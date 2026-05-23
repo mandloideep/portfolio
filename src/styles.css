@@ -1,1 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Geist+Mono:wght@400;500;700&display=swap');
 @import 'tailwindcss';
+/*
+ ---break---
+ */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Theme tokens are registry-driven. The `[data-theme="<slug>"] { … }` rules
+ * are generated at SSR from src/content/themes.ts via #/lib/theme-css and
+ * inlined into the document head. Do not hand-edit data-theme blocks.
+ *
+ * Tailwind v4 @theme inline bridges those CSS variables into utility
+ * classes: `bg-bg`, `text-fg`, `border-border`, `text-accent`, etc.
+ */
+
+@theme inline {
+	--color-bg: var(--bg);
+	--color-fg: var(--fg);
+	--color-muted: var(--muted);
+	--color-border: var(--border);
+	--color-accent: var(--accent);
+	--color-accent-alt: var(--accent-alt);
+	--color-link: var(--link);
+	--color-success: var(--success);
+	--color-error: var(--error);
+
+	--font-mono: "JetBrains Mono", "Geist Mono", ui-monospace, SFMono-Regular,
+		Menlo, monospace;
+
+	--animate-meteor: meteor 5s linear infinite;
+  @keyframes meteor {
+  0% {
+    transform: rotate(var(--angle)) translateX(0);
+    opacity: 1;
+		}
+  70% {
+    opacity: 1;
+		}
+  100% {
+    transform: rotate(var(--angle)) translateX(-500px);
+    opacity: 0;
+		}
+	}
+  --animate-marquee: marquee var(--duration) infinite linear;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite
+;
+  @keyframes marquee {
+  from {
+    transform: translateX(0);}
+  to {
+    transform: translateX(calc(-100% - var(--gap)));}}
+  @keyframes marquee-vertical {
+  from {
+    transform: translateY(0);}
+  to {
+    transform: translateY(calc(-100% - var(--gap)));}}
+  --animate-shiny-text: shiny-text 8s infinite;
+  @keyframes shiny-text {
+  0%, 90%, 100% {
+    background-position: calc(-100% - var(--shiny-width)) 0;}
+  30%, 60% {
+    background-position: calc(100% + var(--shiny-width)) 0;}}}
+
+/* Base typography + colors driven by the active theme. */
+:root {
+	color-scheme: dark light;
+}
+
+html {
+	font-family: var(--font-mono);
+	letter-spacing: -0.01em;
+	line-height: 1.6;
+	background: var(--bg);
+	color: var(--fg);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-rendering: optimizeLegibility;
+}
+
+body {
+	font-family: var(--font-mono);
+	background: var(--bg);
+	color: var(--fg);
+	min-height: 100vh;
+}
+
+::selection {
+	background: var(--accent);
+	color: var(--bg);
+}
+
+/* Respect prefers-reduced-motion: kill transitions and animations. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+		scroll-behavior: auto !important;
+	}
+}
