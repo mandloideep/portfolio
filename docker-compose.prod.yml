@@ -1,0 +1,16 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: portfolio-app-prod
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    # Neon is external — no local `db` service in production.
+    # Bring up with:
+    #   docker compose -f docker-compose.prod.yml up -d --build

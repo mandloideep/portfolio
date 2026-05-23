@@ -1,0 +1,23 @@
+node_modules
+.DS_Store
+dist
+dist-ssr
+*.local
+.env
+.env.development
+.env.production
+.env.*.local
+.nitro
+.tanstack
+.wrangler
+.output
+.vinxi
+__unconfig*
+todos.json
+
+# editor / OS
+.idea
+*.log
+
+# generated drizzle migrations (commit if you want them under review — leave ignored by default)
+# /drizzle
