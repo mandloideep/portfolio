@@ -1,5 +1,6 @@
 import { AnimatedBackground } from "./animated-background";
 import { type DockItem, DockNav } from "./dock-nav";
+import { ExperienceTimeline } from "./experience-timeline";
 import { Hero } from "./hero";
 import { ProjectsBento } from "./projects-bento";
 import { PortfolioSection } from "./section";
@@ -62,6 +63,8 @@ export function PortfolioPage() {
 							<Hero />
 						) : s.id === "projects" ? (
 							<ProjectsBento />
+						) : s.id === "experience" ? (
+							<ExperienceTimeline />
 						) : (
 							<p className="text-muted text-sm">
 								placeholder — content lands in a later phase.
