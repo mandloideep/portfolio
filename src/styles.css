@@ -90,6 +90,28 @@ body {
 	color: var(--bg);
 }
 
+/*
+ * Heatmap intensity steps for the GitHub contributions grid. Derived from
+ * var(--color-accent) per active theme via color-mix so a single declaration
+ * works across all five themes. Requires color-mix support (Safari ≥ 16.4,
+ * Chrome ≥ 111, Firefox ≥ 113).
+ */
+.hm-0 {
+	background: color-mix(in oklch, var(--color-border) 40%, transparent);
+}
+.hm-1 {
+	background: color-mix(in oklch, var(--color-accent) 22%, transparent);
+}
+.hm-2 {
+	background: color-mix(in oklch, var(--color-accent) 44%, transparent);
+}
+.hm-3 {
+	background: color-mix(in oklch, var(--color-accent) 70%, transparent);
+}
+.hm-4 {
+	background: var(--color-accent);
+}
+
 /* Respect prefers-reduced-motion: kill transitions and animations. */
 @media (prefers-reduced-motion: reduce) {
 	*,

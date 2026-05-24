@@ -1,9 +1,14 @@
 import { AnimatedBackground } from "./animated-background";
+import { ContactCard } from "./contact-card";
 import { type DockItem, DockNav } from "./dock-nav";
 import { ExperienceTimeline } from "./experience-timeline";
+import { Footer } from "./footer";
+import { GithubGraph } from "./github-graph";
 import { Hero } from "./hero";
 import { ProjectsBento } from "./projects-bento";
+import { ResearchList } from "./research-list";
 import { PortfolioSection } from "./section";
+import { SkillsGrid } from "./skills-grid";
 
 const SECTIONS: ReadonlyArray<DockItem & { eyebrow: string; title: string }> = [
 	{ id: "hero", label: "intro", eyebrow: "cat ~/intro", title: "intro" },
@@ -65,6 +70,15 @@ export function PortfolioPage() {
 							<ProjectsBento />
 						) : s.id === "experience" ? (
 							<ExperienceTimeline />
+						) : s.id === "skills" ? (
+							<div className="grid grid-cols-1 gap-10 md:grid-cols-2">
+								<SkillsGrid />
+								<ResearchList />
+							</div>
+						) : s.id === "github" ? (
+							<GithubGraph />
+						) : s.id === "contact" ? (
+							<ContactCard />
 						) : (
 							<p className="text-muted text-sm">
 								placeholder — content lands in a later phase.
@@ -73,6 +87,8 @@ export function PortfolioPage() {
 					</PortfolioSection>
 				))}
 			</main>
+
+			<Footer />
 
 			<DockNav items={SECTIONS} />
 		</div>

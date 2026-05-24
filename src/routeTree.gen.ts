@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TerminalRouteImport } from './routes/terminal'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiGithubGraphRouteImport } from './routes/api.github-graph'
 
 const TerminalRoute = TerminalRouteImport.update({
   id: '/terminal',
@@ -22,31 +23,40 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGithubGraphRoute = ApiGithubGraphRouteImport.update({
+  id: '/api/github-graph',
+  path: '/api/github-graph',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/terminal': typeof TerminalRoute
+  '/api/github-graph': typeof ApiGithubGraphRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/terminal': typeof TerminalRoute
+  '/api/github-graph': typeof ApiGithubGraphRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/terminal': typeof TerminalRoute
+  '/api/github-graph': typeof ApiGithubGraphRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/terminal'
+  fullPaths: '/' | '/terminal' | '/api/github-graph'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/terminal'
-  id: '__root__' | '/' | '/terminal'
+  to: '/' | '/terminal' | '/api/github-graph'
+  id: '__root__' | '/' | '/terminal' | '/api/github-graph'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TerminalRoute: typeof TerminalRoute
+  ApiGithubGraphRoute: typeof ApiGithubGraphRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/github-graph': {
+      id: '/api/github-graph'
+      path: '/api/github-graph'
+      fullPath: '/api/github-graph'
+      preLoaderRoute: typeof ApiGithubGraphRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TerminalRoute: TerminalRoute,
+  ApiGithubGraphRoute: ApiGithubGraphRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

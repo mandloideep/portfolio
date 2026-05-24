@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const navigateMock = vi.fn();
 vi.mock("@tanstack/react-router", () => ({
@@ -43,6 +43,16 @@ beforeEach(() => {
 	(
 		globalThis as unknown as { IntersectionObserver: typeof MockIO }
 	).IntersectionObserver = MockIO;
+	// GithubGraph fires fetch on mount; keep it in the loading state so we
+	// don't depend on the real /api/github-graph endpoint in page-level tests.
+	vi.stubGlobal(
+		"fetch",
+		vi.fn<typeof fetch>().mockReturnValue(new Promise(() => {})),
+	);
+});
+
+afterEach(() => {
+	vi.restoreAllMocks();
 });
 
 const EXPECTED_IDS = [
@@ -85,5 +95,32 @@ describe("PortfolioPage", () => {
 		const link = container.querySelector('a[href="#hero"]');
 		expect(link).not.toBeNull();
 		expect(link?.textContent).toMatch(/skip/i);
+	});
+
+	it("renders SkillsGrid and ResearchList in the skills section", () => {
+		const { getByTestId } = render(<PortfolioPage />);
+		expect(getByTestId("skills-grid")).toBeInTheDocument();
+		expect(getByTestId("research-list")).toBeInTheDocument();
+	});
+
+	it("renders GithubGraph in the github section", () => {
+		const { getByTestId } = render(<PortfolioPage />);
+		expect(getByTestId("github-graph")).toBeInTheDocument();
+	});
+
+	it("renders the contact card and footer", () => {
+		const { getByTestId } = render(<PortfolioPage />);
+		expect(getByTestId("contact-card")).toBeInTheDocument();
+		expect(getByTestId("portfolio-footer")).toBeInTheDocument();
+	});
+
+	it("places the footer after main in document order", () => {
+		const { container, getByTestId } = render(<PortfolioPage />);
+		const main = container.querySelector("main");
+		const footer = getByTestId("portfolio-footer");
+		if (!main) throw new Error("expected <main> in the document");
+		expect(
+			main.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING,
+		).toBeTruthy();
 	});
 });

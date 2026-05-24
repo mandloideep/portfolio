@@ -20,6 +20,21 @@ if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
 	Element.prototype.scrollIntoView = vi.fn();
 }
 
+// Radix popper-style primitives (DropdownMenu, Select, Popover) call pointer
+// capture APIs on the trigger; jsdom doesn't implement them. Stub them in so
+// dropdowns can open under tests.
+if (typeof Element !== "undefined") {
+	if (!Element.prototype.hasPointerCapture) {
+		Element.prototype.hasPointerCapture = () => false;
+	}
+	if (!Element.prototype.setPointerCapture) {
+		Element.prototype.setPointerCapture = () => {};
+	}
+	if (!Element.prototype.releasePointerCapture) {
+		Element.prototype.releasePointerCapture = () => {};
+	}
+}
+
 afterEach(() => {
 	cleanup();
 	window.localStorage.clear();
