@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { ModeChooser, UiStub } from "#/components/mode-chooser";
+import { ModeChooser } from "#/components/mode-chooser";
+import { PortfolioPage } from "#/components/portfolio/portfolio-page";
 import { getStoredMode, type Mode, setStoredMode } from "#/lib/mode";
 
 const SearchSchema = z.object({
 	choose: z.coerce.number().int().optional(),
+	project: z.string().optional(),
 });
 
 export const Route = createFileRoute("/")({
@@ -41,5 +43,5 @@ function Home() {
 	const showChooser =
 		!hydrated || choose === 1 || mode === null || mode === "terminal";
 
-	return showChooser ? <ModeChooser onPick={pick} /> : <UiStub />;
+	return showChooser ? <ModeChooser onPick={pick} /> : <PortfolioPage />;
 }

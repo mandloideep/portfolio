@@ -1,10 +1,17 @@
-import { siteMeta } from "#/content/site";
+import { projects, siteMeta } from "#/content/site";
 import { isThemeSlug, type ThemeSlug, themes } from "#/content/themes";
 import { makeBlock } from "#/lib/terminal/blocks";
+import {
+	getCorpusEntry,
+	getProjectMarkdown,
+	listProjectSlugs,
+} from "#/lib/terminal/corpus";
+import { formatTwoCol } from "#/lib/terminal/format";
 import {
 	appendBlock,
 	clearBlocks,
 	emit,
+	setMode,
 	terminalStore,
 } from "#/store/terminal";
 import { setTheme } from "#/store/theme";
@@ -40,11 +47,6 @@ function openExternal(url: string): void {
 	document.body.appendChild(a);
 	a.click();
 	a.remove();
-}
-
-function formatTwoCol(rows: Array<[string, string]>): string {
-	const width = Math.max(...rows.map(([a]) => a.length));
-	return rows.map(([a, b]) => `  ${a.padEnd(width, " ")}  ${b}`).join("\n");
 }
 
 // ─── Commands ───────────────────────────────────────────────────────────
@@ -151,15 +153,91 @@ const resume: Command = {
 	},
 };
 
+const me: Command = {
+	name: "/me",
+	description: "about deep",
+	handler: () => {
+		emit("markdown", getCorpusEntry("me"));
+	},
+};
+
+const experience: Command = {
+	name: "/experience",
+	description: "work + research history",
+	handler: () => {
+		emit("markdown", getCorpusEntry("experience"));
+	},
+};
+
+const skills: Command = {
+	name: "/skills",
+	description: "languages, infra, ai, fun",
+	handler: () => {
+		emit("markdown", getCorpusEntry("skills"));
+	},
+};
+
+const contact: Command = {
+	name: "/contact",
+	description: "how to reach me",
+	handler: () => {
+		emit("markdown", getCorpusEntry("contact"));
+	},
+};
+
+const exit: Command = {
+	name: "/exit",
+	description: "drop into shell mode (type 'deep' to come back)",
+	handler: () => {
+		setMode("shell");
+		emit(
+			"system",
+			"dropped into shell. type `help` for commands, `deep` to return.",
+		);
+	},
+};
+
+const projectsCmd: Command = {
+	name: "/projects",
+	description: "list projects (no args) or open one: /projects <slug>",
+	handler: ({ args }) => {
+		if (args.length === 0) {
+			const rows: Array<[string, string]> = projects.map((p) => [
+				p.slug,
+				p.title,
+			]);
+			emit("output", `projects (use /projects <slug>):\n${formatTwoCol(rows)}`);
+			return;
+		}
+		const slug = args[0] ?? "";
+		const text = getProjectMarkdown(slug);
+		if (!text) {
+			const known = listProjectSlugs().join(", ");
+			emit(
+				"error",
+				`unknown project: ${slug}. known: ${known}. try /projects.`,
+			);
+			return;
+		}
+		emit("markdown", text);
+	},
+};
+
 export const commands: Command[] = [
 	help,
 	clear,
 	history,
 	retry,
+	me,
+	experience,
+	skills,
+	projectsCmd,
+	contact,
 	ui,
 	theme,
 	github,
 	resume,
+	exit,
 ];
 
 // ─── Lookup helpers ─────────────────────────────────────────────────────

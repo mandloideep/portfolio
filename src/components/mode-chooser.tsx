@@ -64,19 +64,3 @@ export function ModeChooser({ onPick }: { onPick: (m: Mode) => void }) {
 		</main>
 	);
 }
-
-export function UiStub() {
-	return (
-		<main className="min-h-screen flex items-center justify-center px-6">
-			<div data-testid="ui-stub" className="text-center">
-				<p className="text-muted text-sm mb-2">
-					<span className="text-accent">$</span> cat /portfolio
-				</p>
-				<h1 className="text-2xl font-medium">phase 08 lands here</h1>
-				<p className="text-muted mt-2">
-					hero, bento, experience, heatmap, contact.
-				</p>
-			</div>
-		</main>
-	);
-}

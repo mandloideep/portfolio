@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { projects } from "#/content/site";
 import { emit as _emit, pushHistory, terminalStore } from "#/store/terminal";
 import { themeStore } from "#/store/theme";
 import { autocomplete, parseInput, runCommand } from "./commands";
+import { getCorpusEntry } from "./corpus";
 
 beforeEach(() => {
 	window.localStorage.clear();
@@ -11,6 +13,7 @@ beforeEach(() => {
 		historyCursor: null,
 		mode: "agent",
 		booted: false,
+		cwd: "~",
 	}));
 	themeStore.setState(() => ({ slug: "nord-green" }));
 });
@@ -150,6 +153,79 @@ describe("runCommand", () => {
 	it("/retry errors when there is nothing to retry", async () => {
 		await runCommand("/retry", { navigate: noopNavigate, submit: noopSubmit });
 		expect(lastBlock()?.kind).toBe("error");
+	});
+
+	it.each([
+		"/me",
+		"/experience",
+		"/skills",
+		"/contact",
+	] as const)("%s emits a markdown block matching the corpus file", async (cmd) => {
+		await runCommand(cmd, { navigate: noopNavigate, submit: noopSubmit });
+		const b = lastBlock();
+		expect(b?.kind).toBe("markdown");
+		const key = cmd.slice(1) as "me" | "experience" | "skills" | "contact";
+		expect((b as { text: string }).text).toBe(getCorpusEntry(key));
+	});
+
+	it("/projects with no args lists every slug", async () => {
+		await runCommand("/projects", {
+			navigate: noopNavigate,
+			submit: noopSubmit,
+		});
+		const b = lastBlock();
+		expect(b?.kind).toBe("output");
+		const text = (b as { text: string }).text;
+		for (const p of projects) {
+			expect(text).toContain(p.slug);
+		}
+	});
+
+	it("/projects <known-slug> emits a markdown block", async () => {
+		await runCommand("/projects mydininghall", {
+			navigate: noopNavigate,
+			submit: noopSubmit,
+		});
+		const b = lastBlock();
+		expect(b?.kind).toBe("markdown");
+		expect((b as { text: string }).text.startsWith("# ")).toBe(true);
+	});
+
+	it("/projects <unknown-slug> emits an error block, not a crash", async () => {
+		await runCommand("/projects definitely-not-a-real-project", {
+			navigate: noopNavigate,
+			submit: noopSubmit,
+		});
+		const b = lastBlock();
+		expect(b?.kind).toBe("error");
+		expect((b as { text: string }).text).toMatch(/unknown project/);
+	});
+
+	it("/help lists the new content commands", async () => {
+		await runCommand("/help", { navigate: noopNavigate, submit: noopSubmit });
+		const text = (lastBlock() as { text: string }).text;
+		for (const name of [
+			"/me",
+			"/experience",
+			"/skills",
+			"/contact",
+			"/projects",
+		]) {
+			expect(text).toContain(name);
+		}
+	});
+
+	it("/exit flips mode to shell and emits a system block", async () => {
+		await runCommand("/exit", { navigate: noopNavigate, submit: noopSubmit });
+		expect(terminalStore.state.mode).toBe("shell");
+		expect(lastBlock()?.kind).toBe("system");
+		expect((lastBlock() as { text: string }).text).toMatch(/shell|deep/i);
+	});
+
+	it("/help lists /exit", async () => {
+		await runCommand("/help", { navigate: noopNavigate, submit: noopSubmit });
+		const text = (lastBlock() as { text: string }).text;
+		expect(text).toContain("/exit");
 	});
 
 	it("/github + /resume open links (smoke)", async () => {

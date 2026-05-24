@@ -1,6 +1,6 @@
 import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ModeChooser, UiStub } from "./mode-chooser";
+import { ModeChooser } from "./mode-chooser";
 
 describe("ModeChooser", () => {
 	it("renders both options", () => {
@@ -31,13 +31,5 @@ describe("ModeChooser", () => {
 		const heading = container.querySelector("#chooser-heading");
 		expect(heading).toBeInTheDocument();
 		expect(heading?.tagName).toBe("H1");
-	});
-});
-
-describe("UiStub", () => {
-	it("renders the phase-08 placeholder", () => {
-		const { getByTestId } = render(<UiStub />);
-		expect(getByTestId("ui-stub")).toBeInTheDocument();
-		expect(getByTestId("ui-stub").textContent).toMatch(/phase 08/);
 	});
 });

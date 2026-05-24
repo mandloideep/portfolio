@@ -1,5 +1,6 @@
 import type { Block } from "#/lib/terminal/blocks";
 import { cn } from "#/lib/utils";
+import { MarkdownBlock } from "./markdown-block";
 
 /**
  * Exhaustive switch over `Block` discriminated union. Adding a new kind to
@@ -26,8 +27,8 @@ export function BlockRow({ block }: { block: Block }) {
 			);
 		case "markdown":
 			return (
-				<div data-block="markdown" className="whitespace-pre-wrap text-fg">
-					{block.text}
+				<div data-block="markdown" className="text-fg">
+					<MarkdownBlock text={block.text} />
 				</div>
 			);
 		case "error":

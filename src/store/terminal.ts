@@ -3,6 +3,7 @@ import { type Block, makeBlock, type PromptMode } from "#/lib/terminal/blocks";
 
 export const HISTORY_STORAGE_KEY = "portfolio.terminal.history";
 export const HISTORY_LIMIT = 100;
+export const SHELL_HOME = "~";
 
 export type TerminalState = {
 	blocks: Block[];
@@ -10,6 +11,7 @@ export type TerminalState = {
 	historyCursor: number | null;
 	mode: PromptMode;
 	booted: boolean;
+	cwd: string;
 };
 
 function readInitialHistory(): string[] {
@@ -42,6 +44,7 @@ export const terminalStore = new Store<TerminalState>({
 	historyCursor: null,
 	mode: "agent",
 	booted: false,
+	cwd: SHELL_HOME,
 });
 
 export function appendBlock(block: Block): void {
@@ -77,7 +80,16 @@ export function setBooted(booted: boolean): void {
 }
 
 export function setMode(mode: PromptMode): void {
-	terminalStore.setState((s) => ({ ...s, mode }));
+	terminalStore.setState((s) => ({
+		...s,
+		mode,
+		// Re-entering agent mode resets cwd so the next `/exit` starts at home.
+		cwd: mode === "agent" ? SHELL_HOME : s.cwd,
+	}));
+}
+
+export function setCwd(cwd: string): void {
+	terminalStore.setState((s) => ({ ...s, cwd }));
 }
 
 /**

@@ -11,6 +11,7 @@ beforeEach(() => {
 		historyCursor: null,
 		mode: "agent",
 		booted: false,
+		cwd: "~",
 	}));
 });
 
