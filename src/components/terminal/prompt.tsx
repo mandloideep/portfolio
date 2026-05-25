@@ -8,7 +8,13 @@ import {
 } from "react";
 import { autocomplete } from "#/lib/terminal/commands";
 import { abortTour, isTourRunning } from "#/lib/terminal/tour";
-import { clearBlocks, setHistoryCursor, terminalStore } from "#/store/terminal";
+import {
+	clearBlocks,
+	emit,
+	setHistoryCursor,
+	setMode,
+	terminalStore,
+} from "#/store/terminal";
 import { abortAgentStream, isAgentStreaming } from "./use-agent-stream";
 import { useSubmit } from "./use-submit";
 
@@ -25,6 +31,7 @@ export function Prompt({ onOpenPalette }: Props) {
 	const mode = useStore(terminalStore, (s) => s.mode);
 	const [value, setValue] = useState("");
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const ctrlCArmedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const submit = useSubmit();
 
 	useEffect(() => {
@@ -69,7 +76,7 @@ export function Prompt({ onOpenPalette }: Props) {
 	}
 
 	function handleTab() {
-		const matches = autocomplete(value);
+		const matches = autocomplete(value, mode);
 		if (matches.length === 0) return;
 		if (matches.length === 1) {
 			setValue(`${matches[0]} `);
@@ -83,7 +90,14 @@ export function Prompt({ onOpenPalette }: Props) {
 		});
 		if (lcp.length > value.length) {
 			setValue(lcp);
+			return;
 		}
+		// No further auto-completion possible; surface the choices as a hint.
+		emitTabHint(matches);
+	}
+
+	function emitTabHint(matches: string[]) {
+		emit("system", `[tab] ${matches.join("  ")}`);
 	}
 
 	async function handleSubmit() {
@@ -123,16 +137,40 @@ export function Prompt({ onOpenPalette }: Props) {
 			return;
 		}
 		if (e.ctrlKey && e.key.toLowerCase() === "c") {
-			// Only intercept while a tour or stream is running so the browser's
-			// native copy shortcut still works when the user has selected text.
-			// Tour first — abortTour() cascades into abortAgentStream().
+			// Tour or stream running → abort it.
 			if (isTourRunning()) {
 				e.preventDefault();
 				abortTour();
-			} else if (isAgentStreaming()) {
+				return;
+			}
+			if (isAgentStreaming()) {
 				e.preventDefault();
 				abortAgentStream();
+				return;
 			}
+			// Preserve native copy when the user has actually selected text.
+			const el = e.currentTarget;
+			const selectionStart = el.selectionStart ?? 0;
+			const selectionEnd = el.selectionEnd ?? 0;
+			if (selectionEnd > selectionStart) return;
+			// Double-tap to exit agent mode. First press primes the timer +
+			// emits a hint; a second within 2s flips to shell.
+			if (mode !== "agent") return;
+			e.preventDefault();
+			if (ctrlCArmedRef.current) {
+				clearTimeout(ctrlCArmedRef.current);
+				ctrlCArmedRef.current = null;
+				setMode("shell");
+				emit(
+					"system",
+					"dropped into shell. type `help` for commands, `deep` to return.",
+				);
+				return;
+			}
+			emit("system", "(ctrl+c again to drop into shell)");
+			ctrlCArmedRef.current = setTimeout(() => {
+				ctrlCArmedRef.current = null;
+			}, 2000);
 			return;
 		}
 		if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "l") {

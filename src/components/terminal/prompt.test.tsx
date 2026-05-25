@@ -195,9 +195,10 @@ describe("Prompt", () => {
 		expect(isAgentStreaming()).toBe(false);
 	});
 
-	it("Ctrl+C is a no-op when no stream is active (so copy still works)", () => {
+	it("Ctrl+C with a text selection lets the browser copy", () => {
 		const { input } = renderPrompt();
-		// Should not throw, should not prevent default.
+		input.value = "abc";
+		input.setSelectionRange(0, 3);
 		const event = new KeyboardEvent("keydown", {
 			key: "c",
 			ctrlKey: true,
@@ -206,6 +207,28 @@ describe("Prompt", () => {
 		});
 		input.dispatchEvent(event);
 		expect(event.defaultPrevented).toBe(false);
+	});
+
+	it("Ctrl+C in agent mode without selection arms the exit hint, second drops to shell", () => {
+		const { input } = renderPrompt();
+		expect(terminalStore.state.mode).toBe("agent");
+		const first = new KeyboardEvent("keydown", {
+			key: "c",
+			ctrlKey: true,
+			bubbles: true,
+			cancelable: true,
+		});
+		input.dispatchEvent(first);
+		expect(first.defaultPrevented).toBe(true);
+		expect(terminalStore.state.mode).toBe("agent");
+		const second = new KeyboardEvent("keydown", {
+			key: "c",
+			ctrlKey: true,
+			bubbles: true,
+			cancelable: true,
+		});
+		input.dispatchEvent(second);
+		expect(terminalStore.state.mode).toBe("shell");
 	});
 
 	it("Shift+Enter does not submit", () => {

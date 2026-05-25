@@ -9,6 +9,7 @@ import {
 	listProjectSlugs,
 } from "#/lib/terminal/corpus";
 import { formatTwoCol } from "#/lib/terminal/format";
+import { shellCommands } from "#/lib/terminal/shell";
 import { isTourRunning, runPresentation } from "#/lib/terminal/tour";
 import { modelStore, setModel } from "#/store/model";
 import {
@@ -313,10 +314,33 @@ export function findCommand(name: string): Command | undefined {
 	return commands.find((c) => c.name === name);
 }
 
-export function autocomplete(prefix: string): string[] {
-	if (!prefix.startsWith("/")) return [];
+/**
+ * Mode-aware tab autocomplete. Agent mode completes slash commands;
+ * shell mode completes the shell registry (no slash). Either mode
+ * tolerates a blank prefix → return all visible names so the user can
+ * press Tab in an empty input to discover commands.
+ */
+export function autocomplete(
+	prefix: string,
+	mode: "agent" | "shell" = "agent",
+): string[] {
+	const trimmed = prefix.trimStart();
+	if (mode === "shell") {
+		// Only complete the first token. Don't suggest mid-arg.
+		if (trimmed.includes(" ")) return [];
+		return shellCommands
+			.filter((c) => !c.hidden && c.name.startsWith(trimmed))
+			.map((c) => c.name);
+	}
+	if (!trimmed.startsWith("/")) {
+		// Empty input → list all slash commands as a hint.
+		if (trimmed.length === 0) {
+			return commands.filter((c) => !c.hidden).map((c) => c.name);
+		}
+		return [];
+	}
 	return commands
-		.filter((c) => !c.hidden && c.name.startsWith(prefix))
+		.filter((c) => !c.hidden && c.name.startsWith(trimmed))
 		.map((c) => c.name);
 }
 

@@ -35,7 +35,7 @@ export function TerminalShell() {
 				className="pointer-events-none absolute inset-x-0 top-[12vh] h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent"
 			/>
 
-			<div className="relative z-overlay w-full max-w-[min(64rem,92vw)] overflow-hidden rounded-card border border-border/80 bg-bg-elev shadow-frame">
+			<div className="relative z-overlay mx-auto w-full max-w-[min(82rem,90vw)] overflow-hidden rounded-card border border-border/80 bg-bg-elev shadow-frame">
 				<Chrome title="~ — agent" closeTo="/" />
 				<RuleAccent />
 				<Scrollback />
