@@ -1,19 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { assembleContext } from "#/lib/context";
-import { getServerEnv } from "#/lib/env";
+import { getLlmConfig, getServerEnv } from "#/lib/env";
 import {
 	type ChatMessage,
-	isOpenRouterModel,
-	streamOpenRouter,
+	isModelForProvider,
+	streamLlm,
 } from "#/lib/openrouter";
 
 /**
- * POST /api/agent — streams an OpenRouter chat completion as SSE.
+ * POST /api/agent — streams an LLM chat completion as SSE.
+ *
+ * Picks the provider from `LLM_PROVIDER` (defaults to `openrouter`) and
+ * dispatches to the matching endpoint. The wire format is identical
+ * (OpenAI-compatible Chat Completions) for both, so callers don't need
+ * to know which one served the response.
  *
  * Event sequence:
  *   event: activity  data: {"step":"reading","files":[...]}
- *   event: activity  data: {"step":"calling","model":"..."}
+ *   event: activity  data: {"step":"calling","model":"...","provider":"..."}
  *   event: token     data: "<chunk>"
  *   ...
  *   event: done      data: {"tokens":N}
@@ -48,10 +53,11 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 	}
 
 	const env = getServerEnv();
+	const { provider, apiKey, defaultModel } = getLlmConfig(env);
 	const model =
-		parsed.data.model && isOpenRouterModel(parsed.data.model)
+		parsed.data.model && isModelForProvider(provider, parsed.data.model)
 			? parsed.data.model
-			: env.OPENROUTER_DEFAULT_MODEL;
+			: defaultModel;
 
 	const { system, contextDocs, files } = assembleContext(parsed.data.message);
 	const messages: ChatMessage[] = [
@@ -76,12 +82,13 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 
 			try {
 				write("activity", { step: "reading", files });
-				write("activity", { step: "calling", model });
+				write("activity", { step: "calling", model, provider });
 
 				let totalTokens = 0;
 				let lastUsage: { total_tokens?: number } | undefined;
-				for await (const ev of streamOpenRouter({
-					apiKey: env.OPENROUTER_API_KEY,
+				for await (const ev of streamLlm({
+					provider,
+					apiKey,
 					model,
 					messages,
 					signal: request.signal,

@@ -1,21 +1,28 @@
 import { Store } from "@tanstack/store";
 import {
-	isOpenRouterModel,
-	OPENROUTER_MODELS,
-	type OpenRouterModelId,
+	getActiveProviderClient,
+	getDefaultModelForProvider,
+	getModelsForProvider,
+	isModelForProvider,
+	type LlmModel,
 } from "#/lib/openrouter";
 
 export const MODEL_STORAGE_KEY = "portfolio.terminal.model";
 
-export const DEFAULT_MODEL_ID: OpenRouterModelId = OPENROUTER_MODELS[0].id;
+const PROVIDER = getActiveProviderClient();
+const PROVIDER_MODELS: readonly LlmModel[] = getModelsForProvider(PROVIDER);
 
-type ModelState = { activeModel: OpenRouterModelId };
+export const DEFAULT_MODEL_ID: string = getDefaultModelForProvider(PROVIDER);
+
+type ModelState = { activeModel: string };
 
 function readInitial(): ModelState {
 	if (typeof window === "undefined") return { activeModel: DEFAULT_MODEL_ID };
 	try {
 		const raw = window.localStorage.getItem(MODEL_STORAGE_KEY);
-		if (raw && isOpenRouterModel(raw)) return { activeModel: raw };
+		if (raw && isModelForProvider(PROVIDER, raw)) {
+			return { activeModel: raw };
+		}
 	} catch {
 		// private browsing / restricted contexts
 	}
@@ -25,7 +32,7 @@ function readInitial(): ModelState {
 export const modelStore = new Store<ModelState>(readInitial());
 
 export function setModel(id: string): boolean {
-	if (!isOpenRouterModel(id)) return false;
+	if (!isModelForProvider(PROVIDER, id)) return false;
 	modelStore.setState(() => ({ activeModel: id }));
 	if (typeof window !== "undefined") {
 		try {
@@ -37,6 +44,11 @@ export function setModel(id: string): boolean {
 	return true;
 }
 
-export function getModel(): OpenRouterModelId {
+export function getModel(): string {
 	return modelStore.state.activeModel;
+}
+
+/** The model list for the currently active provider. */
+export function getProviderModels(): readonly LlmModel[] {
+	return PROVIDER_MODELS;
 }

@@ -1,15 +1,27 @@
 import { siteMeta } from "#/content/site";
 import type { Mode } from "#/lib/mode";
+import { cn } from "#/lib/utils";
 import { Card } from "./ui/card";
 import { Eyebrow } from "./ui/eyebrow";
 import { RuleAccent } from "./ui/rule-accent";
 
+const PREVIEW_MIN_HEIGHT = "min-h-[10rem]";
+
+type ModeChooserProps = {
+	onPick: (m: Mode) => void;
+	/** The mode currently persisted in localStorage, if any. Used to render
+	 * the "switch" toggle at the bottom of the chooser. */
+	currentMode?: Mode | null;
+};
+
 /**
- * Mode chooser. Pure presentation — wiring (router, localStorage) lives
- * in the route. Two preview cards under a tight identity block, both in
- * the unified token system.
+ * Mode chooser. Pure presentation — wiring (router, localStorage) lives in
+ * the route. Two preview cards under a tight identity block. The bottom
+ * "remembered" line is a live toggle: if a mode is stored, clicking the
+ * `/?choose=1` chip flips it and fires `onPick`.
  */
-export function ModeChooser({ onPick }: { onPick: (m: Mode) => void }) {
+export function ModeChooser({ onPick, currentMode }: ModeChooserProps) {
+	const opposite: Mode = currentMode === "terminal" ? "ui" : "terminal";
 	return (
 		<main
 			data-page="chooser"
@@ -52,12 +64,38 @@ export function ModeChooser({ onPick }: { onPick: (m: Mode) => void }) {
 				/>
 			</div>
 
-			<p className="font-mono text-meta uppercase tracking-tab text-muted">
-				your choice is remembered. visit{" "}
-				<code className="normal-case tracking-normal text-link">
-					/?choose=1
-				</code>{" "}
-				to switch.
+			<p
+				data-testid="chooser-toggle-line"
+				className="flex flex-wrap items-center justify-center gap-x-2 font-mono text-meta uppercase tracking-tab text-muted"
+			>
+				{currentMode ? (
+					<>
+						<span>remembered:</span>
+						<code className="rounded-sm border border-border/70 bg-bg-elev/60 px-1.5 py-0.5 normal-case tracking-normal text-fg/90">
+							{currentMode === "terminal" ? "/terminal" : "/portfolio"}
+						</code>
+						<span aria-hidden="true">·</span>
+						<button
+							type="button"
+							data-testid="chooser-toggle"
+							onClick={() => onPick(opposite)}
+							className="inline-flex items-center gap-1.5 rounded-sm border border-border/70 bg-bg-elev/60 px-2 py-0.5 normal-case tracking-normal text-link transition-colors duration-base hover:border-accent/60 hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:border-accent/70 focus-visible:bg-accent/10 focus-visible:text-accent"
+						>
+							<span>/?choose=1</span>
+							<span aria-hidden="true">
+								→ {opposite === "terminal" ? "/terminal" : "/portfolio"}
+							</span>
+						</button>
+					</>
+				) : (
+					<>
+						<span>your choice is remembered. visit</span>
+						<code className="normal-case tracking-normal text-link">
+							/?choose=1
+						</code>
+						<span>to switch.</span>
+					</>
+				)}
 			</p>
 		</main>
 	);
@@ -87,9 +125,14 @@ function ChoiceCard({
 			type="button"
 			onClick={onPick}
 			data-testid={testId}
-			className="group flex flex-col gap-5 p-6 transition-transform duration-base hover:-translate-y-0.5"
+			className="group flex h-full flex-col gap-5 p-6 transition-transform duration-base hover:-translate-y-0.5"
 		>
-			<div className="overflow-hidden rounded-md border border-border/70 bg-bg p-4 transition-colors duration-base group-hover:border-accent/40">
+			<div
+				className={cn(
+					"flex flex-col justify-center overflow-hidden rounded-md border border-border/70 bg-bg p-4 transition-colors duration-base group-hover:border-accent/40",
+					PREVIEW_MIN_HEIGHT,
+				)}
+			>
 				{preview}
 			</div>
 			<div className="flex items-center justify-between gap-3">
@@ -148,7 +191,7 @@ function TerminalPreview() {
 function PortfolioPreview() {
 	return (
 		<div className="flex flex-col gap-3">
-			<div className="flex items-center gap-1.5">
+			<div className="flex flex-wrap items-center gap-1.5">
 				<span className="rounded-sm border border-accent/60 bg-accent/10 px-1.5 py-px font-mono text-meta tracking-tab text-accent">
 					[whoami]
 				</span>
@@ -163,11 +206,11 @@ function PortfolioPreview() {
 				Selected work
 			</div>
 			<div className="grid grid-cols-3 gap-1.5">
-				<div className="col-span-2 h-7 rounded-sm border border-border/70 bg-bg-elev" />
-				<div className="h-7 rounded-sm border border-border/70 bg-bg-elev" />
-				<div className="h-7 rounded-sm border border-border/70 bg-bg-elev" />
-				<div className="h-7 rounded-sm border border-accent/60 bg-accent/15" />
-				<div className="h-7 rounded-sm border border-border/70 bg-bg-elev" />
+				<div className="col-span-2 h-6 rounded-sm border border-border/70 bg-bg-elev" />
+				<div className="h-6 rounded-sm border border-border/70 bg-bg-elev" />
+				<div className="h-6 rounded-sm border border-border/70 bg-bg-elev" />
+				<div className="h-6 rounded-sm border border-accent/60 bg-accent/15" />
+				<div className="h-6 rounded-sm border border-border/70 bg-bg-elev" />
 			</div>
 		</div>
 	);

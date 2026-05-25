@@ -210,4 +210,44 @@ describe("streamOpenRouter", () => {
 		controller.abort();
 		await expect(iterator.next()).rejects.toThrow(/aborted/i);
 	});
+
+	it("routes to the Gemini OpenAI-compat endpoint when provider=gemini", async () => {
+		const stream = bodyFromChunks([
+			dataFrame({ choices: [{ delta: { content: "hi" } }] }),
+			`data: [DONE]\n\n`,
+		]);
+		const fetchMock = vi
+			.fn<typeof fetch>()
+			.mockImplementation(async () => new Response(stream, { status: 200 }));
+		vi.stubGlobal("fetch", fetchMock);
+
+		const events = [];
+		for await (const ev of streamOpenRouter({
+			provider: "gemini",
+			apiKey: "AIza-test",
+			model: "gemini-2.5-flash-lite",
+			messages: [{ role: "user", content: "hi" }],
+		})) {
+			events.push(ev);
+		}
+
+		expect(events).toEqual([
+			{ type: "token", text: "hi" },
+			{ type: "done", usage: undefined },
+		]);
+		const call = fetchMock.mock.calls[0];
+		expect(call[0]).toBe(
+			"https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+		);
+		const init = call[1] as RequestInit;
+		const headers = init.headers as Record<string, string>;
+		expect(headers.Authorization).toBe("Bearer AIza-test");
+		// OpenRouter attribution headers must NOT leak to Gemini.
+		expect(headers["HTTP-Referer"]).toBeUndefined();
+		expect(headers["X-Title"]).toBeUndefined();
+		expect(JSON.parse(init.body as string)).toMatchObject({
+			model: "gemini-2.5-flash-lite",
+			stream: true,
+		});
+	});
 });

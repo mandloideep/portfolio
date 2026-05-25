@@ -61,7 +61,11 @@ function Home() {
 
 	return (
 		<>
-			{showChooser ? <ModeChooser onPick={pick} /> : <PortfolioPage />}
+			{showChooser ? (
+				<ModeChooser onPick={pick} currentMode={mode} />
+			) : (
+				<PortfolioPage />
+			)}
 			<HiddenCorpus />
 		</>
 	);

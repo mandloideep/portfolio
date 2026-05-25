@@ -4,10 +4,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // from jsdom, so we stub it out.
 vi.mock("#/lib/env", () => ({
 	getServerEnv: () => ({
+		LLM_PROVIDER: "openrouter",
 		OPENROUTER_API_KEY: "test-or",
 		OPENROUTER_DEFAULT_MODEL: "google/gemini-2.5-flash-lite",
 		GITHUB_TOKEN: "test-token",
 		GITHUB_USERNAME: "deep",
+	}),
+	getLlmConfig: () => ({
+		provider: "openrouter",
+		apiKey: "test-or",
+		defaultModel: "google/gemini-2.5-flash-lite",
 	}),
 	_resetEnvCacheForTests: () => {},
 }));

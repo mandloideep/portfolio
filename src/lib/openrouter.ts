@@ -1,20 +1,39 @@
 /**
- * OpenRouter SSE client.
+ * LLM client — supports two providers behind one OpenAI-compatible API:
+ *   • `openrouter`  → https://openrouter.ai/api/v1/chat/completions
+ *   • `gemini`      → https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
  *
- * Two surfaces:
- *   - `OPENROUTER_MODELS` + `isOpenRouterModel` — pure data + type guard,
- *     safe to import from client code (the `/model` command needs the list).
- *   - `streamOpenRouter` — async generator over a Chat Completions SSE
- *     stream. Used by `src/routes/api.agent.ts`; not imported by client code.
+ * Both speak the same SSE shape, so the parser is shared. Provider selection
+ * is driven by:
+ *   • server side  → `LLM_PROVIDER` env var (see src/lib/env.ts)
+ *   • client side  → `import.meta.env.VITE_LLM_PROVIDER`
+ * Both default to `openrouter` for back-compat.
  *
- * No env access here on purpose: the caller (server route) injects the
- * API key. That keeps the module isomorphic for the allowlist export.
+ * File stays named `openrouter.ts` to avoid churning every import. The
+ * provider-agnostic surface is exported alongside the legacy names.
  */
 
-export type OpenRouterModel = {
-	id: string;
-	label: string;
+// ─── Providers ──────────────────────────────────────────────────────────
+
+export const PROVIDERS = ["openrouter", "gemini"] as const;
+export type Provider = (typeof PROVIDERS)[number];
+
+export function isProvider(value: unknown): value is Provider {
+	return (
+		typeof value === "string" &&
+		(PROVIDERS as readonly string[]).includes(value)
+	);
+}
+
+const ENDPOINTS: Record<Provider, string> = {
+	openrouter: "https://openrouter.ai/api/v1/chat/completions",
+	gemini:
+		"https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
 };
+
+// ─── Model catalogues ───────────────────────────────────────────────────
+
+export type LlmModel = { id: string; label: string };
 
 export const OPENROUTER_MODELS = [
 	{
@@ -25,32 +44,82 @@ export const OPENROUTER_MODELS = [
 	{ id: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5" },
 	{ id: "openai/gpt-5-mini", label: "GPT-5 Mini" },
 	{ id: "deepseek/deepseek-chat", label: "DeepSeek Chat" },
-] as const satisfies readonly OpenRouterModel[];
+] as const satisfies readonly LlmModel[];
+
+export const GEMINI_MODELS = [
+	{
+		id: "gemini-2.5-flash-lite",
+		label: "Gemini 2.5 Flash Lite (default · cheapest)",
+	},
+	{ id: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash Lite" },
+	{ id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+	{ id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+] as const satisfies readonly LlmModel[];
+
+const MODELS_BY_PROVIDER: Record<Provider, readonly LlmModel[]> = {
+	openrouter: OPENROUTER_MODELS,
+	gemini: GEMINI_MODELS,
+};
 
 export type OpenRouterModelId = (typeof OPENROUTER_MODELS)[number]["id"];
+export type GeminiModelId = (typeof GEMINI_MODELS)[number]["id"];
+export type LlmModelId = OpenRouterModelId | GeminiModelId;
 
-export function isOpenRouterModel(id: string): id is OpenRouterModelId {
-	return OPENROUTER_MODELS.some((m) => m.id === id);
+export function getModelsForProvider(p: Provider): readonly LlmModel[] {
+	return MODELS_BY_PROVIDER[p];
 }
+
+export function getDefaultModelForProvider(p: Provider): string {
+	const models = MODELS_BY_PROVIDER[p];
+	// Type-narrowed: every entry in MODELS_BY_PROVIDER has ≥ 1 model.
+	return models[0]?.id ?? "";
+}
+
+export function isModelForProvider(p: Provider, id: string): boolean {
+	return MODELS_BY_PROVIDER[p].some((m) => m.id === id);
+}
+
+/** Legacy alias preserved for callers that already validated against the
+ *  OpenRouter model list. New code should use `isModelForProvider`. */
+export function isOpenRouterModel(id: string): id is OpenRouterModelId {
+	return isModelForProvider("openrouter", id);
+}
+
+// ─── Active-provider lookups ────────────────────────────────────────────
+
+/**
+ * Client-side active provider. Reads `import.meta.env.VITE_LLM_PROVIDER`
+ * with `openrouter` as the fallback so existing setups keep working.
+ */
+export function getActiveProviderClient(): Provider {
+	const raw = (import.meta as { env?: Record<string, string | undefined> }).env
+		?.VITE_LLM_PROVIDER;
+	return isProvider(raw) ? raw : "openrouter";
+}
+
+// ─── Chat shapes ────────────────────────────────────────────────────────
 
 export type ChatMessage = {
 	role: "system" | "user" | "assistant";
 	content: string;
 };
 
-export type OpenRouterUsage = {
+export type LlmUsage = {
 	prompt_tokens?: number;
 	completion_tokens?: number;
 	total_tokens?: number;
 };
 
-export type OpenRouterEvent =
+export type LlmEvent =
 	| { type: "token"; text: string }
-	| { type: "done"; usage?: OpenRouterUsage };
+	| { type: "done"; usage?: LlmUsage };
 
-const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
+/** Legacy alias preserved for tests + callers that imported the old name. */
+export type OpenRouterUsage = LlmUsage;
+export type OpenRouterEvent = LlmEvent;
 
 export type StreamArgs = {
+	provider?: Provider;
 	apiKey: string;
 	model: string;
 	messages: ChatMessage[];
@@ -60,21 +129,30 @@ export type StreamArgs = {
 };
 
 /**
- * POST a streaming chat completion and yield parsed token / done events.
- * Cancelling the passed `signal` aborts the underlying fetch.
+ * POST a streaming chat completion against the active provider and yield
+ * parsed `token` / `done` events. Defaults to `openrouter` for backward
+ * compatibility; `provider: "gemini"` swaps the endpoint and drops the
+ * OpenRouter-specific attribution headers.
  */
-export async function* streamOpenRouter(
+export async function* streamLlm(
 	args: StreamArgs,
-): AsyncGenerator<OpenRouterEvent, void, void> {
-	const res = await fetch(ENDPOINT, {
+): AsyncGenerator<LlmEvent, void, void> {
+	const provider = args.provider ?? "openrouter";
+	const endpoint = ENDPOINTS[provider];
+	const headers: Record<string, string> = {
+		Authorization: `Bearer ${args.apiKey}`,
+		"Content-Type": "application/json",
+	};
+	// OpenRouter-specific attribution headers (Gemini ignores them).
+	if (provider === "openrouter") {
+		if (args.referer) headers["HTTP-Referer"] = args.referer;
+		if (args.title) headers["X-Title"] = args.title;
+	}
+
+	const res = await fetch(endpoint, {
 		method: "POST",
 		signal: args.signal,
-		headers: {
-			Authorization: `Bearer ${args.apiKey}`,
-			"Content-Type": "application/json",
-			...(args.referer ? { "HTTP-Referer": args.referer } : {}),
-			...(args.title ? { "X-Title": args.title } : {}),
-		},
+		headers,
 		body: JSON.stringify({
 			model: args.model,
 			stream: true,
@@ -85,12 +163,15 @@ export async function* streamOpenRouter(
 	if (!res.ok || !res.body) {
 		const detail = res.body ? await safeText(res) : "";
 		throw new Error(
-			`OpenRouter responded ${res.status}${detail ? `: ${detail.slice(0, 200)}` : ""}`,
+			`${provider} responded ${res.status}${detail ? `: ${detail.slice(0, 200)}` : ""}`,
 		);
 	}
 
 	yield* parseSseStream(res.body, args.signal);
 }
+
+/** Legacy alias preserved for tests and the `api.agent.ts` import. */
+export const streamOpenRouter = streamLlm;
 
 async function safeText(res: Response): Promise<string> {
 	try {
@@ -100,14 +181,16 @@ async function safeText(res: Response): Promise<string> {
 	}
 }
 
+// ─── SSE parser (shared across providers) ───────────────────────────────
+
 type FrameOutcome =
-	| { kind: "token"; text: string; usage?: OpenRouterUsage }
-	| { kind: "usage"; usage: OpenRouterUsage }
-	| { kind: "done"; usage?: OpenRouterUsage }
+	| { kind: "token"; text: string; usage?: LlmUsage }
+	| { kind: "usage"; usage: LlmUsage }
+	| { kind: "done"; usage?: LlmUsage }
 	| { kind: "skip" };
 
 /**
- * Parse an OpenAI-style SSE stream into `OpenRouterEvent`s.
+ * Parse an OpenAI-style SSE stream into `LlmEvent`s.
  *
  * Splits on `\n\n` event boundaries, then on `\n` lines, only consuming
  * `data:` lines. JSON parse errors and empty deltas are skipped silently
@@ -121,11 +204,11 @@ type FrameOutcome =
 export async function* parseSseStream(
 	body: ReadableStream<Uint8Array>,
 	signal?: AbortSignal,
-): AsyncGenerator<OpenRouterEvent, void, void> {
+): AsyncGenerator<LlmEvent, void, void> {
 	const reader = body.getReader();
 	const decoder = new TextDecoder();
 	let buffer = "";
-	let lastUsage: OpenRouterUsage | undefined;
+	let lastUsage: LlmUsage | undefined;
 
 	const onAbort = () => {
 		reader.cancel("aborted").catch(() => {});
@@ -179,7 +262,7 @@ export async function* parseSseStream(
 }
 
 function parseFrame(frame: string): FrameOutcome {
-	let usage: OpenRouterUsage | undefined;
+	let usage: LlmUsage | undefined;
 	for (const line of frame.split("\n")) {
 		if (!line.startsWith("data:")) continue;
 		const payload = line.slice(5).trim();
@@ -190,7 +273,7 @@ function parseFrame(frame: string): FrameOutcome {
 		try {
 			const json = JSON.parse(payload) as {
 				choices?: Array<{ delta?: { content?: string } }>;
-				usage?: OpenRouterUsage;
+				usage?: LlmUsage;
 			};
 			if (json.usage) usage = json.usage;
 			const text = json.choices?.[0]?.delta?.content;
