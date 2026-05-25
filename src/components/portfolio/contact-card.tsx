@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { Pill } from "#/components/ui/pill";
 import { siteMeta } from "#/content/site";
 import { cn } from "#/lib/utils";
 
@@ -10,7 +11,6 @@ type RowProps = {
 	onClick?: () => void;
 	value: React.ReactNode;
 	testId: string;
-	highlighted?: boolean;
 };
 
 function ContactRow({
@@ -20,30 +20,25 @@ function ContactRow({
 	onClick,
 	value,
 	testId,
-	highlighted,
 }: RowProps) {
 	const externalAttrs = external
 		? { target: "_blank" as const, rel: "noreferrer" }
 		: undefined;
-	const rowClass = cn(
-		"flex items-center gap-6 rounded-md border bg-bg-elev/60 px-5 py-4 transition-colors",
-		highlighted
-			? "border-accent/70 shadow-[0_0_0_1px_color-mix(in_oklch,var(--accent)_30%,transparent)]"
-			: "border-border/70 hover:border-border",
-	);
+	const rowClass =
+		"flex items-center gap-6 rounded-md border border-border/70 bg-bg-elev/60 px-5 py-4 transition-[colors,box-shadow] duration-base hover:border-accent/60 hover:shadow-glow focus-visible:outline-none focus-visible:border-accent/70 focus-visible:shadow-glow-strong";
 
 	const labelEl = (
-		<span className="w-24 shrink-0 font-mono text-[13.5px] text-muted">
+		<span className="w-24 shrink-0 font-mono text-base text-muted">
 			{label}
 		</span>
 	);
 	const arrowEl = (
-		<span aria-hidden="true" className="text-muted">
+		<span aria-hidden="true" className="font-mono text-base text-muted">
 			→
 		</span>
 	);
 	const valueEl = (
-		<span className="flex-1 font-mono text-[13.5px] text-link">{value}</span>
+		<span className="flex-1 font-mono text-base text-link">{value}</span>
 	);
 
 	if (href) {
@@ -52,10 +47,7 @@ function ContactRow({
 				data-testid={testId}
 				href={href}
 				{...externalAttrs}
-				className={cn(
-					rowClass,
-					"focus-visible:outline-none focus-visible:border-accent/70",
-				)}
+				className={rowClass}
 			>
 				{labelEl}
 				{arrowEl}
@@ -69,10 +61,7 @@ function ContactRow({
 				type="button"
 				data-testid={testId}
 				onClick={onClick}
-				className={cn(
-					rowClass,
-					"text-left focus-visible:outline-none focus-visible:border-accent/70",
-				)}
+				className={cn(rowClass, "text-left")}
 			>
 				{labelEl}
 				{arrowEl}
@@ -124,7 +113,7 @@ export function ContactCard() {
 	return (
 		<div
 			data-testid="contact-card"
-			className="flex flex-col gap-3 rounded-xl border border-border/70 bg-bg-elev/40 p-3 sm:p-5"
+			className="flex flex-col gap-3 rounded-card border border-border/70 bg-bg-elev/40 p-3 sm:p-5"
 		>
 			<ContactRow
 				testId="contact-github"
@@ -138,7 +127,6 @@ export function ContactCard() {
 				label="linkedin"
 				href={siteMeta.links.linkedin}
 				external
-				highlighted
 				value={linkedin.replace(/^(?:www\.)?linkedin\.com\/in\//, "")}
 			/>
 			<ContactRow
@@ -159,11 +147,11 @@ export function ContactCard() {
 				label="terminal"
 				onClick={() => navigate({ to: "/terminal" })}
 				value={
-					<span className="inline-flex items-center gap-2">
+					<span className="inline-flex items-center gap-2.5">
 						open the agentic terminal
-						<span className="rounded-sm border border-border/70 bg-bg/60 px-1.5 py-0.5 font-mono text-[10px] text-muted">
+						<Pill size="xs" tone="muted">
 							press t
-						</span>
+						</Pill>
 					</span>
 				}
 			/>

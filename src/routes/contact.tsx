@@ -32,7 +32,7 @@ function ContactRoute() {
 				<ContactCard />
 				<p
 					data-testid="contact-hint"
-					className="text-center font-mono text-[12.5px] text-muted"
+					className="text-center font-mono text-sm text-muted"
 				>
 					<span className="text-accent">hint:</span> email is the fastest way to
 					reach me

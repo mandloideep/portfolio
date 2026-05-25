@@ -1,5 +1,8 @@
+import { AnimatedShinyText } from "#/components/ui/animated-shiny-text";
 import { CommandPrompt } from "#/components/ui/command-prompt";
 import { siteMeta } from "#/content/site";
+import { useQuip } from "#/hooks/use-quip";
+import { useReducedMotion } from "#/hooks/use-reduced-motion";
 import { cn } from "#/lib/utils";
 
 type MetaRow = { label: string; value: React.ReactNode };
@@ -13,6 +16,8 @@ type MetaRow = { label: string; value: React.ReactNode };
  */
 export function Hero({ className }: { className?: string }) {
 	const nickname = "Deep";
+	const reduced = useReducedMotion();
+	const quip = useQuip();
 	const meta: MetaRow[] = [
 		{
 			label: "focus",
@@ -49,11 +54,11 @@ export function Hero({ className }: { className?: string }) {
 		<div data-testid="hero" className={cn("flex flex-col gap-5", className)}>
 			<CommandPrompt command="cat whoami" />
 
-			<article className="rounded-xl border border-border/80 bg-bg-elev/60 px-7 py-8 sm:px-9 sm:py-9">
+			<article className="rounded-card border border-border/80 bg-bg-elev/60 px-7 py-8 sm:px-9 sm:py-9">
 				<header className="flex flex-col gap-2">
 					<h2
 						data-testid="hero-name"
-						className="font-mono text-[clamp(2rem,5.2vw,3.05rem)] font-semibold leading-[1.05] tracking-tight text-fg"
+						className="font-mono text-display font-semibold leading-tight tracking-tight text-fg"
 					>
 						{siteMeta.name} <span className="text-accent">({nickname})</span>
 					</h2>
@@ -61,7 +66,7 @@ export function Hero({ className }: { className?: string }) {
 						href={siteMeta.links.resume}
 						target="_blank"
 						rel="noreferrer"
-						className="w-fit font-mono text-[1.05rem] text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline sm:text-[1.125rem]"
+						className="w-fit font-mono text-md text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline sm:text-lg"
 					>
 						{siteMeta.role}
 					</a>
@@ -70,10 +75,10 @@ export function Hero({ className }: { className?: string }) {
 				<dl className="mt-7 grid grid-cols-1 gap-x-12 gap-y-2 sm:grid-cols-2">
 					{meta.map((row) => (
 						<div key={row.label} className="flex items-baseline gap-5 py-1.5">
-							<dt className="w-28 shrink-0 font-mono text-[13.5px] text-muted">
+							<dt className="w-28 shrink-0 font-mono text-sm text-muted">
 								{row.label}:
 							</dt>
-							<dd className="flex-1 font-mono text-[13.5px]">{row.value}</dd>
+							<dd className="flex-1 font-mono text-sm">{row.value}</dd>
 						</div>
 					))}
 				</dl>
@@ -82,9 +87,15 @@ export function Hero({ className }: { className?: string }) {
 
 				<p
 					data-testid="hero-quip"
-					className="font-mono text-[15px] italic text-accent"
+					className="font-mono text-base italic text-accent"
 				>
-					“{siteMeta.quip}”
+					{reduced ? (
+						`“${quip}”`
+					) : (
+						<AnimatedShinyText className="mx-0 max-w-none text-accent">
+							{`“${quip}”`}
+						</AnimatedShinyText>
+					)}
 				</p>
 			</article>
 		</div>

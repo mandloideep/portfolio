@@ -5,29 +5,34 @@ import { cn } from "#/lib/utils";
 type TerminalFrameProps = {
 	title?: string;
 	chrome?: ReactNode;
+	controls?: ReactNode;
+	closeTo?: string;
 	children: ReactNode;
 	className?: string;
 };
 
 /**
  * Editorial-workstation terminal window. Renders the macOS chrome + a
- * subtle elevated container that hosts the page's content. `chrome` lets
- * the caller slot a top-tab strip directly below the title bar.
+ * subtle elevated container that hosts the page's content. `chrome` slots
+ * a top-tab strip directly below the title bar; `controls` slots controls
+ * (theme, density) on the chrome's right side.
  */
 export function TerminalFrame({
-	title = "soney — portfolio — 80×24",
+	title = "~ — portfolio",
 	chrome,
+	controls,
+	closeTo,
 	children,
 	className,
 }: TerminalFrameProps) {
 	return (
 		<div
 			className={cn(
-				"mx-auto w-full max-w-5xl overflow-hidden rounded-xl border border-border/80 bg-bg-elev shadow-[0_1px_0_var(--color-border),0_30px_60px_-20px_rgba(0,0,0,0.55)]",
+				"mx-auto w-full max-w-5xl overflow-hidden rounded-card border border-border/80 bg-bg-elev shadow-frame",
 				className,
 			)}
 		>
-			<Chrome title={title} />
+			<Chrome title={title} controls={controls} closeTo={closeTo} />
 			{chrome ? (
 				<div className="border-b border-border/70 bg-bg-elev/95">{chrome}</div>
 			) : null}

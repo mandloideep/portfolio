@@ -31,8 +31,8 @@ export function MobileQuickChips() {
 						void submit(cmd);
 					}}
 					className={cn(
-						"shrink-0 inline-flex items-center h-9 rounded-md border border-border/80 bg-bg/70 px-3 font-mono text-[12.5px] font-medium text-fg/90",
-						"transition-colors hover:border-accent/60 hover:bg-accent/10 hover:text-accent",
+						"shrink-0 inline-flex items-center h-10 rounded-md border border-border/80 bg-bg/70 px-3.5 font-mono text-sm font-medium text-fg/90",
+						"transition-colors duration-base hover:border-accent/60 hover:bg-accent/10 hover:text-accent",
 						"active:bg-accent/20 active:border-accent",
 						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0",
 					)}

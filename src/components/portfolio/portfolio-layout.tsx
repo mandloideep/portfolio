@@ -1,7 +1,12 @@
 import type { ReactNode } from "react";
 import { TerminalFrame } from "#/components/ui/terminal-frame";
 import { siteMeta } from "#/content/site";
+import { useDensity } from "#/hooks/use-density";
+import { DensityToggle } from "./density-toggle";
+import { DesktopTerminalIcon } from "./desktop-terminal-icon";
 import { Footer } from "./footer";
+import { HelloLoader } from "./hello-loader";
+import { ThemeSwitcher } from "./theme-switcher";
 import { type TopTab, TopTabs } from "./top-tabs";
 
 const TABS: readonly TopTab[] = [
@@ -18,14 +23,23 @@ const TABS: readonly TopTab[] = [
  * the footer. Page-level routes drop their content as children.
  */
 export function PortfolioLayout({ children }: { children: ReactNode }) {
+	useDensity();
 	return (
 		<div
 			data-page="portfolio"
 			className="surface-grain relative min-h-screen bg-bg px-3 py-5 sm:px-6 sm:py-8"
 		>
+			<HelloLoader />
 			<TerminalFrame
 				className="max-w-[min(82rem,90vw)]"
-				title={`${siteMeta.name.split(" ")[0]?.toLowerCase()} — portfolio — 80×24`}
+				title={`${siteMeta.name.split(" ")[0]?.toLowerCase()} — portfolio`}
+				closeTo="/terminal"
+				controls={
+					<>
+						<DensityToggle />
+						<ThemeSwitcher />
+					</>
+				}
 				chrome={<TopTabs items={TABS} />}
 			>
 				<main id="main" className="flex flex-col">
@@ -36,6 +50,7 @@ export function PortfolioLayout({ children }: { children: ReactNode }) {
 					<Footer />
 				</main>
 			</TerminalFrame>
+			<DesktopTerminalIcon />
 		</div>
 	);
 }

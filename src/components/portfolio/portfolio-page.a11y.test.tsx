@@ -17,9 +17,12 @@ vi.mock("@tanstack/react-router", async () => {
 		useRouterState: () => "/",
 		Link: ({
 			children,
+			to,
 			...rest
-		}: React.PropsWithChildren<Record<string, unknown>>) => (
-			<a {...(rest as Record<string, string>)}>{children}</a>
+		}: React.PropsWithChildren<{ to?: string } & Record<string, unknown>>) => (
+			<a href={to as string} {...(rest as Record<string, string>)}>
+				{children}
+			</a>
 		),
 	};
 });

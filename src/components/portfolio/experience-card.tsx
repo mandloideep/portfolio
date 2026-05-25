@@ -1,6 +1,8 @@
 import { useId, useState } from "react";
+import { Card } from "#/components/ui/card";
+import { Pill } from "#/components/ui/pill";
+import { TechIcon } from "#/components/ui/tech-icon";
 import type { Experience } from "#/content/site";
-import { cn } from "#/lib/utils";
 
 export interface ExperienceCardProps {
 	entry: Experience;
@@ -45,9 +47,8 @@ function formatRange(start: string, end: string): string {
 
 /**
  * Collapsible experience entry. Header shows role + tag chips + date
- * range; body (bullets + summary tags) is hidden until expanded. The
- * currently-active job (end="present") and the first entry on the page
- * default to expanded — controlled by the parent via `defaultExpanded`.
+ * range; body (bullets) hidden until expanded. Current role (end="present")
+ * gets the accent glow and auto-expands.
  */
 export function ExperienceCard({
 	entry,
@@ -59,15 +60,12 @@ export function ExperienceCard({
 	const panelId = useId();
 
 	return (
-		<li
+		<Card
+			as="li"
+			tone={isCurrent ? "accent" : "default"}
 			data-testid={`experience-card-${index}`}
 			data-expanded={expanded ? "true" : "false"}
-			className={cn(
-				"rounded-md border bg-bg-elev/50 transition-colors",
-				expanded
-					? "border-accent/60 shadow-[0_0_0_1px_color-mix(in_oklch,var(--accent)_25%,transparent)]"
-					: "border-border/70 hover:border-border",
-			)}
+			data-current={isCurrent ? "true" : "false"}
 		>
 			<button
 				type="button"
@@ -79,29 +77,26 @@ export function ExperienceCard({
 			>
 				<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
 					<div className="flex flex-wrap items-center gap-2.5">
-						<h3 className="text-[15px] text-accent">{entry.role}</h3>
+						<h3 className="text-md text-accent">{entry.role}</h3>
 						<div className="flex flex-wrap items-center gap-1.5">
 							{entry.tags.map((tag) => (
-								<span
-									key={tag}
-									data-slot="badge"
-									className="inline-flex items-center rounded-sm border border-border/70 bg-bg/40 px-1.5 py-0.5 text-[10.5px] text-fg/80"
-								>
+								<Pill key={tag} size="xs" className="gap-1.5">
+									<TechIcon label={tag} className="size-3 text-fg/70" />
 									{tag}
-								</span>
+								</Pill>
 							))}
 						</div>
 					</div>
 					<span
 						data-testid={`experience-dates-${index}`}
-						className="shrink-0 text-[12px] tracking-wider text-muted [font-variant-numeric:tabular-nums]"
+						className="shrink-0 text-meta tracking-wide text-muted [font-variant-numeric:tabular-nums]"
 					>
 						{formatRange(entry.start, entry.end)}
 					</span>
 				</div>
 				<div className="flex flex-wrap items-center justify-between gap-2">
-					<div className="text-[13px] text-link">{entry.company}</div>
-					<span aria-hidden="true" className="text-[11px] text-muted">
+					<div className="text-sm text-link">{entry.company}</div>
+					<span aria-hidden="true" className="text-meta text-muted">
 						{expanded ? "▼ click to collapse" : "▶ click to expand"}
 					</span>
 				</div>
@@ -112,7 +107,7 @@ export function ExperienceCard({
 					id={panelId}
 					className="border-t border-border/60 px-5 py-5 sm:px-7 sm:py-6"
 				>
-					<ul className="flex flex-col gap-2.5 font-mono text-[13.5px] leading-[1.65] text-fg/90">
+					<ul className="flex flex-col gap-2.5 font-mono text-base leading-relaxed text-fg/90">
 						{entry.bullets.map((bullet) => (
 							<li key={bullet} className="flex gap-2.5">
 								<span
@@ -132,6 +127,6 @@ export function ExperienceCard({
 					current role
 				</span>
 			) : null}
-		</li>
+		</Card>
 	);
 }

@@ -1,5 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { QUIPS } from "#/content/quips";
 import { siteMeta } from "#/content/site";
 import { Hero } from "./hero";
 
@@ -19,9 +20,11 @@ describe("Hero", () => {
 		expect(container.textContent).toContain(siteMeta.status);
 	});
 
-	it("renders the quip from siteMeta", () => {
+	it("renders a quip from the QUIPS list", () => {
 		const { getByTestId } = render(<Hero />);
-		expect(getByTestId("hero-quip").textContent).toContain(siteMeta.quip);
+		const text = getByTestId("hero-quip").textContent ?? "";
+		const matched = QUIPS.some((q) => text.includes(q));
+		expect(matched).toBe(true);
 	});
 
 	it("renders the cat whoami command prompt above the card", () => {

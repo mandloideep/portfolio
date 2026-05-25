@@ -228,6 +228,17 @@ export const experience: Experience[] = z.array(ExperienceSchema).parse([
 
 // ─── Research ───────────────────────────────────────────────────────────
 
+const TimelineStatus = z.enum(["done", "wip", "pending"]);
+export type TimelineStatusT = z.infer<typeof TimelineStatus>;
+
+const TimelineItemSchema = z.object({
+	label: z.string().min(1),
+	status: TimelineStatus,
+	range: z.string().optional(),
+});
+
+export type TimelineItem = z.infer<typeof TimelineItemSchema>;
+
 const ResearchSchema = z.object({
 	slug: z.string().regex(/^[a-z0-9-]+$/),
 	title: z.string().min(1),
@@ -235,6 +246,13 @@ const ResearchSchema = z.object({
 	year: z.number().int().gte(2000),
 	abstract: z.string().min(1),
 	tags: z.array(z.string()),
+	links: z
+		.object({
+			github: z.string().url().optional(),
+			poster: z.string().url().optional(),
+		})
+		.optional(),
+	timeline: z.array(TimelineItemSchema).optional(),
 });
 
 export type Research = z.infer<typeof ResearchSchema>;
@@ -243,20 +261,37 @@ export const research: Research[] = z.array(ResearchSchema).parse([
 	{
 		slug: "agent-tooluse-campus",
 		title: "Tool-use patterns for narrow-domain campus agents",
-		venue: "NEIU undergraduate research symposium",
+		venue: "NEIU undergraduate research symposium · Advisor: Prof. Jing Su",
 		year: 2025,
 		abstract:
-			"How constrained tool surfaces and a small local-context corpus outperform open browsing for campus-facing agents.",
-		tags: ["Agents", "LLM", "Tool-use"],
+			"How constrained tool surfaces and a small local-context corpus outperform open browsing for campus-facing agents. Built a testbed with multiple LLM backends and tool inventories to compare grounding strategies under real student queries.",
+		tags: ["Agents", "LLM", "Tool-use", "OpenRouter", "Evals"],
+		links: {
+			github: "https://github.com/deepmandloi/agent-tooluse-campus",
+		},
+		timeline: [
+			{ label: "Literature review", status: "done", range: "Sep 1 — Sep 22" },
+			{
+				label: "Testbed + tool inventory",
+				status: "done",
+				range: "Sep 23 — Oct 20",
+			},
+			{ label: "Experiments", status: "wip", range: "Oct 21 — Nov 30" },
+			{
+				label: "Write-up & symposium",
+				status: "pending",
+				range: "Dec 1 — Dec 12",
+			},
+		],
 	},
 	{
 		slug: "menu-scraping-resilience",
 		title: "Resilient menu scraping across heterogeneous dining APIs",
-		venue: "internal write-up",
+		venue: "Internal write-up · mydininghall.com",
 		year: 2024,
 		abstract:
-			"Plugin adapter design plus circuit-breaker patterns to keep menus fresh across 10+ upstream vendors.",
-		tags: ["Scraping", "Resilience", "Python"],
+			"Plugin adapter design plus circuit-breaker patterns to keep menus fresh across 10+ upstream vendors. Trade-off study between freshness, retry budget, and downstream cache coherence under real production load.",
+		tags: ["Scraping", "Resilience", "Python", "Celery"],
 	},
 ]);
 

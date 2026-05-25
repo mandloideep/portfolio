@@ -36,7 +36,7 @@ function ProjectStatBlock({ project }: { project: Project }) {
 					)
 				}
 			/>
-			<p className="max-w-3xl font-mono text-[14px] leading-[1.7] text-fg/85">
+			<p className="max-w-3xl font-mono text-sm leading-relaxed text-fg/85">
 				{project.pitch ?? project.summary}
 			</p>
 			<div

@@ -45,7 +45,7 @@ export function BlockRow({ block }: { block: Block }) {
 						"whitespace-pre-wrap border-l-2 border-error pl-3 text-error",
 					)}
 				>
-					<span className="mr-2 select-none font-semibold uppercase tracking-[0.18em] text-error/80 text-[11px]">
+					<span className="mr-2 select-none font-semibold uppercase tracking-eyebrow text-error/80 text-eyebrow">
 						err
 					</span>
 					{block.text}
@@ -54,7 +54,7 @@ export function BlockRow({ block }: { block: Block }) {
 		case "system":
 			return (
 				<div data-block="system" className="whitespace-pre-wrap text-muted">
-					<span className="mr-2 select-none font-semibold uppercase tracking-[0.18em] text-muted/80 text-[11px]">
+					<span className="mr-2 select-none font-semibold uppercase tracking-eyebrow text-muted/80 text-eyebrow">
 						sys
 					</span>
 					{block.text}
@@ -64,7 +64,7 @@ export function BlockRow({ block }: { block: Block }) {
 			return (
 				<div
 					data-block="activity"
-					className="flex gap-2 whitespace-pre-wrap text-muted text-xs"
+					className="flex gap-2 whitespace-pre-wrap text-muted text-meta"
 				>
 					<span className="shrink-0 select-none text-muted/60">
 						[{formatTs(block.ts)}]

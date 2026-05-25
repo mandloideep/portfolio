@@ -19,10 +19,10 @@ export function ThemeSwitcher() {
 					data-testid="theme-switcher"
 					variant="ghost"
 					size="sm"
-					className="gap-2 font-mono text-xs text-fg/80 hover:bg-accent/10 hover:text-accent"
+					className="h-7 gap-1.5 rounded-md border border-border/70 bg-bg/40 px-2 font-mono text-meta text-muted hover:bg-accent/10 hover:text-accent"
 				>
-					<Palette className="size-3.5" aria-hidden="true" />
-					<span>{activeName}</span>
+					<Palette className="size-3" aria-hidden="true" />
+					<span className="hidden sm:inline">{activeName}</span>
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent

@@ -4,14 +4,17 @@ import { research } from "#/content/site";
 import { ResearchList } from "./research-list";
 
 describe("ResearchList", () => {
-	it("renders one <li> per research entry", () => {
+	it("renders one card <li> per research entry", () => {
 		const { container } = render(<ResearchList />);
-		expect(container.querySelectorAll("li").length).toBe(research.length);
+		const cards = container.querySelectorAll('[data-testid^="research-card-"]');
+		expect(cards.length).toBe(research.length);
 	});
 
 	it("orders entries by year descending", () => {
 		const { container } = render(<ResearchList />);
-		const cards = container.querySelectorAll('[data-testid^="research-card-"]');
+		const cards = container.querySelectorAll(
+			'[data-testid^="research-card-"]:not([data-testid*="timeline"]):not([data-testid*="link"])',
+		);
 		const sortedByYear = [...research].sort((a, b) => b.year - a.year);
 		Array.from(cards).forEach((card, i) => {
 			expect(card.getAttribute("data-testid")).toBe(
@@ -24,11 +27,10 @@ describe("ResearchList", () => {
 		const { getByTestId } = render(<ResearchList />);
 		for (const entry of research) {
 			const card = getByTestId(`research-card-${entry.slug}`);
-			const scope = within(card);
-			expect(scope.getByText(String(entry.year))).toBeInTheDocument();
-			expect(scope.getByText(entry.venue)).toBeInTheDocument();
-			expect(scope.getByText(entry.title)).toBeInTheDocument();
-			expect(scope.getByText(entry.abstract)).toBeInTheDocument();
+			expect(card.textContent).toContain(String(entry.year));
+			expect(card.textContent).toContain(entry.venue);
+			expect(within(card).getByText(entry.title)).toBeInTheDocument();
+			expect(within(card).getByText(entry.abstract)).toBeInTheDocument();
 		}
 	});
 

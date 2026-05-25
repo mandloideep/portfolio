@@ -14,16 +14,48 @@ vi.mock("@tanstack/react-router", async () => {
 		useRouterState: () => "/",
 		Link: ({
 			children,
+			to,
 			...rest
-		}: React.PropsWithChildren<Record<string, unknown>>) => (
-			<a {...(rest as Record<string, string>)}>{children}</a>
+		}: React.PropsWithChildren<{ to?: string } & Record<string, unknown>>) => (
+			<a href={to as string} {...(rest as Record<string, string>)}>
+				{children}
+			</a>
 		),
 	};
 });
 
 import { PortfolioPage } from "./portfolio-page";
 
+class MockIO {
+	observe() {}
+	unobserve() {}
+	disconnect() {}
+	takeRecords() {
+		return [];
+	}
+	root = null;
+	rootMargin = "";
+	thresholds = [];
+}
+
 beforeEach(() => {
+	Object.defineProperty(window, "matchMedia", {
+		writable: true,
+		configurable: true,
+		value: vi.fn().mockImplementation((query: string) => ({
+			matches: false,
+			media: query,
+			onchange: null,
+			addEventListener: vi.fn(),
+			removeEventListener: vi.fn(),
+			addListener: vi.fn(),
+			removeListener: vi.fn(),
+			dispatchEvent: vi.fn(),
+		})),
+	});
+	(
+		globalThis as unknown as { IntersectionObserver: typeof MockIO }
+	).IntersectionObserver = MockIO;
 	vi.stubGlobal(
 		"fetch",
 		vi.fn<typeof fetch>().mockReturnValue(new Promise(() => {})),

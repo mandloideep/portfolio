@@ -23,10 +23,10 @@ export function StatusFooter() {
 	return (
 		<div
 			data-testid="status-footer"
-			className="flex items-center justify-between gap-3 border-t border-border bg-bg-elev/95 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted [font-variant-numeric:tabular-nums]"
+			className="flex items-center justify-between gap-3 border-t border-border bg-bg-elev/95 px-4 py-2.5 font-mono text-meta uppercase tracking-tab text-muted [font-variant-numeric:tabular-nums]"
 		>
 			<div className="flex items-center gap-2.5 min-w-0">
-				<span className="rounded-sm border border-border/70 bg-bg/60 px-1.5 py-0.5 font-semibold tracking-[0.16em] text-fg/90">
+				<span className="rounded-chip border border-border/70 bg-bg/60 px-1.5 py-0.5 font-semibold tracking-tab text-fg/90">
 					{mode}
 				</span>
 				<span className="select-none text-muted/40" aria-hidden="true">
