@@ -6,10 +6,23 @@ import * as matchers from "vitest-axe/matchers";
 // biome-ignore lint/suspicious/noExplicitAny: vitest-axe matchers shape varies between vitest majors
 expect.extend(matchers as any);
 
-vi.mock("@tanstack/react-router", () => ({
-	useNavigate: () => vi.fn(),
-	useSearch: () => ({}),
-}));
+vi.mock("@tanstack/react-router", async () => {
+	const actual = await vi.importActual<typeof import("@tanstack/react-router")>(
+		"@tanstack/react-router",
+	);
+	return {
+		...actual,
+		useNavigate: () => vi.fn(),
+		useSearch: () => ({}),
+		useRouterState: () => "/",
+		Link: ({
+			children,
+			...rest
+		}: React.PropsWithChildren<Record<string, unknown>>) => (
+			<a {...(rest as Record<string, string>)}>{children}</a>
+		),
+	};
+});
 
 import { PortfolioPage } from "./portfolio-page";
 

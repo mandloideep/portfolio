@@ -1,48 +1,29 @@
 import { render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { projects, siteMeta } from "#/content/site";
 
 const navigateMock = vi.fn();
-vi.mock("@tanstack/react-router", () => ({
-	useNavigate: () => navigateMock,
-	useSearch: () => ({}),
-}));
+vi.mock("@tanstack/react-router", async () => {
+	const actual = await vi.importActual<typeof import("@tanstack/react-router")>(
+		"@tanstack/react-router",
+	);
+	return {
+		...actual,
+		useNavigate: () => navigateMock,
+		useSearch: () => ({}),
+		useRouterState: () => "/",
+		Link: ({
+			children,
+			...rest
+		}: React.PropsWithChildren<Record<string, unknown>>) => (
+			<a {...(rest as Record<string, string>)}>{children}</a>
+		),
+	};
+});
 
 import { PortfolioPage } from "./portfolio-page";
 
-class MockIO {
-	observe() {}
-	unobserve() {}
-	disconnect() {}
-	takeRecords() {
-		return [];
-	}
-	root = null;
-	rootMargin = "";
-	thresholds = [];
-}
-
-function mockMatchMedia(reduced: boolean) {
-	Object.defineProperty(window, "matchMedia", {
-		writable: true,
-		configurable: true,
-		value: vi.fn().mockImplementation((query: string) => ({
-			matches: reduced && query.includes("reduced"),
-			media: query,
-			onchange: null,
-			addEventListener: vi.fn(),
-			removeEventListener: vi.fn(),
-			addListener: vi.fn(),
-			removeListener: vi.fn(),
-			dispatchEvent: vi.fn(),
-		})),
-	});
-}
-
 beforeEach(() => {
-	mockMatchMedia(false);
-	(
-		globalThis as unknown as { IntersectionObserver: typeof MockIO }
-	).IntersectionObserver = MockIO;
 	vi.stubGlobal(
 		"fetch",
 		vi.fn<typeof fetch>().mockReturnValue(new Promise(() => {})),
@@ -53,21 +34,16 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-const EXPECTED_IDS = [
-	"hero",
-	"projects",
-	"experience",
-	"research",
-	"github",
-	"contact",
-];
+describe("PortfolioPage (whoami)", () => {
+	it("renders the hero profile card", () => {
+		const { getByTestId } = render(<PortfolioPage />);
+		expect(getByTestId("hero")).toBeInTheDocument();
+		expect(getByTestId("hero-name").textContent).toContain(siteMeta.name);
+	});
 
-describe("PortfolioPage", () => {
-	it("renders all section scaffolds with the expected ids", () => {
+	it("marks the root with data-page=portfolio for page-scoped styling", () => {
 		const { container } = render(<PortfolioPage />);
-		for (const id of EXPECTED_IDS) {
-			expect(container.querySelector(`#${id}`)).not.toBeNull();
-		}
+		expect(container.querySelector('[data-page="portfolio"]')).not.toBeNull();
 	});
 
 	it("renders the top-tab nav", () => {
@@ -75,16 +51,35 @@ describe("PortfolioPage", () => {
 		expect(getByTestId("top-tabs")).toBeInTheDocument();
 	});
 
-	it("renders one top-tab per section", () => {
+	it("renders a top-tab for each portfolio section", () => {
 		const { getByTestId } = render(<PortfolioPage />);
-		for (const id of EXPECTED_IDS) {
+		for (const id of [
+			"hero",
+			"projects",
+			"experience",
+			"research",
+			"contact",
+		]) {
 			expect(getByTestId(`top-tab-${id}`)).toBeInTheDocument();
 		}
 	});
 
-	it("marks the root with data-page=portfolio for page-scoped styling", () => {
-		const { container } = render(<PortfolioPage />);
-		expect(container.querySelector('[data-page="portfolio"]')).not.toBeNull();
+	it("renders a stat block for every featured project that ships stats", () => {
+		const { getByTestId } = render(<PortfolioPage />);
+		const featured = projects.filter((p) => p.featured && p.stats);
+		for (const p of featured) {
+			expect(getByTestId(`whoami-stat-${p.slug}`)).toBeInTheDocument();
+		}
+	});
+
+	it("renders the GitHub graph block at the bottom", () => {
+		const { getByTestId } = render(<PortfolioPage />);
+		expect(getByTestId("github-graph")).toBeInTheDocument();
+	});
+
+	it("renders the footer", () => {
+		const { getByTestId } = render(<PortfolioPage />);
+		expect(getByTestId("portfolio-footer")).toBeInTheDocument();
 	});
 
 	it("renders exactly one <main id='main'> landmark", () => {
@@ -100,21 +95,5 @@ describe("PortfolioPage", () => {
 		expect(h1).not.toBeNull();
 		expect(h1?.className).toMatch(/sr-only/);
 		expect(h1?.textContent).toMatch(/deep/i);
-	});
-
-	it("renders the research list in the research section", () => {
-		const { getByTestId } = render(<PortfolioPage />);
-		expect(getByTestId("research-list")).toBeInTheDocument();
-	});
-
-	it("renders GithubGraph in the github section", () => {
-		const { getByTestId } = render(<PortfolioPage />);
-		expect(getByTestId("github-graph")).toBeInTheDocument();
-	});
-
-	it("renders the contact card and footer", () => {
-		const { getByTestId } = render(<PortfolioPage />);
-		expect(getByTestId("contact-card")).toBeInTheDocument();
-		expect(getByTestId("portfolio-footer")).toBeInTheDocument();
 	});
 });

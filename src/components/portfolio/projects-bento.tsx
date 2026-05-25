@@ -17,7 +17,7 @@ function orderedProjects(): Project[] {
  */
 export function ProjectsBento() {
 	const navigate = useNavigate();
-	const search = useSearch({ from: "/" });
+	const search = useSearch({ strict: false }) as { project?: string };
 	const activeSlug =
 		typeof search.project === "string" ? search.project : undefined;
 
@@ -27,7 +27,7 @@ export function ProjectsBento() {
 	function handleToggle(slug: string) {
 		const next = slug === activeSlug ? undefined : slug;
 		navigate({
-			to: "/",
+			to: "/projects",
 			search: (prev) => ({ ...prev, project: next }),
 			replace: false,
 		});

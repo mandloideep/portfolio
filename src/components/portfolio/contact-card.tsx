@@ -1,7 +1,93 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { KVRow } from "#/components/ui/kv-row";
 import { siteMeta } from "#/content/site";
+import { cn } from "#/lib/utils";
+
+type RowProps = {
+	label: string;
+	href?: string;
+	external?: boolean;
+	onClick?: () => void;
+	value: React.ReactNode;
+	testId: string;
+	highlighted?: boolean;
+};
+
+function ContactRow({
+	label,
+	href,
+	external,
+	onClick,
+	value,
+	testId,
+	highlighted,
+}: RowProps) {
+	const externalAttrs = external
+		? { target: "_blank" as const, rel: "noreferrer" }
+		: undefined;
+	const rowClass = cn(
+		"flex items-center gap-6 rounded-md border bg-bg-elev/60 px-5 py-4 transition-colors",
+		highlighted
+			? "border-accent/70 shadow-[0_0_0_1px_color-mix(in_oklch,var(--accent)_30%,transparent)]"
+			: "border-border/70 hover:border-border",
+	);
+
+	const labelEl = (
+		<span className="w-24 shrink-0 font-mono text-[13.5px] text-muted">
+			{label}
+		</span>
+	);
+	const arrowEl = (
+		<span aria-hidden="true" className="text-muted">
+			→
+		</span>
+	);
+	const valueEl = (
+		<span className="flex-1 font-mono text-[13.5px] text-link">{value}</span>
+	);
+
+	if (href) {
+		return (
+			<a
+				data-testid={testId}
+				href={href}
+				{...externalAttrs}
+				className={cn(
+					rowClass,
+					"focus-visible:outline-none focus-visible:border-accent/70",
+				)}
+			>
+				{labelEl}
+				{arrowEl}
+				{valueEl}
+			</a>
+		);
+	}
+	if (onClick) {
+		return (
+			<button
+				type="button"
+				data-testid={testId}
+				onClick={onClick}
+				className={cn(
+					rowClass,
+					"text-left focus-visible:outline-none focus-visible:border-accent/70",
+				)}
+			>
+				{labelEl}
+				{arrowEl}
+				{valueEl}
+			</button>
+		);
+	}
+	return (
+		<div className={rowClass} data-testid={testId}>
+			{labelEl}
+			{arrowEl}
+			{valueEl}
+		</div>
+	);
+}
 
 function isEditableTarget(target: EventTarget | null): boolean {
 	if (!(target instanceof HTMLElement)) return false;
@@ -32,74 +118,55 @@ export function ContactCard() {
 		return () => window.removeEventListener("keydown", onKey);
 	}, [navigate]);
 
-	const githubUrl = siteMeta.links.github;
-	const linkedinUrl = siteMeta.links.linkedin;
+	const github = siteMeta.links.github.replace(/^https?:\/\//, "");
+	const linkedin = siteMeta.links.linkedin.replace(/^https?:\/\//, "");
 
 	return (
 		<div
 			data-testid="contact-card"
-			className="rounded-md border border-border/70 bg-bg-elev/50 px-5 py-4"
+			className="flex flex-col gap-3 rounded-xl border border-border/70 bg-bg-elev/40 p-3 sm:p-5"
 		>
-			<dl className="grid grid-cols-1 gap-x-10 sm:grid-cols-2">
-				<KVRow
-					label="email"
-					value={
-						<a
-							data-testid="contact-email"
-							href={`mailto:${siteMeta.email}`}
-							className="text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
-						>
-							{siteMeta.email}
-						</a>
-					}
-				/>
-				<KVRow
-					label="github"
-					value={
-						<a
-							data-testid="contact-github"
-							href={githubUrl}
-							target="_blank"
-							rel="noreferrer"
-							className="text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
-						>
-							{githubUrl.replace(/^https?:\/\//, "")}
-						</a>
-					}
-				/>
-				<KVRow
-					label="linkedin"
-					value={
-						<a
-							data-testid="contact-linkedin"
-							href={linkedinUrl}
-							target="_blank"
-							rel="noreferrer"
-							className="text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
-						>
-							{linkedinUrl.replace(/^https?:\/\//, "")}
-						</a>
-					}
-				/>
-				<KVRow
-					label="terminal"
-					value={
-						<span className="inline-flex flex-wrap items-center gap-2">
-							<button
-								type="button"
-								data-testid="contact-terminal"
-								onClick={() => navigate({ to: "/terminal" })}
-								className="text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
-							>
-								open the agentic terminal
-							</button>
-							<span className="rounded-sm border border-border/70 bg-bg/60 px-1.5 py-0.5 font-mono text-[10px] text-muted">
-								press t
-							</span>
+			<ContactRow
+				testId="contact-github"
+				label="github"
+				href={siteMeta.links.github}
+				external
+				value={github.replace(/^github\.com\//, "")}
+			/>
+			<ContactRow
+				testId="contact-linkedin"
+				label="linkedin"
+				href={siteMeta.links.linkedin}
+				external
+				highlighted
+				value={linkedin.replace(/^(?:www\.)?linkedin\.com\/in\//, "")}
+			/>
+			<ContactRow
+				testId="contact-email"
+				label="email"
+				href={`mailto:${siteMeta.email}`}
+				value={siteMeta.email}
+			/>
+			<ContactRow
+				testId="contact-resume"
+				label="resume"
+				href={siteMeta.links.resume}
+				external
+				value="view resume"
+			/>
+			<ContactRow
+				testId="contact-terminal"
+				label="terminal"
+				onClick={() => navigate({ to: "/terminal" })}
+				value={
+					<span className="inline-flex items-center gap-2">
+						open the agentic terminal
+						<span className="rounded-sm border border-border/70 bg-bg/60 px-1.5 py-0.5 font-mono text-[10px] text-muted">
+							press t
 						</span>
-					}
-				/>
-			</dl>
+					</span>
+				}
+			/>
 		</div>
 	);
 }

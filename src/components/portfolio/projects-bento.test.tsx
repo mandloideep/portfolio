@@ -38,16 +38,15 @@ describe("ProjectsBento", () => {
 		expect(card.dataset.expanded).toBe("true");
 	});
 
-	it("toggling a project navigates with the slug in the search", () => {
+	it("toggling a project navigates to /projects with the slug in the search", () => {
 		const target = projects[1];
 		if (!target) throw new Error("expected a second project");
 		const { getByTestId } = render(<ProjectsBento />);
 		fireEvent.click(getByTestId(`project-card-open-${target.slug}`));
 		expect(navigateMock).toHaveBeenCalledOnce();
 		const [arg] = navigateMock.mock.calls[0] ?? [];
-		expect(arg.to).toBe("/");
-		expect(arg.search({ choose: 1 })).toEqual({
-			choose: 1,
+		expect(arg.to).toBe("/projects");
+		expect(arg.search({ project: undefined })).toEqual({
 			project: target.slug,
 		});
 	});
@@ -60,6 +59,7 @@ describe("ProjectsBento", () => {
 		fireEvent.click(getByTestId(`project-card-open-${target.slug}`));
 		expect(navigateMock).toHaveBeenCalledOnce();
 		const [arg] = navigateMock.mock.calls[0] ?? [];
+		expect(arg.to).toBe("/projects");
 		expect(arg.search({})).toEqual({ project: undefined });
 	});
 

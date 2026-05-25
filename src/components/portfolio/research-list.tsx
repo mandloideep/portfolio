@@ -13,29 +13,32 @@ export function ResearchList({ className }: { className?: string }) {
 				<li
 					key={entry.slug}
 					data-testid={`research-card-${entry.slug}`}
-					className="rounded-md border border-border/70 bg-bg-elev/50 px-5 py-4"
+					className="rounded-md border border-border/70 bg-bg-elev/50 px-6 py-5"
 				>
-					<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 font-mono">
-						<h3 className="text-[14px] text-fg">
-							<span className="text-accent">›</span> {entry.title}
-						</h3>
-						<span className="shrink-0 text-[11px] tracking-wider text-muted [font-variant-numeric:tabular-nums]">
+					<div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 font-mono">
+						<div className="flex items-baseline gap-2.5">
+							<span aria-hidden="true" className="text-accent">
+								●
+							</span>
+							<h3 className="text-[15px] font-medium text-fg">{entry.title}</h3>
+						</div>
+						<span className="shrink-0 text-[12px] tracking-wider text-link [font-variant-numeric:tabular-nums]">
 							{entry.year}
 						</span>
 					</div>
-					<div className="mt-0.5 font-mono text-[12.5px] text-link">
+					<div className="mt-1 font-mono text-[13px] text-link">
 						{entry.venue}
 					</div>
-					<p className="mt-3 font-mono text-[12.5px] leading-[1.6] text-fg/85">
+					<p className="mt-4 font-mono text-[13.5px] leading-[1.7] text-fg/85">
 						{entry.abstract}
 					</p>
 					{entry.tags.length > 0 ? (
-						<div className="mt-3 flex flex-wrap items-center gap-1.5">
+						<div className="mt-4 flex flex-wrap items-center gap-1.5">
 							{entry.tags.map((tag) => (
 								<span
 									key={tag}
 									data-slot="badge"
-									className="inline-flex items-center rounded-sm border border-border/70 bg-bg/40 px-2 py-0.5 font-mono text-[10.5px] text-fg/80"
+									className="inline-flex items-center rounded-sm border border-border/70 bg-bg/40 px-2 py-0.5 font-mono text-[11px] text-fg/80"
 								>
 									{tag}
 								</span>

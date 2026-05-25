@@ -1,9 +1,10 @@
-import { useScrollSpy } from "#/hooks/use-scroll-spy";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { cn } from "#/lib/utils";
 
 export interface TopTab {
 	id: string;
 	label: string;
+	to: string;
 }
 
 export interface TopTabsProps {
@@ -13,43 +14,36 @@ export interface TopTabsProps {
 
 /**
  * Terminal-style top tab strip. Each tab reads like a command name in
- * square brackets — active tab gets a green border + soft glow, others
- * sit in muted with a hover bump. Scroll-spies the sections to keep
- * the active tab in sync with viewport position.
+ * square brackets; the active tab gets a green border + soft glow. Active
+ * state is derived from the current router pathname so the tabs work
+ * across separate routes (no scroll-spy here).
  */
 export function TopTabs({ items, className }: TopTabsProps) {
-	const ids = items.map((i) => i.id);
-	const active = useScrollSpy(ids);
-
-	function jump(e: React.MouseEvent<HTMLAnchorElement>, id: string) {
-		e.preventDefault();
-		const el = document.getElementById(id);
-		if (!el) return;
-		el.scrollIntoView({ behavior: "smooth", block: "start" });
-		history.replaceState(null, "", `#${id}`);
-	}
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
 
 	return (
 		<nav
 			aria-label="Page sections"
 			data-testid="top-tabs"
 			className={cn(
-				"flex items-center gap-2 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+				"flex items-center gap-2 overflow-x-auto px-4 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
 				className,
 			)}
 		>
 			{items.map((item) => {
-				const isActive = active === item.id;
+				const isActive =
+					item.to === "/"
+						? pathname === "/"
+						: pathname === item.to || pathname.startsWith(`${item.to}/`);
 				return (
-					<a
+					<Link
 						key={item.id}
-						href={`#${item.id}`}
-						onClick={(e) => jump(e, item.id)}
+						to={item.to}
 						data-testid={`top-tab-${item.id}`}
 						data-active={isActive ? "true" : "false"}
-						aria-current={isActive ? "location" : undefined}
+						aria-current={isActive ? "page" : undefined}
 						className={cn(
-							"shrink-0 rounded-md border px-3 py-1 font-mono text-[12px] transition-colors",
+							"shrink-0 rounded-md border px-3 py-1.5 font-mono text-[13px] transition-colors",
 							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0",
 							isActive
 								? "border-accent/70 bg-accent/10 text-accent shadow-[0_0_0_1px_color-mix(in_oklch,var(--accent)_30%,transparent),0_0_18px_-2px_color-mix(in_oklch,var(--accent)_45%,transparent)]"
@@ -57,7 +51,7 @@ export function TopTabs({ items, className }: TopTabsProps) {
 						)}
 					>
 						[{item.label}]
-					</a>
+					</Link>
 				);
 			})}
 		</nav>

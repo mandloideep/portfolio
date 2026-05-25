@@ -36,6 +36,15 @@ export type SiteMeta = typeof siteMeta;
 export const ProjectStatus = z.enum(["running", "complete", "wip", "archived"]);
 export type ProjectStatusT = z.infer<typeof ProjectStatus>;
 
+const StatCardSchema = z.object({
+	value: z.string().min(1),
+	label: z.string().min(1),
+	sublabel: z.string().optional(),
+	pulse: z.boolean().optional(),
+});
+
+export type ProjectStat = z.infer<typeof StatCardSchema>;
+
 const ProjectSchema = z.object({
 	slug: z.string().regex(/^[a-z0-9-]+$/),
 	title: z.string().min(1),
@@ -51,6 +60,12 @@ const ProjectSchema = z.object({
 		})
 		.default({}),
 	featured: z.boolean().default(false),
+	// Optional fields used only on the whoami page summary block:
+	endpoint: z.string().optional(),
+	cta: z.string().optional(),
+	pitch: z.string().optional(),
+	stats: z.array(StatCardSchema).optional(),
+	meta: z.string().optional(),
 });
 
 export type Project = z.infer<typeof ProjectSchema>;
@@ -71,6 +86,26 @@ export const projects: Project[] = z.array(ProjectSchema).parse([
 		tags: ["Python", "Django", "React", "PostgreSQL", "Celery", "AWS"],
 		links: { live: "https://mydininghall.com" },
 		featured: true,
+		endpoint: "curl -s mydininghall.com/api/stats",
+		cta: "visit site",
+		meta: "1.2k visitors/mo · 2 universities · up 200 days",
+		pitch:
+			"Multi-tenant campus dining platform with real-time menus, nutrition info, and dining hall hours. Started as a capstone, now serving multiple universities with full observability and a white-label architecture.",
+		stats: [
+			{
+				value: "1.2k",
+				label: "visitors",
+				sublabel: "past 30 days",
+				pulse: true,
+			},
+			{ value: "2", label: "universities", sublabel: "neiu + uic" },
+			{
+				value: "99.9%",
+				label: "uptime",
+				sublabel: "since aug 2024",
+				pulse: true,
+			},
+		],
 	},
 	{
 		slug: "findingfive",
@@ -86,6 +121,20 @@ export const projects: Project[] = z.array(ProjectSchema).parse([
 		tags: ["React", "Django", "PostgreSQL", "TypeScript"],
 		links: { live: "https://www.findingfive.com" },
 		featured: true,
+		endpoint: "cat findingfive/build-metrics.log",
+		cta: "findingfive.com",
+		meta: "1K+ MAU · faster builder loads",
+		pitch:
+			"Front-end features and instrumentation for a behavioral-research platform serving 1K+ monthly active users. Tuned a slow study-builder load path and added analytics-grade event instrumentation.",
+		stats: [
+			{ value: "~3x", label: "faster", sublabel: "study-builder load" },
+			{ value: "1K+", label: "MAU", sublabel: "researchers using studies" },
+			{
+				value: "100%",
+				label: "study events",
+				sublabel: "covered by analytics",
+			},
+		],
 	},
 	{
 		slug: "agent-portfolio",
@@ -103,6 +152,16 @@ export const projects: Project[] = z.array(ProjectSchema).parse([
 			repo: "https://github.com/deepmandloi/portfolio",
 		},
 		featured: true,
+		endpoint: "git log --oneline origin/main | head -5",
+		cta: "view repo",
+		meta: "tanstack start · react 19 · openrouter",
+		pitch:
+			"Dual-mode portfolio: a Claude-code-style terminal agent or a polished browser experience. One repo, one deploy, two front doors — built on TanStack Start with OpenRouter via plain HTTP.",
+		stats: [
+			{ value: "525", label: "tests", sublabel: "passing in CI" },
+			{ value: "7", label: "themes", sublabel: "registered" },
+			{ value: "2", label: "front doors", sublabel: "terminal + portfolio" },
+		],
 	},
 	{
 		slug: "dining-scraper",

@@ -13,9 +13,9 @@ const sample: Experience = {
 };
 
 describe("ExperienceCard", () => {
-	it("renders role, company, and every bullet", () => {
+	it("renders role, company, and every bullet when expanded", () => {
 		const { getByText, container } = render(
-			<ExperienceCard entry={sample} index={0} />,
+			<ExperienceCard entry={sample} index={0} defaultExpanded />,
 		);
 		expect(container.textContent).toContain("Test Role");
 		expect(container.textContent).toContain("Test Co");
@@ -43,7 +43,9 @@ describe("ExperienceCard", () => {
 	});
 
 	it("renders one chip per tag", () => {
-		const { getByText } = render(<ExperienceCard entry={sample} index={0} />);
+		const { getByText } = render(
+			<ExperienceCard entry={sample} index={0} defaultExpanded />,
+		);
 		expect(getByText("TypeScript")).toBeInTheDocument();
 		expect(getByText("React")).toBeInTheDocument();
 	});

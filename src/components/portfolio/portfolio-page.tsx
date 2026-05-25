@@ -1,104 +1,91 @@
-import { TerminalFrame } from "#/components/ui/terminal-frame";
-import { siteMeta } from "#/content/site";
-import { ContactCard } from "./contact-card";
-import { ExperienceTimeline } from "./experience-timeline";
-import { Footer } from "./footer";
+import { CommandPrompt } from "#/components/ui/command-prompt";
+import { StatCard } from "#/components/ui/stat-card";
+import type { Project } from "#/content/site";
+import { projects } from "#/content/site";
 import { GithubGraph } from "./github-graph";
 import { Hero } from "./hero";
-import { ProjectsBento } from "./projects-bento";
-import { ResearchList } from "./research-list";
-import { PortfolioSection } from "./section";
-import { type TopTab, TopTabs } from "./top-tabs";
+import { PortfolioLayout } from "./portfolio-layout";
 
-type SectionDef = TopTab & {
-	command: string;
-	trailing?: React.ReactNode;
-	title: string;
-};
+const SECTION_PADDING = "px-6 py-10 sm:px-10 sm:py-12";
 
-const SECTIONS: ReadonlyArray<SectionDef> = [
-	{
-		id: "hero",
-		label: "whoami",
-		title: "intro",
-		command: "cat whoami",
-	},
-	{
-		id: "projects",
-		label: "/projects",
-		title: "projects",
-		command: "ls -la ~/projects",
-	},
-	{
-		id: "experience",
-		label: "/experience",
-		title: "experience",
-		command: "cat ~/experience.md",
-	},
-	{
-		id: "research",
-		label: "/research",
-		title: "research",
-		command: "cat ~/research.md",
-	},
-	{
-		id: "github",
-		label: "/github",
-		title: "github",
-		command: `git log --author="${siteMeta.name.split(" ")[0]?.toLowerCase()}" --oneline | wc -l`,
-	},
-	{
-		id: "contact",
-		label: "/contact",
-		title: "contact",
-		command: "cat ~/contact.md",
-	},
-] as const;
+function ProjectStatBlock({ project }: { project: Project }) {
+	if (!project.stats || project.stats.length === 0) return null;
+	const command = project.endpoint ?? `cat ~/projects/${project.slug}.log`;
+	const ctaHref = project.links.live ?? project.links.repo;
+	const cta = project.cta ?? "view";
 
-export function PortfolioPage() {
 	return (
-		<div
-			data-page="portfolio"
-			className="surface-grain relative min-h-screen bg-bg px-3 py-6 sm:px-6 sm:py-10"
+		<section
+			data-testid={`whoami-stat-${project.slug}`}
+			className={`flex flex-col gap-4 border-t border-border/60 ${SECTION_PADDING}`}
 		>
-			<TerminalFrame
-				title={`${siteMeta.name.split(" ")[0]?.toLowerCase()} — portfolio — 80×24`}
-				chrome={<TopTabs items={SECTIONS} />}
-			>
-				<main id="main" className="flex flex-col divide-y divide-border/60">
-					<h1 className="sr-only">
-						{siteMeta.name} — {siteMeta.role}
-					</h1>
-					{SECTIONS.map((s) => (
-						<PortfolioSection
-							key={s.id}
-							id={s.id}
-							title={s.title}
-							command={s.command}
-							trailing={s.trailing}
+			<CommandPrompt
+				command={command}
+				trailing={
+					ctaHref ? (
+						<a
+							href={ctaHref}
+							target="_blank"
+							rel="noreferrer"
+							className="underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
 						>
-							{s.id === "hero" ? (
-								<Hero />
-							) : s.id === "projects" ? (
-								<ProjectsBento />
-							) : s.id === "experience" ? (
-								<ExperienceTimeline />
-							) : s.id === "research" ? (
-								<ResearchList />
-							) : s.id === "github" ? (
-								<GithubGraph />
-							) : s.id === "contact" ? (
-								<ContactCard />
-							) : (
-								<p className="text-muted text-sm">
-									placeholder — content lands in a later phase.
-								</p>
-							)}
-						</PortfolioSection>
-					))}
-					<Footer />
-				</main>
-			</TerminalFrame>
-		</div>
+							{cta}
+						</a>
+					) : (
+						cta
+					)
+				}
+			/>
+			<p className="max-w-3xl font-mono text-[14px] leading-[1.7] text-fg/85">
+				{project.pitch ?? project.summary}
+			</p>
+			<div
+				className={`grid gap-3 ${
+					project.stats.length === 4
+						? "grid-cols-2 sm:grid-cols-4"
+						: project.stats.length === 3
+							? "grid-cols-1 sm:grid-cols-3"
+							: "grid-cols-1 sm:grid-cols-2"
+				}`}
+			>
+				{project.stats.map((s) => (
+					<StatCard
+						key={s.label}
+						value={s.value}
+						label={s.label}
+						sublabel={s.sublabel}
+						pulse={s.pulse}
+					/>
+				))}
+			</div>
+		</section>
+	);
+}
+
+/**
+ * The whoami page. Profile card up top, then a stat summary block per
+ * featured project, then a GitHub contributions graph block at the
+ * bottom. Each block reads as `$ command → cta` over its content.
+ */
+export function PortfolioPage() {
+	const featured = projects.filter((p) => p.featured && p.stats);
+
+	return (
+		<PortfolioLayout>
+			<section className={SECTION_PADDING}>
+				<Hero />
+			</section>
+
+			{featured.map((p) => (
+				<ProjectStatBlock key={p.slug} project={p} />
+			))}
+
+			<section
+				className={`flex flex-col gap-5 border-t border-border/60 ${SECTION_PADDING}`}
+			>
+				<CommandPrompt command={`git log --author="deep" --oneline | wc -l`} />
+				<GithubGraph />
+			</section>
+		</PortfolioLayout>
 	);
 }

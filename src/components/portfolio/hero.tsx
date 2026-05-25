@@ -1,20 +1,26 @@
 import { CommandPrompt } from "#/components/ui/command-prompt";
-import { KVRow } from "#/components/ui/kv-row";
 import { siteMeta } from "#/content/site";
 import { cn } from "#/lib/utils";
 
+type MetaRow = { label: string; value: React.ReactNode };
+
 /**
- * Profile card hero. Renders the prompt line above, then a bordered card
- * with name (white) + green nickname-in-parens, cyan role subtitle, a
- * 2-column key/value grid, and an italic accent quip at the bottom.
+ * Profile card hero. Renders the `$ cat whoami` prompt above, then a
+ * bordered card with name (white) + green nickname-in-parens, cyan role
+ * subtitle, a 2-column key/value grid, and an italic accent quip with a
+ * hairline separator above it. Sizes track the reference: ~36-42px name,
+ * ~14-15px key/value rows.
  */
 export function Hero({ className }: { className?: string }) {
 	const nickname = "Deep";
-	const role = siteMeta.role;
-	const meta: Array<{ label: string; value: React.ReactNode }> = [
+	const meta: MetaRow[] = [
 		{
 			label: "focus",
-			value: "AI agents, full-stack systems, developer tooling",
+			value: (
+				<span className="text-accent">
+					AI agents, full-stack systems, developer tooling
+				</span>
+			),
 		},
 		{
 			label: "status",
@@ -40,14 +46,14 @@ export function Hero({ className }: { className?: string }) {
 	];
 
 	return (
-		<div data-testid="hero" className={cn("flex flex-col gap-4", className)}>
+		<div data-testid="hero" className={cn("flex flex-col gap-5", className)}>
 			<CommandPrompt command="cat whoami" />
 
-			<article className="rounded-xl border border-border/80 bg-bg-elev/60 px-6 py-7 sm:px-8 sm:py-8">
+			<article className="rounded-xl border border-border/80 bg-bg-elev/60 px-7 py-8 sm:px-9 sm:py-9">
 				<header className="flex flex-col gap-2">
 					<h2
 						data-testid="hero-name"
-						className="font-mono text-[clamp(1.85rem,4.4vw,2.65rem)] font-semibold leading-[1.05] tracking-tight text-fg"
+						className="font-mono text-[clamp(2rem,5.2vw,3.05rem)] font-semibold leading-[1.05] tracking-tight text-fg"
 					>
 						{siteMeta.name} <span className="text-accent">({nickname})</span>
 					</h2>
@@ -55,23 +61,28 @@ export function Hero({ className }: { className?: string }) {
 						href={siteMeta.links.resume}
 						target="_blank"
 						rel="noreferrer"
-						className="w-fit font-mono text-[1rem] text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline sm:text-[1.05rem]"
+						className="w-fit font-mono text-[1.05rem] text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline sm:text-[1.125rem]"
 					>
-						{role}
+						{siteMeta.role}
 					</a>
 				</header>
 
-				<dl className="mt-5 grid grid-cols-1 gap-x-10 sm:grid-cols-2">
+				<dl className="mt-7 grid grid-cols-1 gap-x-12 gap-y-2 sm:grid-cols-2">
 					{meta.map((row) => (
-						<KVRow key={row.label} label={row.label} value={row.value} />
+						<div key={row.label} className="flex items-baseline gap-5 py-1.5">
+							<dt className="w-28 shrink-0 font-mono text-[13.5px] text-muted">
+								{row.label}:
+							</dt>
+							<dd className="flex-1 font-mono text-[13.5px]">{row.value}</dd>
+						</div>
 					))}
 				</dl>
 
-				<hr className="my-5 border-border/60" />
+				<hr className="my-7 border-border/60" />
 
 				<p
 					data-testid="hero-quip"
-					className="font-mono text-[14px] italic text-accent"
+					className="font-mono text-[15px] italic text-accent"
 				>
 					“{siteMeta.quip}”
 				</p>

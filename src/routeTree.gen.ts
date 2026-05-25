@@ -10,6 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TerminalRouteImport } from './routes/terminal'
+import { Route as ResearchRouteImport } from './routes/research'
+import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as ExperienceRouteImport } from './routes/experience'
+import { Route as ContactRouteImport } from './routes/contact'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiGithubGraphRouteImport } from './routes/api.github-graph'
 import { Route as ApiAgentRouteImport } from './routes/api.agent'
@@ -17,6 +21,26 @@ import { Route as ApiAgentRouteImport } from './routes/api.agent'
 const TerminalRoute = TerminalRouteImport.update({
   id: '/terminal',
   path: '/terminal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResearchRoute = ResearchRouteImport.update({
+  id: '/research',
+  path: '/research',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsRoute = ProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExperienceRoute = ExperienceRouteImport.update({
+  id: '/experience',
+  path: '/experience',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -37,12 +61,20 @@ const ApiAgentRoute = ApiAgentRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/contact': typeof ContactRoute
+  '/experience': typeof ExperienceRoute
+  '/projects': typeof ProjectsRoute
+  '/research': typeof ResearchRoute
   '/terminal': typeof TerminalRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/github-graph': typeof ApiGithubGraphRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/contact': typeof ContactRoute
+  '/experience': typeof ExperienceRoute
+  '/projects': typeof ProjectsRoute
+  '/research': typeof ResearchRoute
   '/terminal': typeof TerminalRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/github-graph': typeof ApiGithubGraphRoute
@@ -50,20 +82,53 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/contact': typeof ContactRoute
+  '/experience': typeof ExperienceRoute
+  '/projects': typeof ProjectsRoute
+  '/research': typeof ResearchRoute
   '/terminal': typeof TerminalRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/github-graph': typeof ApiGithubGraphRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/terminal' | '/api/agent' | '/api/github-graph'
+  fullPaths:
+    | '/'
+    | '/contact'
+    | '/experience'
+    | '/projects'
+    | '/research'
+    | '/terminal'
+    | '/api/agent'
+    | '/api/github-graph'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/terminal' | '/api/agent' | '/api/github-graph'
-  id: '__root__' | '/' | '/terminal' | '/api/agent' | '/api/github-graph'
+  to:
+    | '/'
+    | '/contact'
+    | '/experience'
+    | '/projects'
+    | '/research'
+    | '/terminal'
+    | '/api/agent'
+    | '/api/github-graph'
+  id:
+    | '__root__'
+    | '/'
+    | '/contact'
+    | '/experience'
+    | '/projects'
+    | '/research'
+    | '/terminal'
+    | '/api/agent'
+    | '/api/github-graph'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ContactRoute: typeof ContactRoute
+  ExperienceRoute: typeof ExperienceRoute
+  ProjectsRoute: typeof ProjectsRoute
+  ResearchRoute: typeof ResearchRoute
   TerminalRoute: typeof TerminalRoute
   ApiAgentRoute: typeof ApiAgentRoute
   ApiGithubGraphRoute: typeof ApiGithubGraphRoute
@@ -76,6 +141,34 @@ declare module '@tanstack/react-router' {
       path: '/terminal'
       fullPath: '/terminal'
       preLoaderRoute: typeof TerminalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/research': {
+      id: '/research'
+      path: '/research'
+      fullPath: '/research'
+      preLoaderRoute: typeof ResearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects': {
+      id: '/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof ProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/experience': {
+      id: '/experience'
+      path: '/experience'
+      fullPath: '/experience'
+      preLoaderRoute: typeof ExperienceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -104,6 +197,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ContactRoute: ContactRoute,
+  ExperienceRoute: ExperienceRoute,
+  ProjectsRoute: ProjectsRoute,
+  ResearchRoute: ResearchRoute,
   TerminalRoute: TerminalRoute,
   ApiAgentRoute: ApiAgentRoute,
   ApiGithubGraphRoute: ApiGithubGraphRoute,

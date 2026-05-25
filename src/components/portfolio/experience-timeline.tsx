@@ -13,6 +13,7 @@ export function ExperienceTimeline({ className }: { className?: string }) {
 					key={`${entry.company}-${entry.start}`}
 					entry={entry}
 					index={i}
+					defaultExpanded={i === 0 || entry.end === "present"}
 				/>
 			))}
 		</ol>
