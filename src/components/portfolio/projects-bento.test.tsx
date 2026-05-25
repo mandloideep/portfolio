@@ -89,7 +89,7 @@ describe("ProjectsBento", () => {
 		const target = projects[1];
 		if (!target) throw new Error("expected a second project");
 		const { getByTestId } = render(<ProjectsBento />);
-		fireEvent.click(getByTestId(`project-card-${target.slug}`));
+		fireEvent.click(getByTestId(`project-card-open-${target.slug}`));
 		expect(navigateMock).toHaveBeenCalledOnce();
 		const [arg] = navigateMock.mock.calls[0] ?? [];
 		expect(arg.to).toBe("/");

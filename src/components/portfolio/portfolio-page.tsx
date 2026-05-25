@@ -1,3 +1,4 @@
+import { siteMeta } from "#/content/site";
 import { AnimatedBackground } from "./animated-background";
 import { ContactCard } from "./contact-card";
 import { type DockItem, DockNav } from "./dock-nav";
@@ -49,14 +50,10 @@ export function PortfolioPage() {
 		<div data-page="portfolio" className="relative min-h-screen">
 			<AnimatedBackground />
 
-			<a
-				href="#hero"
-				className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-bg focus:px-3 focus:py-2 focus:text-accent focus:ring-2 focus:ring-accent"
-			>
-				skip to content
-			</a>
-
 			<main id="main" className="relative">
+				<h1 className="sr-only">
+					{siteMeta.name} — {siteMeta.role}
+				</h1>
 				{SECTIONS.map((s) => (
 					<PortfolioSection
 						key={s.id}

@@ -64,3 +64,25 @@ export function listProjectSlugs(): string[] {
 		.map((p) => p.slice(prefix.length, -".md".length))
 		.sort();
 }
+
+const SYSTEM_PROMPT_PATH = "/src/content/agent/system-prompt.md";
+const CORPUS_PATH_PREFIX = "/src/content/agent/";
+
+const allCorpusText: string = Object.keys(corpusRecord)
+	.filter((p) => p !== SYSTEM_PROMPT_PATH)
+	.sort()
+	.map((p) => {
+		const relPath = p.slice(CORPUS_PATH_PREFIX.length);
+		return `# ${relPath}\n\n${corpusRecord[p]}`;
+	})
+	.join("\n\n---\n\n");
+
+/**
+ * Concatenation of every agent markdown file except `system-prompt.md`
+ * (internal LLM prompt — must not leak into the public DOM). Each entry
+ * is prefixed with a `# <relative-path>` heading so crawlers can attribute
+ * snippets. Computed once at module load.
+ */
+export function getAllCorpusText(): string {
+	return allCorpusText;
+}

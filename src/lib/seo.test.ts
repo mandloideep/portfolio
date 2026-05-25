@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { siteMeta } from "#/content/site";
-import { buildPersonJsonLd, buildRobotsTxt, buildSitemapXml } from "./seo";
+import {
+	buildOpenGraphMeta,
+	buildPersonJsonLd,
+	buildRobotsTxt,
+	buildSitemapXml,
+} from "./seo";
 
 describe("buildPersonJsonLd", () => {
 	const ld = buildPersonJsonLd(siteMeta, "https://deepmandloi.com");
@@ -62,5 +67,85 @@ describe("buildRobotsTxt", () => {
 		expect(r).toContain("User-agent: *");
 		expect(r).toContain("Allow: /");
 		expect(r).toContain("Sitemap: https://deepmandloi.com/sitemap.xml");
+	});
+});
+
+describe("buildOpenGraphMeta", () => {
+	const meta = buildOpenGraphMeta({
+		title: "Test title",
+		description: "Test desc",
+		path: "/terminal",
+		siteMeta,
+	});
+
+	function find(key: "property" | "name", value: string) {
+		return meta.find((r) => r[key] === value);
+	}
+
+	it("emits og:title / og:description / og:type=website", () => {
+		expect(find("property", "og:title")?.content).toBe("Test title");
+		expect(find("property", "og:description")?.content).toBe("Test desc");
+		expect(find("property", "og:type")?.content).toBe("website");
+	});
+
+	it("joins origin + path into absolute og:url", () => {
+		expect(find("property", "og:url")?.content).toBe(
+			`${siteMeta.url}/terminal`,
+		);
+	});
+
+	it("emits absolute og:image using siteMeta.ogImage", () => {
+		expect(find("property", "og:image")?.content).toBe(
+			`${siteMeta.url}${siteMeta.ogImage}`,
+		);
+	});
+
+	it("emits og:image:alt derived from name + role", () => {
+		expect(find("property", "og:image:alt")?.content).toContain(siteMeta.name);
+	});
+
+	it("emits twitter card + matching title/desc/image", () => {
+		expect(find("name", "twitter:card")?.content).toBe("summary_large_image");
+		expect(find("name", "twitter:title")?.content).toBe("Test title");
+		expect(find("name", "twitter:description")?.content).toBe("Test desc");
+		expect(find("name", "twitter:image")?.content).toBe(
+			`${siteMeta.url}${siteMeta.ogImage}`,
+		);
+	});
+
+	it("honors ogType override", () => {
+		const m = buildOpenGraphMeta({
+			title: "t",
+			description: "d",
+			path: "/",
+			siteMeta,
+			ogType: "article",
+		});
+		expect(m.find((r) => r.property === "og:type")?.content).toBe("article");
+	});
+
+	it("path '/' produces og:url with single trailing slash", () => {
+		const m = buildOpenGraphMeta({
+			title: "t",
+			description: "d",
+			path: "/",
+			siteMeta,
+		});
+		const url = m.find((r) => r.property === "og:url")?.content;
+		expect(url).toBe(`${siteMeta.url}/`);
+		// Only the protocol "//" should be present
+		expect(url?.replace("://", "")).not.toContain("//");
+	});
+
+	it("strips trailing slash from origin before joining", () => {
+		const m = buildOpenGraphMeta({
+			title: "t",
+			description: "d",
+			path: "/foo",
+			siteMeta: { ...siteMeta, url: "https://example.com/" },
+		});
+		expect(m.find((r) => r.property === "og:url")?.content).toBe(
+			"https://example.com/foo",
+		);
 	});
 });

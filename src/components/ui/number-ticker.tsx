@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ComponentPropsWithoutRef } from "react"
 import { useInView, useMotionValue, useSpring } from "motion/react"
 
+import { useReducedMotion } from "#/hooks/use-reduced-motion"
 import { cn } from "#/lib/utils"
 
 interface NumberTickerProps extends ComponentPropsWithoutRef<"span"> {
@@ -21,6 +22,7 @@ export function NumberTicker({
   ...props
 }: NumberTickerProps) {
   const ref = useRef<HTMLSpanElement>(null)
+  const reduced = useReducedMotion()
   const motionValue = useMotionValue(direction === "down" ? value : startValue)
   const springValue = useSpring(motionValue, {
     damping: 60,
@@ -29,6 +31,15 @@ export function NumberTicker({
   const isInView = useInView(ref, { once: true, margin: "0px" })
 
   useEffect(() => {
+    if (reduced) {
+      if (ref.current) {
+        ref.current.textContent = Intl.NumberFormat("en-US", {
+          minimumFractionDigits: decimalPlaces,
+          maximumFractionDigits: decimalPlaces,
+        }).format(direction === "down" ? startValue : value)
+      }
+      return
+    }
     let timer: ReturnType<typeof setTimeout> | null = null
 
     if (isInView) {
@@ -42,24 +53,24 @@ export function NumberTicker({
         clearTimeout(timer)
       }
     }
-  }, [motionValue, isInView, delay, value, direction, startValue])
+  }, [motionValue, isInView, delay, value, direction, startValue, reduced, decimalPlaces])
 
-  useEffect(
-    () =>
-      springValue.on("change", (latest) => {
-        if (ref.current) {
-          ref.current.textContent = Intl.NumberFormat("en-US", {
-            minimumFractionDigits: decimalPlaces,
-            maximumFractionDigits: decimalPlaces,
-          }).format(Number(latest.toFixed(decimalPlaces)))
-        }
-      }),
-    [springValue, decimalPlaces]
-  )
+  useEffect(() => {
+    if (reduced) return
+    return springValue.on("change", (latest) => {
+      if (ref.current) {
+        ref.current.textContent = Intl.NumberFormat("en-US", {
+          minimumFractionDigits: decimalPlaces,
+          maximumFractionDigits: decimalPlaces,
+        }).format(Number(latest.toFixed(decimalPlaces)))
+      }
+    })
+  }, [springValue, decimalPlaces, reduced])
 
   return (
     <span
       ref={ref}
+      data-reduced={reduced ? "true" : "false"}
       className={cn(
         "inline-block tracking-wider text-black tabular-nums dark:text-white",
         className

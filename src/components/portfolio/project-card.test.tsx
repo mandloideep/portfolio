@@ -128,7 +128,7 @@ describe("ProjectCard", () => {
 		const { getByTestId } = render(
 			<ProjectCard project={baseProject} size="medium" onOpen={onOpen} />,
 		);
-		fireEvent.click(getByTestId(`project-card-${baseProject.slug}`));
+		fireEvent.click(getByTestId(`project-card-open-${baseProject.slug}`));
 		expect(onOpen).toHaveBeenCalledOnce();
 		expect(onOpen).toHaveBeenCalledWith(baseProject.slug);
 	});
@@ -163,5 +163,26 @@ describe("ProjectCard", () => {
 		expect(
 			container.querySelector("[data-shimmer]")?.getAttribute("data-shimmer"),
 		).toBe("false");
+	});
+
+	it("card root is magnetic under normal motion", () => {
+		const { getByTestId } = render(
+			<ProjectCard project={baseProject} size="medium" onOpen={() => {}} />,
+		);
+		expect(
+			(getByTestId("project-card-test-project") as HTMLDivElement).dataset
+				.magnetic,
+		).toBe("on");
+	});
+
+	it("card root is non-magnetic under reduced motion", () => {
+		mockMatchMedia(true);
+		const { getByTestId } = render(
+			<ProjectCard project={baseProject} size="medium" onOpen={() => {}} />,
+		);
+		expect(
+			(getByTestId("project-card-test-project") as HTMLDivElement).dataset
+				.magnetic,
+		).toBe("off");
 	});
 });

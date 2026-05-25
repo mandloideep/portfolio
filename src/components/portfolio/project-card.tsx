@@ -1,6 +1,7 @@
 import { ExternalLink, Github } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Project, ProjectStatusT } from "#/content/site";
+import { useMagnetic } from "#/hooks/use-magnetic";
 import { useReducedMotion } from "#/hooks/use-reduced-motion";
 import { cn } from "#/lib/utils";
 import { AnimatedShinyText } from "../ui/animated-shiny-text";
@@ -70,19 +71,22 @@ export function ProjectCard({
 		? project.tags
 		: project.tags.slice(0, MEDIUM_TAG_LIMIT);
 	const hiddenTagCount = project.tags.length - visibleTags.length;
+	const magneticRef = useMagnetic<HTMLDivElement>();
 
 	return (
-		<button
-			type="button"
+		<div
+			ref={magneticRef}
 			data-testid={`project-card-${project.slug}`}
 			data-size={size}
-			onClick={() => onOpen(project.slug)}
-			className={cn(
-				"group block h-full w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-				className,
-			)}
-			aria-label={`Open details for ${project.title}`}
+			className={cn("group relative h-full w-full rounded-xl", className)}
 		>
+			<button
+				type="button"
+				data-testid={`project-card-open-${project.slug}`}
+				onClick={() => onOpen(project.slug)}
+				aria-label={`Open details for ${project.title}`}
+				className="absolute inset-0 z-10 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+			/>
 			<MagicCard className="h-full rounded-xl">
 				<div
 					className={cn(
@@ -136,7 +140,7 @@ export function ProjectCard({
 
 					{(project.links.repo || project.links.live) && (
 						<div
-							className="flex items-center gap-3 pt-1"
+							className="relative z-20 flex items-center gap-3 pt-1"
 							data-testid={`project-links-${project.slug}`}
 						>
 							{project.links.repo ? (
@@ -171,6 +175,6 @@ export function ProjectCard({
 					)}
 				</div>
 			</MagicCard>
-		</button>
+		</div>
 	);
 }

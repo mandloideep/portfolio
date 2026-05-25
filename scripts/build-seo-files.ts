@@ -9,9 +9,10 @@
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { siteMeta } from "../src/content/site.ts";
 import { buildRobotsTxt, buildSitemapXml } from "../src/lib/seo.ts";
 
-const ORIGIN = "https://deepmandloi.com";
+const ORIGIN = siteMeta.url;
 const ROUTES = ["/", "/terminal"] as const;
 
 const here = dirname(fileURLToPath(import.meta.url));

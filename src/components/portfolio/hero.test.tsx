@@ -97,4 +97,25 @@ describe("Hero", () => {
 		act(() => fireInView(true));
 		expect(getByTestId("hero-name").dataset.shimmer).toBe("false");
 	});
+
+	it("CTAs are magnetic under normal motion", () => {
+		const { getByTestId } = render(<Hero />);
+		expect(
+			(getByTestId("hero-cta-projects") as HTMLAnchorElement).dataset.magnetic,
+		).toBe("on");
+		expect(
+			(getByTestId("hero-cta-terminal") as HTMLAnchorElement).dataset.magnetic,
+		).toBe("on");
+	});
+
+	it("CTAs are non-magnetic under reduced motion", () => {
+		mockMatchMedia(true);
+		const { getByTestId } = render(<Hero />);
+		expect(
+			(getByTestId("hero-cta-projects") as HTMLAnchorElement).dataset.magnetic,
+		).toBe("off");
+		expect(
+			(getByTestId("hero-cta-terminal") as HTMLAnchorElement).dataset.magnetic,
+		).toBe("off");
+	});
 });

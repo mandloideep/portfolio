@@ -8,6 +8,7 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 // Import after mock so the hook resolves to the mocked navigate.
+import { abortTour } from "#/lib/terminal/tour";
 import { Prompt } from "./prompt";
 import { abortAgentStream, isAgentStreaming } from "./use-agent-stream";
 
@@ -38,6 +39,7 @@ beforeEach(() => {
 	}));
 	navigateMock.mockReset();
 	abortAgentStream();
+	abortTour();
 });
 
 afterEach(() => {
@@ -144,6 +146,53 @@ describe("Prompt", () => {
 			(b) => b.kind === "system" && b.text === "^C aborted",
 		);
 		expect(system).toBeDefined();
+	});
+
+	it("Ctrl+C cancels a running tour ahead of the stream", async () => {
+		// Reduced motion collapses the inter-beat pause so the test stays fast.
+		Object.defineProperty(window, "matchMedia", {
+			writable: true,
+			configurable: true,
+			value: vi.fn().mockImplementation((query: string) => ({
+				matches: query.includes("reduced"),
+				media: query,
+				onchange: null,
+				addEventListener: vi.fn(),
+				removeEventListener: vi.fn(),
+				addListener: vi.fn(),
+				removeListener: vi.fn(),
+				dispatchEvent: vi.fn(),
+			})),
+		});
+		// Each beat's fetch hangs until aborted, mirroring a slow stream.
+		const fetchMock = vi.fn<typeof fetch>().mockImplementation(
+			(_, init) =>
+				new Promise<Response>((_resolve, reject) => {
+					const sig = (init as RequestInit | undefined)?.signal;
+					sig?.addEventListener("abort", () => {
+						const err = new Error("aborted");
+						err.name = "AbortError";
+						reject(err);
+					});
+				}),
+		);
+		vi.stubGlobal("fetch", fetchMock);
+
+		const { input } = renderPrompt();
+		fireEvent.change(input, { target: { value: "/presentation" } });
+		await act(async () => {
+			fireEvent.keyDown(input, { key: "Enter" });
+			await Promise.resolve();
+		});
+		const { isTourRunning } = await import("#/lib/terminal/tour");
+		expect(isTourRunning()).toBe(true);
+
+		await act(async () => {
+			fireEvent.keyDown(input, { key: "c", ctrlKey: true });
+			await new Promise((r) => setTimeout(r, 20));
+		});
+		expect(isTourRunning()).toBe(false);
+		expect(isAgentStreaming()).toBe(false);
 	});
 
 	it("Ctrl+C is a no-op when no stream is active (so copy still works)", () => {

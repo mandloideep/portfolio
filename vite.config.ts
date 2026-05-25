@@ -10,7 +10,19 @@ import neon from "./neon-vite-plugin.ts";
 
 const config = defineConfig({
 	resolve: { tsconfigPaths: true },
-	plugins: [devtools(), neon, tailwindcss(), tanstackStart(), viteReact()],
+	plugins: [
+		devtools(),
+		neon,
+		tailwindcss(),
+		tanstackStart({
+			pages: [
+				{ path: "/", prerender: { enabled: true } },
+				{ path: "/terminal", prerender: { enabled: true } },
+			],
+			prerender: { failOnError: true, concurrency: 4 },
+		}),
+		viteReact(),
+	],
 	test: {
 		environment: "jsdom",
 		globals: true,

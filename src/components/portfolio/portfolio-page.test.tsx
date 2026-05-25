@@ -90,11 +90,19 @@ describe("PortfolioPage", () => {
 		expect(container.querySelector('[data-page="portfolio"]')).not.toBeNull();
 	});
 
-	it("includes a skip-link to #hero", () => {
+	it("renders exactly one <main id='main'> landmark", () => {
 		const { container } = render(<PortfolioPage />);
-		const link = container.querySelector('a[href="#hero"]');
-		expect(link).not.toBeNull();
-		expect(link?.textContent).toMatch(/skip/i);
+		const mains = container.querySelectorAll("main");
+		expect(mains.length).toBe(1);
+		expect(mains[0]?.id).toBe("main");
+	});
+
+	it("renders an sr-only <h1> with name + role", () => {
+		const { container } = render(<PortfolioPage />);
+		const h1 = container.querySelector("h1");
+		expect(h1).not.toBeNull();
+		expect(h1?.className).toMatch(/sr-only/);
+		expect(h1?.textContent).toMatch(/deep/i);
 	});
 
 	it("renders SkillsGrid and ResearchList in the skills section", () => {

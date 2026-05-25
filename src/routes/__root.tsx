@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { siteMeta } from "#/content/site";
 import { themes } from "#/content/themes";
-import { buildPersonJsonLd } from "#/lib/seo";
+import { buildOpenGraphMeta, buildPersonJsonLd } from "#/lib/seo";
 import { generateThemeCss } from "#/lib/theme-css";
 import appCss from "../styles.css?url";
 
@@ -14,27 +14,24 @@ interface MyRouterContext {
 	queryClient: QueryClient;
 }
 
-const TITLE = `${siteMeta.name} — ${siteMeta.role}`;
-const DESCRIPTION =
-	"Portfolio of Deep Mandloi: CS student, full-stack engineer, agent-tinkerer.";
+export const ROOT_TITLE = `${siteMeta.name} — ${siteMeta.role}`;
 
 const themeCss = generateThemeCss(themes);
-const personJsonLd = JSON.stringify(buildPersonJsonLd(siteMeta));
+const personJsonLd = JSON.stringify(buildPersonJsonLd(siteMeta, siteMeta.url));
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
 	head: () => ({
 		meta: [
 			{ charSet: "utf-8" },
 			{ name: "viewport", content: "width=device-width, initial-scale=1" },
-			{ title: TITLE },
-			{ name: "description", content: DESCRIPTION },
-			{ property: "og:title", content: TITLE },
-			{ property: "og:description", content: DESCRIPTION },
-			{ property: "og:type", content: "website" },
-			{ property: "og:url", content: "https://deepmandloi.com/" },
-			{ name: "twitter:card", content: "summary_large_image" },
-			{ name: "twitter:title", content: TITLE },
-			{ name: "twitter:description", content: DESCRIPTION },
+			{ title: ROOT_TITLE },
+			{ name: "description", content: siteMeta.description },
+			...buildOpenGraphMeta({
+				title: ROOT_TITLE,
+				description: siteMeta.description,
+				path: "/",
+				siteMeta,
+			}),
 		],
 		links: [
 			{ rel: "stylesheet", href: appCss },
@@ -72,7 +69,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				>
 					Skip to main content
 				</a>
-				<div id="main">{children}</div>
+				<div>{children}</div>
 				<Scripts />
 			</body>
 		</html>

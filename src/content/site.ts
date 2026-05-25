@@ -16,6 +16,11 @@ export const siteMeta = {
 	status: "Open to internships & SWE roles",
 	email: "dmandloi@neiu.edu",
 	location: "Chicago, IL",
+	url: "https://deepmandloi.com",
+	description:
+		"Portfolio of Deep Mandloi: CS student, full-stack engineer, agent-tinkerer.",
+	// TODO(og-image): swap for a real 1200×630 og.png
+	ogImage: "/logo512.png",
 	links: {
 		github: "https://github.com/deepmandloi",
 		linkedin: "https://linkedin.com/in/deepmandloi",

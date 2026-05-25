@@ -274,6 +274,56 @@ describe("runCommand", () => {
 		expect(text).toContain("/model");
 	});
 
+	it("/help lists /presentation", async () => {
+		await runCommand("/help", { navigate: noopNavigate, submit: noopSubmit });
+		const text = (lastBlock() as { text: string }).text;
+		expect(text).toContain("/presentation");
+	});
+
+	it("/presentation without agentStream emits an error", async () => {
+		await runCommand("/presentation", {
+			navigate: noopNavigate,
+			submit: noopSubmit,
+		});
+		const b = lastBlock();
+		expect(b?.kind).toBe("error");
+		expect((b as { text: string }).text).toMatch(/agent stream unavailable/);
+	});
+
+	it("/presentation drives the agent stream once per beat", async () => {
+		// Collapse inter-beat sleeps via reduced-motion.
+		Object.defineProperty(window, "matchMedia", {
+			writable: true,
+			configurable: true,
+			value: vi.fn().mockImplementation((query: string) => ({
+				matches: query.includes("reduced"),
+				media: query,
+				onchange: null,
+				addEventListener: vi.fn(),
+				removeEventListener: vi.fn(),
+				addListener: vi.fn(),
+				removeListener: vi.fn(),
+				dispatchEvent: vi.fn(),
+			})),
+		});
+		const startMock = vi
+			.fn<(message: string) => Promise<void>>()
+			.mockResolvedValue();
+		const abortMock = vi.fn(() => false);
+		await runCommand("/presentation", {
+			navigate: noopNavigate,
+			submit: noopSubmit,
+			agentStream: { start: startMock, abort: abortMock },
+		});
+		// One call per beat (7 beats per src/lib/terminal/tour.ts).
+		expect(startMock).toHaveBeenCalledTimes(7);
+		// Each beat appended a "→ ..." system header.
+		const headers = terminalStore.state.blocks.filter(
+			(b) => b.kind === "system" && b.text.startsWith("→"),
+		);
+		expect(headers.length).toBe(7);
+	});
+
 	it("/github + /resume open links (smoke)", async () => {
 		// jsdom .click() on an <a target=_blank> won't open a window, but the
 		// system block + the side-effect (anchor was created) is what we assert.

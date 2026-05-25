@@ -7,6 +7,7 @@ import {
 } from "motion/react"
 import { useTheme } from "next-themes"
 
+import { useReducedMotion } from "#/hooks/use-reduced-motion"
 import { cn } from "#/lib/utils"
 
 interface MagicCardBaseProps {
@@ -53,6 +54,25 @@ function isOrbMode(props: MagicCardProps): props is MagicCardOrbProps {
 }
 
 export function MagicCard(props: MagicCardProps) {
+  const reduced = useReducedMotion()
+  if (reduced) {
+    return (
+      <div
+        data-testid="magic-card-static"
+        data-reduced="true"
+        className={cn(
+          "relative isolate overflow-hidden rounded-[inherit] border border-border",
+          props.className
+        )}
+      >
+        <div className="relative z-40">{props.children}</div>
+      </div>
+    )
+  }
+  return <MagicCardDynamic {...props} />
+}
+
+function MagicCardDynamic(props: MagicCardProps) {
   const {
     children,
     className,

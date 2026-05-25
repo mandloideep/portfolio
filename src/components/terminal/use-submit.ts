@@ -57,6 +57,7 @@ export function useSubmit() {
 			const handled = await runCommand(text, {
 				navigate: navigateAdapter,
 				submit: (line) => submitRef.current(line),
+				agentStream,
 			});
 			if (!handled) {
 				await agentStream.start(text);

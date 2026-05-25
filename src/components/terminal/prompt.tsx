@@ -7,6 +7,7 @@ import {
 	useState,
 } from "react";
 import { autocomplete } from "#/lib/terminal/commands";
+import { abortTour, isTourRunning } from "#/lib/terminal/tour";
 import { clearBlocks, setHistoryCursor, terminalStore } from "#/store/terminal";
 import { abortAgentStream, isAgentStreaming } from "./use-agent-stream";
 import { useSubmit } from "./use-submit";
@@ -122,9 +123,13 @@ export function Prompt({ onOpenPalette }: Props) {
 			return;
 		}
 		if (e.ctrlKey && e.key.toLowerCase() === "c") {
-			// Only intercept while a stream is running so the browser's native
-			// copy shortcut still works when the user has selected text.
-			if (isAgentStreaming()) {
+			// Only intercept while a tour or stream is running so the browser's
+			// native copy shortcut still works when the user has selected text.
+			// Tour first — abortTour() cascades into abortAgentStream().
+			if (isTourRunning()) {
+				e.preventDefault();
+				abortTour();
+			} else if (isAgentStreaming()) {
 				e.preventDefault();
 				abortAgentStream();
 			}

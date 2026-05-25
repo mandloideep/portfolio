@@ -1,3 +1,4 @@
+import type { StreamHandle } from "#/components/terminal/use-agent-stream";
 import { projects, siteMeta } from "#/content/site";
 import { isThemeSlug, type ThemeSlug, themes } from "#/content/themes";
 import { OPENROUTER_MODELS } from "#/lib/openrouter";
@@ -8,6 +9,7 @@ import {
 	listProjectSlugs,
 } from "#/lib/terminal/corpus";
 import { formatTwoCol } from "#/lib/terminal/format";
+import { isTourRunning, runPresentation } from "#/lib/terminal/tour";
 import { modelStore, setModel } from "#/store/model";
 import {
 	appendBlock,
@@ -29,6 +31,12 @@ export type CommandContext = {
 	 * so commands like /retry can drive the same handler pipeline.
 	 */
 	submit: (line: string) => void;
+	/**
+	 * Active agent-stream handle. Threaded from `use-submit` so commands like
+	 * `/presentation` can drive scripted prompts without re-entering the
+	 * input pipeline.
+	 */
+	agentStream?: StreamHandle;
 };
 
 export type Command = {
@@ -228,6 +236,22 @@ const model: Command = {
 	},
 };
 
+const presentation: Command = {
+	name: "/presentation",
+	description: "auto-narrated agent tour (ctrl+c to stop)",
+	handler: async ({ agentStream }) => {
+		if (!agentStream) {
+			emit("error", "presentation: agent stream unavailable");
+			return;
+		}
+		if (isTourRunning()) {
+			emit("error", "presentation: tour already running (ctrl+c to stop)");
+			return;
+		}
+		await runPresentation({ agentStream });
+	},
+};
+
 const projectsCmd: Command = {
 	name: "/projects",
 	description: "list projects (no args) or open one: /projects <slug>",
@@ -264,6 +288,7 @@ export const commands: Command[] = [
 	skills,
 	projectsCmd,
 	contact,
+	presentation,
 	ui,
 	theme,
 	model,
@@ -302,7 +327,11 @@ export function autocomplete(prefix: string): string[] {
  */
 export async function runCommand(
 	raw: string,
-	deps: { navigate: Navigate; submit: (line: string) => void },
+	deps: {
+		navigate: Navigate;
+		submit: (line: string) => void;
+		agentStream?: StreamHandle;
+	},
 ): Promise<boolean> {
 	const parsed = parseInput(raw);
 	if (!parsed) return false;
@@ -320,6 +349,7 @@ export async function runCommand(
 		raw,
 		navigate: deps.navigate,
 		submit: deps.submit,
+		agentStream: deps.agentStream,
 	});
 	return true;
 }
