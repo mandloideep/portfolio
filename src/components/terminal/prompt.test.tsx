@@ -259,6 +259,17 @@ describe("Prompt", () => {
 		expect(input.value).toBe("/help ");
 	});
 
+	it("keeps focus on the prompt after submitting a command", async () => {
+		const { input } = renderPrompt();
+		input.focus();
+		expect(document.activeElement).toBe(input);
+		fireEvent.change(input, { target: { value: "/help" } });
+		await act(async () => {
+			fireEvent.keyDown(input, { key: "Enter" });
+		});
+		expect(document.activeElement).toBe(input);
+	});
+
 	it("/ui calls navigate", async () => {
 		const { input } = renderPrompt();
 		fireEvent.change(input, { target: { value: "/ui" } });

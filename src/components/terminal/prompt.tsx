@@ -162,7 +162,7 @@ export function Prompt({ onOpenPalette }: Props) {
 				e.preventDefault();
 				void handleSubmit();
 			}}
-			className="flex items-start gap-2 border-t border-border bg-bg/60 px-4 py-2 text-sm"
+			className="flex items-start gap-2 border-t border-border bg-bg/60 px-4 py-2 text-[13px] sm:text-sm"
 		>
 			<label htmlFor="terminal-prompt" className="sr-only">
 				Terminal prompt

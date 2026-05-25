@@ -19,7 +19,7 @@ export function StatusFooter() {
 	return (
 		<div
 			data-testid="status-footer"
-			className="flex items-center justify-between border-t border-border bg-bg/80 px-3 py-1.5 text-xs text-muted font-mono"
+			className="flex items-center justify-between border-t border-border bg-bg/80 px-3 py-1.5 text-[11px] sm:text-xs text-muted font-mono"
 		>
 			<div className="flex items-center gap-2">
 				<span className="rounded bg-border/60 px-1.5 py-0.5 text-fg uppercase tracking-wide">
