@@ -1,141 +1,81 @@
-import { useEffect, useRef, useState } from "react";
+import { CommandPrompt } from "#/components/ui/command-prompt";
+import { KVRow } from "#/components/ui/kv-row";
 import { siteMeta } from "#/content/site";
-import { useMagnetic } from "#/hooks/use-magnetic";
-import { useReducedMotion } from "#/hooks/use-reduced-motion";
 import { cn } from "#/lib/utils";
-import { AnimatedShinyText } from "../ui/animated-shiny-text";
-import { Eyebrow } from "../ui/eyebrow";
-import { LocalTime } from "./local-time";
-import { StatusPill } from "./status-pill";
 
-function ShimmerName({ name }: { name: string }) {
-	const reduced = useReducedMotion();
-	const ref = useRef<HTMLSpanElement | null>(null);
-	const [inView, setInView] = useState(false);
-
-	useEffect(() => {
-		const el = ref.current;
-		if (!el || typeof IntersectionObserver === "undefined") return;
-		const io = new IntersectionObserver((entries) => {
-			const entry = entries[0];
-			setInView(entry?.isIntersecting ?? false);
-		});
-		io.observe(el);
-		return () => io.disconnect();
-	}, []);
-
-	if (reduced || !inView) {
-		return (
-			<span
-				ref={ref}
-				data-testid="hero-name"
-				data-shimmer="false"
-				className="text-fg"
-			>
-				{name}
-			</span>
-		);
-	}
-
-	return (
-		<span ref={ref} data-testid="hero-name" data-shimmer="true">
-			<AnimatedShinyText className="mx-0 max-w-none text-fg/90">
-				{name}
-			</AnimatedShinyText>
-		</span>
-	);
-}
-
-type MetaRowProps = {
-	label: string;
-	value: string;
-};
-
-function MetaRow({ label, value }: MetaRowProps) {
-	return (
-		<div className="flex items-baseline gap-3 py-2.5 border-b border-border/60 last:border-b-0">
-			<dt className="w-20 shrink-0">
-				<Eyebrow className="text-muted/80">{label}</Eyebrow>
-			</dt>
-			<dd className="text-sm text-fg/90">{value}</dd>
-		</div>
-	);
-}
-
+/**
+ * Profile card hero. Renders the prompt line above, then a bordered card
+ * with name (white) + green nickname-in-parens, cyan role subtitle, a
+ * 2-column key/value grid, and an italic accent quip at the bottom.
+ */
 export function Hero({ className }: { className?: string }) {
-	const projectsRef = useMagnetic<HTMLAnchorElement>();
-	const terminalRef = useMagnetic<HTMLAnchorElement>();
-	const meta = [
-		{ label: "location", value: siteMeta.location },
-		{ label: "focus", value: "agents · systems · ui" },
-		{ label: "email", value: siteMeta.email },
-		{ label: "stack", value: "ts · python · postgres" },
+	const nickname = "Deep";
+	const role = siteMeta.role;
+	const meta: Array<{ label: string; value: React.ReactNode }> = [
+		{
+			label: "focus",
+			value: "AI agents, full-stack systems, developer tooling",
+		},
+		{
+			label: "status",
+			value: <span className="text-accent">{siteMeta.status}</span>,
+		},
+		{
+			label: "location",
+			value: <span className="text-link">{siteMeta.location}</span>,
+		},
+		{
+			label: "open source",
+			value: (
+				<a
+					href={siteMeta.links.github}
+					target="_blank"
+					rel="noreferrer"
+					className="text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
+				>
+					github.com/deepmandloi
+				</a>
+			),
+		},
 	];
 
 	return (
-		<div
-			data-testid="hero"
-			className={cn(
-				"grid grid-cols-1 gap-10 md:grid-cols-[1fr_minmax(0,16rem)] md:items-end",
-				className,
-			)}
-		>
-			<div className="flex flex-col gap-6">
-				<Eyebrow as="p" className="flex items-center gap-2">
-					<span aria-hidden="true" className="text-accent">
-						$
-					</span>
-					<span>hey, I&apos;m</span>
-				</Eyebrow>
-				<h3 className="font-display text-[clamp(2.75rem,7vw,5.25rem)] font-medium leading-[0.95] tracking-tight">
-					<ShimmerName name={siteMeta.name} />
-				</h3>
-				<p className="max-w-xl text-[1.0625rem] leading-[1.65] text-fg/90 md:text-lg">
-					{siteMeta.role}
+		<div data-testid="hero" className={cn("flex flex-col gap-4", className)}>
+			<CommandPrompt command="cat whoami" />
+
+			<article className="rounded-xl border border-border/80 bg-bg-elev/60 px-6 py-7 sm:px-8 sm:py-8">
+				<header className="flex flex-col gap-2">
+					<h2
+						data-testid="hero-name"
+						className="font-mono text-[clamp(1.85rem,4.4vw,2.65rem)] font-semibold leading-[1.05] tracking-tight text-fg"
+					>
+						{siteMeta.name} <span className="text-accent">({nickname})</span>
+					</h2>
+					<a
+						href={siteMeta.links.resume}
+						target="_blank"
+						rel="noreferrer"
+						className="w-fit font-mono text-[1rem] text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline sm:text-[1.05rem]"
+					>
+						{role}
+					</a>
+				</header>
+
+				<dl className="mt-5 grid grid-cols-1 gap-x-10 sm:grid-cols-2">
+					{meta.map((row) => (
+						<KVRow key={row.label} label={row.label} value={row.value} />
+					))}
+				</dl>
+
+				<hr className="my-5 border-border/60" />
+
+				<p
+					data-testid="hero-quip"
+					className="font-mono text-[14px] italic text-accent"
+				>
+					“{siteMeta.quip}”
 				</p>
-
-				<div className="flex flex-wrap items-center gap-3 pt-2">
-					<StatusPill status={siteMeta.status} />
-					<LocalTime />
-				</div>
-
-				<div className="flex flex-wrap items-center gap-3 pt-3">
-					<a
-						ref={projectsRef}
-						href="#projects"
-						data-testid="hero-cta-projects"
-						className="group inline-flex items-center gap-2 rounded-md border border-accent/70 bg-accent/10 px-4 py-2.5 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-					>
-						<span
-							aria-hidden="true"
-							className="text-accent transition-transform group-hover:translate-x-0.5"
-						>
-							▸
-						</span>
-						View projects
-					</a>
-					<a
-						ref={terminalRef}
-						href="/terminal"
-						data-testid="hero-cta-terminal"
-						className="inline-flex items-center gap-2 rounded-md border border-border bg-bg-elev/70 px-4 py-2.5 text-sm font-medium text-fg/90 transition-colors hover:border-accent/60 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-					>
-						<span aria-hidden="true" className="font-mono text-muted">
-							$
-						</span>
-						Open terminal
-					</a>
-				</div>
-			</div>
-
-			<dl
-				aria-label="profile metadata"
-				className="rounded-md border border-border/70 bg-bg-elev/70 px-4 py-1"
-			>
-				{meta.map((row) => (
-					<MetaRow key={row.label} label={row.label} value={row.value} />
-				))}
-			</dl>
+			</article>
 		</div>
 	);
 }

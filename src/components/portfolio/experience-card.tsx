@@ -1,8 +1,5 @@
-import { useEffect, useRef, useState } from "react";
 import type { Experience } from "#/content/site";
-import { useReducedMotion } from "#/hooks/use-reduced-motion";
 import { cn } from "#/lib/utils";
-import { Badge } from "../ui/badge";
 
 export interface ExperienceCardProps {
 	entry: Experience;
@@ -45,91 +42,63 @@ function formatRange(start: string, end: string): string {
 }
 
 export function ExperienceCard({ entry, index }: ExperienceCardProps) {
-	const reduced = useReducedMotion();
-	const dotRef = useRef<HTMLSpanElement | null>(null);
-	const [inView, setInView] = useState(false);
 	const isCurrent = entry.end === "present";
-
-	useEffect(() => {
-		const el = dotRef.current;
-		if (!el || typeof IntersectionObserver === "undefined") return;
-		const io = new IntersectionObserver(
-			(entries) => {
-				const e = entries[0];
-				if (e?.isIntersecting) setInView(true);
-			},
-			{ threshold: 0.5 },
-		);
-		io.observe(el);
-		return () => io.disconnect();
-	}, []);
-
-	const animated = reduced || inView;
 
 	return (
 		<li
 			data-testid={`experience-card-${index}`}
-			className="relative pl-8 pb-12 last:pb-0 md:pl-10"
+			className={cn(
+				"rounded-md border bg-bg-elev/50 px-5 py-4",
+				isCurrent
+					? "border-accent/60 shadow-[0_0_0_1px_color-mix(in_oklch,var(--accent)_25%,transparent)]"
+					: "border-border/70",
+			)}
 		>
-			<span
-				ref={dotRef}
-				data-testid={`experience-dot-${index}`}
-				data-reduced={reduced ? "true" : "false"}
-				data-in-view={inView ? "true" : "false"}
-				aria-hidden="true"
-				className={cn(
-					"absolute left-0 top-2 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-accent bg-bg",
-					"transition-all duration-500 ease-out",
-					animated ? "scale-100 opacity-100" : "scale-50 opacity-0",
-					isCurrent &&
-						"after:absolute after:inset-[-6px] after:rounded-full after:border after:border-accent/40 after:animate-[status-pulse_1.6s_ease-in-out_infinite]",
-				)}
-			/>
-
-			<div className="flex flex-col gap-3">
-				<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-					<div className="flex flex-col">
-						<h3 className="font-display text-[1.35rem] font-medium leading-[1.1] tracking-tight text-fg md:text-[1.55rem]">
-							{entry.company}
-						</h3>
-						<span className="text-[0.95rem] text-fg/85">{entry.role}</span>
-					</div>
-					<span
-						data-testid={`experience-dates-${index}`}
-						className="shrink-0 font-mono text-[11px] uppercase tracking-[0.14em] text-muted [font-variant-numeric:tabular-nums] md:text-xs"
-					>
-						{formatRange(entry.start, entry.end)}
+			<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+				<div className="flex items-baseline gap-2">
+					<span aria-hidden="true" className="select-none text-accent">
+						›
 					</span>
+					<h3 className="font-mono text-[14px] text-fg">{entry.company}</h3>
 				</div>
-
-				<ul className="flex flex-col gap-2 text-[0.95rem] leading-[1.6] text-fg/90">
-					{entry.bullets.map((bullet) => (
-						<li key={bullet} className="flex gap-2.5">
-							<span
-								aria-hidden="true"
-								className="shrink-0 select-none pt-1 text-accent"
-							>
-								▸
-							</span>
-							<span>{bullet}</span>
-						</li>
-					))}
-				</ul>
-
-				{entry.tags.length > 0 ? (
-					<div className="flex flex-wrap items-center gap-1.5 pt-1">
-						{entry.tags.map((tag) => (
-							<Badge
-								key={tag}
-								variant="outline"
-								className="border-border/70 bg-bg/40 font-mono text-[10.5px] uppercase tracking-[0.08em] text-fg/80"
-							>
-								{tag}
-							</Badge>
-						))}
-					</div>
-				) : null}
+				<span
+					data-testid={`experience-dates-${index}`}
+					className="shrink-0 font-mono text-[11px] tracking-wider text-muted [font-variant-numeric:tabular-nums]"
+				>
+					{formatRange(entry.start, entry.end)}
+				</span>
 			</div>
+			<div className="mt-0.5 font-mono text-[12.5px] text-link">
+				{entry.role}
+			</div>
+
+			<ul className="mt-3 flex flex-col gap-1.5 font-mono text-[12.5px] leading-[1.6] text-fg/85">
+				{entry.bullets.map((bullet) => (
+					<li key={bullet} className="flex gap-2">
+						<span
+							aria-hidden="true"
+							className="shrink-0 select-none text-accent"
+						>
+							→
+						</span>
+						<span>{bullet}</span>
+					</li>
+				))}
+			</ul>
+
+			{entry.tags.length > 0 ? (
+				<div className="mt-3 flex flex-wrap items-center gap-1.5">
+					{entry.tags.map((tag) => (
+						<span
+							key={tag}
+							data-slot="badge"
+							className="inline-flex items-center rounded-sm border border-border/70 bg-bg/40 px-2 py-0.5 font-mono text-[10.5px] text-fg/80"
+						>
+							{tag}
+						</span>
+					))}
+				</div>
+			) : null}
 		</li>
 	);
 }

@@ -1,6 +1,5 @@
 import { research } from "#/content/site";
 import { cn } from "#/lib/utils";
-import { Badge } from "../ui/badge";
 
 export function ResearchList({ className }: { className?: string }) {
 	const ordered = [...research].sort((a, b) => b.year - a.year);
@@ -8,44 +7,38 @@ export function ResearchList({ className }: { className?: string }) {
 	return (
 		<ol
 			data-testid="research-list"
-			className={cn("flex flex-col gap-5", className)}
+			className={cn("flex flex-col gap-3", className)}
 		>
 			{ordered.map((entry) => (
 				<li
 					key={entry.slug}
 					data-testid={`research-card-${entry.slug}`}
-					className="group flex flex-col gap-2.5 rounded-md border border-border/70 bg-bg-elev/60 p-5 transition-colors hover:border-accent/50"
+					className="rounded-md border border-border/70 bg-bg-elev/50 px-5 py-4"
 				>
-					<div className="flex flex-wrap items-center gap-2">
-						<Badge
-							variant="default"
-							className="font-mono text-[10.5px] uppercase tracking-[0.14em]"
-						>
+					<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 font-mono">
+						<h3 className="text-[14px] text-fg">
+							<span className="text-accent">›</span> {entry.title}
+						</h3>
+						<span className="shrink-0 text-[11px] tracking-wider text-muted [font-variant-numeric:tabular-nums]">
 							{entry.year}
-						</Badge>
-						<Badge
-							variant="outline"
-							className="border-border/70 font-mono text-[10.5px] uppercase tracking-[0.08em] text-fg/80"
-						>
-							{entry.venue}
-						</Badge>
+						</span>
 					</div>
-					<h3 className="font-display text-[1.25rem] font-medium leading-[1.15] tracking-tight text-fg md:text-[1.4rem]">
-						{entry.title}
-					</h3>
-					<p className="text-[0.95rem] leading-[1.6] text-fg/85">
+					<div className="mt-0.5 font-mono text-[12.5px] text-link">
+						{entry.venue}
+					</div>
+					<p className="mt-3 font-mono text-[12.5px] leading-[1.6] text-fg/85">
 						{entry.abstract}
 					</p>
 					{entry.tags.length > 0 ? (
-						<div className="flex flex-wrap items-center gap-1.5 pt-1">
+						<div className="mt-3 flex flex-wrap items-center gap-1.5">
 							{entry.tags.map((tag) => (
-								<Badge
+								<span
 									key={tag}
-									variant="outline"
-									className="border-border/60 bg-bg/40 font-mono text-[10.5px] uppercase tracking-[0.08em] text-fg/75"
+									data-slot="badge"
+									className="inline-flex items-center rounded-sm border border-border/70 bg-bg/40 px-2 py-0.5 font-mono text-[10.5px] text-fg/80"
 								>
 									{tag}
-								</Badge>
+								</span>
 							))}
 						</div>
 					) : null}

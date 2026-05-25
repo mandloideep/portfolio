@@ -1,18 +1,7 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { getProject, type Project, projects } from "#/content/site";
-import { BentoGrid } from "../ui/bento-grid";
-import { ProjectCard } from "./project-card";
-import { ProjectModal } from "./project-modal";
-
-function getCellSpan(index: number, total: number): string {
-	if (index === 0) return "sm:col-span-2 sm:row-span-2";
-	const remaining = total - 1;
-	if (index === remaining && remaining > 2 && index >= 3) {
-		return "sm:col-span-3 sm:row-span-1";
-	}
-	return "sm:col-span-1 sm:row-span-1";
-}
+import { type Project, projects } from "#/content/site";
+import { ProjectRow } from "./project-row";
 
 function orderedProjects(): Project[] {
 	const featured = projects.filter((p) => p.featured);
@@ -20,45 +9,45 @@ function orderedProjects(): Project[] {
 	return [...featured, ...rest];
 }
 
+/**
+ * Renders projects as a stack of collapsible filetree-style rows. The
+ * active project is tracked in the URL (`?project=<slug>`) so deep links
+ * still work; the first featured project defaults to expanded on initial
+ * mount when no query param is present.
+ */
 export function ProjectsBento() {
 	const navigate = useNavigate();
 	const search = useSearch({ from: "/" });
 	const activeSlug =
 		typeof search.project === "string" ? search.project : undefined;
-	const activeProject = activeSlug ? getProject(activeSlug) : undefined;
 
 	const ordered = useMemo(() => orderedProjects(), []);
+	const defaultSlug = activeSlug ?? ordered[0]?.slug;
 
-	function handleOpen(slug: string) {
+	function handleToggle(slug: string) {
+		const next = slug === activeSlug ? undefined : slug;
 		navigate({
 			to: "/",
-			search: (prev) => ({ ...prev, project: slug }),
-			replace: false,
-		});
-	}
-
-	function handleClose() {
-		navigate({
-			to: "/",
-			search: (prev) => ({ ...prev, project: undefined }),
+			search: (prev) => ({ ...prev, project: next }),
 			replace: false,
 		});
 	}
 
 	return (
-		<div data-testid="projects-bento">
-			<BentoGrid className="grid-cols-1 sm:grid-cols-3 auto-rows-[18rem] sm:auto-rows-[16rem]">
-				{ordered.map((project, i) => (
-					<ProjectCard
-						key={project.slug}
-						project={project}
-						size={i === 0 ? "hero" : "medium"}
-						onOpen={handleOpen}
-						className={getCellSpan(i, ordered.length)}
-					/>
-				))}
-			</BentoGrid>
-			<ProjectModal project={activeProject} onClose={handleClose} />
+		<div data-testid="projects-bento" className="flex flex-col gap-2.5">
+			<div className="flex items-center gap-3 px-4 pb-1 font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
+				<span className="w-32">name</span>
+				<span className="w-20">status</span>
+				<span className="flex-1">description</span>
+			</div>
+			{ordered.map((project) => (
+				<ProjectRow
+					key={project.slug}
+					project={project}
+					expanded={defaultSlug === project.slug}
+					onToggle={handleToggle}
+				/>
+			))}
 		</div>
 	);
 }

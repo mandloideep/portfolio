@@ -12,13 +12,12 @@ describe("ResearchList", () => {
 	it("orders entries by year descending", () => {
 		const { container } = render(<ResearchList />);
 		const cards = container.querySelectorAll('[data-testid^="research-card-"]');
-		const years = Array.from(cards).map((card) => {
-			const yearBadge = card.querySelector('[data-variant="default"]');
-			return Number(yearBadge?.textContent);
+		const sortedByYear = [...research].sort((a, b) => b.year - a.year);
+		Array.from(cards).forEach((card, i) => {
+			expect(card.getAttribute("data-testid")).toBe(
+				`research-card-${sortedByYear[i]?.slug}`,
+			);
 		});
-		for (let i = 1; i < years.length; i++) {
-			expect(years[i - 1]).toBeGreaterThanOrEqual(years[i]);
-		}
 	});
 
 	it("renders year, venue, title and abstract for every entry", () => {
@@ -33,7 +32,7 @@ describe("ResearchList", () => {
 		}
 	});
 
-	it("renders each entry's tags as Badges", () => {
+	it("renders each entry's tags", () => {
 		const { getByTestId } = render(<ResearchList />);
 		for (const entry of research) {
 			const card = getByTestId(`research-card-${entry.slug}`);
@@ -41,17 +40,6 @@ describe("ResearchList", () => {
 			for (const tag of entry.tags) {
 				expect(scope.getByText(tag)).toBeInTheDocument();
 			}
-		}
-	});
-
-	it("uses variant=default for the year pill and variant=outline for the venue pill", () => {
-		const { getByTestId } = render(<ResearchList />);
-		for (const entry of research) {
-			const card = getByTestId(`research-card-${entry.slug}`);
-			const yearBadge = within(card).getByText(String(entry.year));
-			const venueBadge = within(card).getByText(entry.venue);
-			expect(yearBadge.dataset.variant).toBe("default");
-			expect(venueBadge.dataset.variant).toBe("outline");
 		}
 	});
 });

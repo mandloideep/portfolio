@@ -43,8 +43,6 @@ beforeEach(() => {
 	(
 		globalThis as unknown as { IntersectionObserver: typeof MockIO }
 	).IntersectionObserver = MockIO;
-	// GithubGraph fires fetch on mount; keep it in the loading state so we
-	// don't depend on the real /api/github-graph endpoint in page-level tests.
 	vi.stubGlobal(
 		"fetch",
 		vi.fn<typeof fetch>().mockReturnValue(new Promise(() => {})),
@@ -59,7 +57,7 @@ const EXPECTED_IDS = [
 	"hero",
 	"projects",
 	"experience",
-	"skills",
+	"research",
 	"github",
 	"contact",
 ];
@@ -72,16 +70,15 @@ describe("PortfolioPage", () => {
 		}
 	});
 
-	it("renders the animated background and dock nav", () => {
+	it("renders the top-tab nav", () => {
 		const { getByTestId } = render(<PortfolioPage />);
-		expect(getByTestId("animated-background")).toBeInTheDocument();
-		expect(getByTestId("dock-nav")).toBeInTheDocument();
+		expect(getByTestId("top-tabs")).toBeInTheDocument();
 	});
 
-	it("renders one dock item per section", () => {
+	it("renders one top-tab per section", () => {
 		const { getByTestId } = render(<PortfolioPage />);
 		for (const id of EXPECTED_IDS) {
-			expect(getByTestId(`dock-item-${id}`)).toBeInTheDocument();
+			expect(getByTestId(`top-tab-${id}`)).toBeInTheDocument();
 		}
 	});
 
@@ -105,9 +102,8 @@ describe("PortfolioPage", () => {
 		expect(h1?.textContent).toMatch(/deep/i);
 	});
 
-	it("renders SkillsGrid and ResearchList in the skills section", () => {
+	it("renders the research list in the research section", () => {
 		const { getByTestId } = render(<PortfolioPage />);
-		expect(getByTestId("skills-grid")).toBeInTheDocument();
 		expect(getByTestId("research-list")).toBeInTheDocument();
 	});
 
@@ -120,15 +116,5 @@ describe("PortfolioPage", () => {
 		const { getByTestId } = render(<PortfolioPage />);
 		expect(getByTestId("contact-card")).toBeInTheDocument();
 		expect(getByTestId("portfolio-footer")).toBeInTheDocument();
-	});
-
-	it("places the footer after main in document order", () => {
-		const { container, getByTestId } = render(<PortfolioPage />);
-		const main = container.querySelector("main");
-		const footer = getByTestId("portfolio-footer");
-		if (!main) throw new Error("expected <main> in the document");
-		expect(
-			main.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING,
-		).toBeTruthy();
 	});
 });
