@@ -4,6 +4,7 @@ import { useMagnetic } from "#/hooks/use-magnetic";
 import { useReducedMotion } from "#/hooks/use-reduced-motion";
 import { cn } from "#/lib/utils";
 import { AnimatedShinyText } from "../ui/animated-shiny-text";
+import { Eyebrow } from "../ui/eyebrow";
 import { LocalTime } from "./local-time";
 import { StatusPill } from "./status-pill";
 
@@ -45,48 +46,96 @@ function ShimmerName({ name }: { name: string }) {
 	);
 }
 
+type MetaRowProps = {
+	label: string;
+	value: string;
+};
+
+function MetaRow({ label, value }: MetaRowProps) {
+	return (
+		<div className="flex items-baseline gap-3 py-2.5 border-b border-border/60 last:border-b-0">
+			<dt className="w-20 shrink-0">
+				<Eyebrow className="text-muted/80">{label}</Eyebrow>
+			</dt>
+			<dd className="text-sm text-fg/90">{value}</dd>
+		</div>
+	);
+}
+
 export function Hero({ className }: { className?: string }) {
 	const projectsRef = useMagnetic<HTMLAnchorElement>();
 	const terminalRef = useMagnetic<HTMLAnchorElement>();
+	const meta = [
+		{ label: "location", value: siteMeta.location },
+		{ label: "focus", value: "agents · systems · ui" },
+		{ label: "email", value: siteMeta.email },
+		{ label: "stack", value: "ts · python · postgres" },
+	];
+
 	return (
-		<div data-testid="hero" className={cn("flex flex-col gap-6", className)}>
-			<div className="flex flex-col gap-3">
-				<p className="text-muted text-sm">hey, I&apos;m</p>
-				<h3 className="text-4xl md:text-5xl font-medium tracking-tight">
-					<ShimmerName name={siteMeta.name} />
-				</h3>
-				<p className="text-fg/80 text-base md:text-lg">{siteMeta.role}</p>
-			</div>
-
-			<div className="flex flex-wrap items-center gap-3">
-				<StatusPill status={siteMeta.status} />
-				<LocalTime />
-			</div>
-
-			<div className="flex flex-wrap items-center gap-3 pt-2">
-				<a
-					ref={projectsRef}
-					href="#projects"
-					data-testid="hero-cta-projects"
-					className="inline-flex items-center gap-2 rounded-md border border-accent bg-accent/10 px-4 py-2 text-sm text-accent hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-				>
+		<div
+			data-testid="hero"
+			className={cn(
+				"grid grid-cols-1 gap-10 md:grid-cols-[1fr_minmax(0,16rem)] md:items-end",
+				className,
+			)}
+		>
+			<div className="flex flex-col gap-6">
+				<Eyebrow as="p" className="flex items-center gap-2">
 					<span aria-hidden="true" className="text-accent">
-						▸
-					</span>
-					View projects
-				</a>
-				<a
-					ref={terminalRef}
-					href="/terminal"
-					data-testid="hero-cta-terminal"
-					className="inline-flex items-center gap-2 rounded-md border border-border bg-bg/40 px-4 py-2 text-sm text-fg hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-				>
-					<span aria-hidden="true" className="text-muted">
 						$
 					</span>
-					Open terminal
-				</a>
+					<span>hey, I&apos;m</span>
+				</Eyebrow>
+				<h3 className="font-display text-[clamp(2.75rem,7vw,5.25rem)] font-medium leading-[0.95] tracking-tight">
+					<ShimmerName name={siteMeta.name} />
+				</h3>
+				<p className="max-w-xl text-[1.0625rem] leading-[1.65] text-fg/90 md:text-lg">
+					{siteMeta.role}
+				</p>
+
+				<div className="flex flex-wrap items-center gap-3 pt-2">
+					<StatusPill status={siteMeta.status} />
+					<LocalTime />
+				</div>
+
+				<div className="flex flex-wrap items-center gap-3 pt-3">
+					<a
+						ref={projectsRef}
+						href="#projects"
+						data-testid="hero-cta-projects"
+						className="group inline-flex items-center gap-2 rounded-md border border-accent/70 bg-accent/10 px-4 py-2.5 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					>
+						<span
+							aria-hidden="true"
+							className="text-accent transition-transform group-hover:translate-x-0.5"
+						>
+							▸
+						</span>
+						View projects
+					</a>
+					<a
+						ref={terminalRef}
+						href="/terminal"
+						data-testid="hero-cta-terminal"
+						className="inline-flex items-center gap-2 rounded-md border border-border bg-bg-elev/70 px-4 py-2.5 text-sm font-medium text-fg/90 transition-colors hover:border-accent/60 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					>
+						<span aria-hidden="true" className="font-mono text-muted">
+							$
+						</span>
+						Open terminal
+					</a>
+				</div>
 			</div>
+
+			<dl
+				aria-label="profile metadata"
+				className="rounded-md border border-border/70 bg-bg-elev/70 px-4 py-1"
+			>
+				{meta.map((row) => (
+					<MetaRow key={row.label} label={row.label} value={row.value} />
+				))}
+			</dl>
 		</div>
 	);
 }

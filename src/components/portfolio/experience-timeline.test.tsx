@@ -51,7 +51,7 @@ describe("ExperienceTimeline", () => {
 		const { getAllByRole } = render(<ExperienceTimeline />);
 		const headings = getAllByRole("heading", { level: 3 });
 		headings.forEach((h, i) => {
-			expect(h.textContent).toBe(experience[i].role);
+			expect(h.textContent).toBe(experience[i].company);
 		});
 	});
 

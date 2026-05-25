@@ -7,7 +7,7 @@ export function ExperienceTimeline({ className }: { className?: string }) {
 		<ol
 			data-testid="experience-timeline"
 			className={cn(
-				"relative ml-1 flex flex-col border-l border-border/60",
+				"relative ml-1 flex flex-col border-l border-border pl-1",
 				className,
 			)}
 		>

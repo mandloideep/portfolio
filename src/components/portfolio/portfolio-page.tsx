@@ -47,7 +47,10 @@ const SECTIONS: ReadonlyArray<DockItem & { eyebrow: string; title: string }> = [
 
 export function PortfolioPage() {
 	return (
-		<div data-page="portfolio" className="relative min-h-screen">
+		<div
+			data-page="portfolio"
+			className="surface-grain relative min-h-screen bg-bg"
+		>
 			<AnimatedBackground />
 
 			<main id="main" className="relative">

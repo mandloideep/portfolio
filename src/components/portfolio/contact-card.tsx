@@ -27,19 +27,19 @@ function ContactRow({
 		? { target: "_blank", rel: "noreferrer" }
 		: undefined;
 	return (
-		<li className="flex items-center gap-3">
-			<span aria-hidden="true" className="shrink-0 text-accent">
+		<li className="group flex items-center gap-3 border-b border-border/60 py-3 last:border-b-0">
+			<span aria-hidden="true" className="shrink-0 select-none text-accent">
 				▸
 			</span>
 			<span className="shrink-0 text-muted">{icon}</span>
-			<span className="w-24 shrink-0 font-mono text-xs uppercase tracking-wider text-muted">
+			<span className="w-24 shrink-0 font-mono text-[11px] uppercase tracking-[0.16em] text-muted">
 				{label}
 			</span>
 			<a
 				data-testid={testId}
 				href={href}
 				{...externalAttrs}
-				className="truncate text-sm text-fg/90 transition hover:text-accent focus-visible:outline-none focus-visible:underline"
+				className="truncate text-[0.95rem] text-fg/90 transition-colors hover:text-accent focus-visible:outline-none focus-visible:underline"
 			>
 				{value}
 			</a>
@@ -80,9 +80,9 @@ export function ContactCard() {
 	return (
 		<div
 			data-testid="contact-card"
-			className="mx-auto flex w-full max-w-2xl flex-col gap-6"
+			className="mx-auto flex w-full max-w-2xl flex-col gap-6 rounded-md border border-border/70 bg-bg-elev/60 px-5 py-2"
 		>
-			<ul className="flex flex-col gap-3">
+			<ul className="flex flex-col">
 				<ContactRow
 					icon={<Mail className="size-4" aria-hidden="true" />}
 					label="email"
@@ -106,28 +106,28 @@ export function ContactCard() {
 					external
 					testId="contact-linkedin"
 				/>
-				<li className="flex items-center gap-3">
-					<span aria-hidden="true" className="shrink-0 text-accent">
+				<li className="flex items-center gap-3 py-3">
+					<span aria-hidden="true" className="shrink-0 select-none text-accent">
 						▸
 					</span>
 					<span className="shrink-0 text-muted">
 						<Terminal className="size-4" aria-hidden="true" />
 					</span>
-					<span className="w-24 shrink-0 font-mono text-xs uppercase tracking-wider text-muted">
+					<span className="w-24 shrink-0 font-mono text-[11px] uppercase tracking-[0.16em] text-muted">
 						terminal
 					</span>
 					<button
 						type="button"
 						data-testid="contact-terminal"
 						onClick={() => navigate({ to: "/terminal" })}
-						className="truncate text-sm text-fg/90 transition hover:text-accent focus-visible:outline-none focus-visible:underline"
+						className="truncate text-[0.95rem] text-fg/90 transition-colors hover:text-accent focus-visible:outline-none focus-visible:underline"
 					>
 						open the agentic terminal
 					</button>
 					<span className="ml-auto">
 						<Badge
 							variant="outline"
-							className="border-border/70 font-mono text-[10px] text-muted"
+							className="border-border/70 bg-bg/60 font-mono text-[10px] uppercase tracking-[0.14em] text-muted"
 						>
 							press t
 						</Badge>

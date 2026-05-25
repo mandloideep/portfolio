@@ -31,7 +31,7 @@ export function DockNav({ items, className }: DockNavProps) {
 		>
 			<ul
 				data-testid="dock-nav"
-				className="flex items-center gap-1 rounded-full border border-border bg-bg/70 px-2 py-1.5 backdrop-blur-md shadow-lg shadow-black/20"
+				className="flex items-center gap-0.5 rounded-full border border-border/80 bg-bg-elev/80 px-2 py-1.5 backdrop-blur-md shadow-[0_1px_0_var(--color-border),0_18px_40px_-20px_rgba(0,0,0,0.45)]"
 			>
 				{items.map((item) => {
 					const isActive = active === item.id;
@@ -44,14 +44,20 @@ export function DockNav({ items, className }: DockNavProps) {
 								data-active={isActive ? "true" : "false"}
 								aria-current={isActive ? "location" : undefined}
 								className={cn(
-									"px-3 py-1.5 rounded-full text-xs font-medium transition",
-									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+									"relative px-3 py-1.5 rounded-full font-mono text-[11px] uppercase tracking-[0.14em] transition-colors",
+									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0",
 									isActive
 										? "bg-accent/15 text-accent"
 										: "text-muted hover:text-fg",
 								)}
 							>
 								{item.label}
+								{isActive ? (
+									<span
+										aria-hidden="true"
+										className="absolute left-1/2 -bottom-[3px] h-[2px] w-5 -translate-x-1/2 rounded-full bg-accent"
+									/>
+								) : null}
 							</button>
 						</li>
 					);

@@ -7,8 +7,8 @@ import {
 } from "./themes";
 
 describe("themes registry", () => {
-	it("ships exactly five themes", () => {
-		expect(themes).toHaveLength(5);
+	it("ships the curated set of themes", () => {
+		expect(themes).toHaveLength(7);
 	});
 
 	it("nord-green is the default and first in the list", () => {

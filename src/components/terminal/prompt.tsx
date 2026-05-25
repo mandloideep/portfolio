@@ -154,35 +154,46 @@ export function Prompt({ onOpenPalette }: Props) {
 
 	const prefix = mode === "shell" ? "deep@portfolio:~ $" : "deep@portfolio:~ ❯";
 	const rows = Math.min(8, Math.max(1, value.split("\n").length));
+	const streaming =
+		useStore(terminalStore, (s) =>
+			s.blocks.some((b) => b.kind === "activity"),
+		) && value.length === 0;
 
 	return (
 		<form
 			data-testid="prompt-form"
+			data-state={streaming ? "streaming" : "idle"}
 			onSubmit={(e) => {
 				e.preventDefault();
 				void handleSubmit();
 			}}
-			className="flex items-start gap-2 border-t border-border bg-bg/60 px-4 py-2 text-[13px] sm:text-sm"
+			className="flex items-start gap-2.5 border-t border-border bg-bg-elev/60 px-5 py-3 font-mono text-[13.5px] focus-within:bg-bg-elev/80 transition-colors"
 		>
 			<label htmlFor="terminal-prompt" className="sr-only">
 				Terminal prompt
 			</label>
-			<span className="text-accent select-none shrink-0 pt-0.5">{prefix}</span>
-			<textarea
-				id="terminal-prompt"
-				ref={textareaRef}
-				data-testid="prompt-input"
-				value={value}
-				onChange={(e) => setValue(e.target.value)}
-				onKeyDown={onKeyDown}
-				rows={rows}
-				autoComplete="off"
-				autoCorrect="off"
-				autoCapitalize="off"
-				spellCheck={false}
-				className="flex-1 resize-none bg-transparent text-fg outline-none placeholder:text-muted font-mono"
-				placeholder="type /help"
-			/>
+			<span className="flex shrink-0 items-center gap-2 pt-[3px] text-accent font-semibold select-none">
+				<span className="status-dot" aria-hidden="true" />
+				{prefix}
+			</span>
+			<div className="relative flex-1">
+				<textarea
+					id="terminal-prompt"
+					ref={textareaRef}
+					data-testid="prompt-input"
+					value={value}
+					onChange={(e) => setValue(e.target.value)}
+					onKeyDown={onKeyDown}
+					rows={rows}
+					autoComplete="off"
+					autoCorrect="off"
+					autoCapitalize="off"
+					spellCheck={false}
+					aria-busy={streaming}
+					className="w-full resize-none bg-transparent text-fg outline-none placeholder:text-muted/70 font-mono caret-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 rounded-sm"
+					placeholder="type /help"
+				/>
+			</div>
 		</form>
 	);
 }
