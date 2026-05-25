@@ -44,7 +44,9 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 					<>
 						<DialogHeader className="gap-3">
 							<div className="flex items-center justify-between gap-3">
-								<Eyebrow className="text-accent">project · {project.slug}</Eyebrow>
+								<Eyebrow className="text-accent">
+									project · {project.slug}
+								</Eyebrow>
 								<Badge
 									variant={STATUS_VARIANT[project.status]}
 									className="shrink-0 font-mono text-[10px] uppercase tracking-[0.16em]"
