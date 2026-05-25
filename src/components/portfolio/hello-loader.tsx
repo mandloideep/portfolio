@@ -7,22 +7,34 @@ const GREETINGS = [
 	"bonjour",
 	"こんにちは",
 	"안녕",
-	"привет",
 	"नमस्ते",
+	"привет",
 	"olá",
 	"你好",
 	"ciao",
 ] as const;
 
 const STORAGE_KEY = "portfolio.hello-seen";
-const PER_GREETING_MS = 380;
-const FADE_MS = 200;
+const PER_GREETING_MS = 480; // 10 × 480 ≈ 4.8s reveal, plus a 300ms fade
+const FADE_MS = 320;
+
+function shouldForce(): boolean {
+	if (typeof window === "undefined") return false;
+	try {
+		return new URLSearchParams(window.location.search).get("hello") === "1";
+	} catch {
+		return false;
+	}
+}
 
 /**
- * Apple-style multilingual boot loader. Cycles a sequence of greetings
- * with a soft fade between, then dismisses itself and remembers in
- * localStorage so repeat visitors don't see it. Suppressed under
- * `prefers-reduced-motion` — the page mounts immediately.
+ * Apple-style multilingual boot loader. Cycles 10 greetings in different
+ * scripts over ~5 seconds with a soft fade, then dismisses itself and
+ * persists `localStorage["portfolio.hello-seen"] = "1"` so repeat
+ * visitors land straight on the portfolio.
+ *
+ * Force-play with `?hello=1` (handy for demos and screenshots).
+ * Suppressed under `prefers-reduced-motion`.
  */
 export function HelloLoader() {
 	const reduced = useReducedMotion();
@@ -37,13 +49,14 @@ export function HelloLoader() {
 			setStage("done");
 			return;
 		}
+		const forced = shouldForce();
 		let seen = false;
 		try {
 			seen = window.localStorage.getItem(STORAGE_KEY) === "1";
 		} catch {
 			// localStorage might throw in restricted contexts; fall through and play.
 		}
-		if (seen) {
+		if (seen && !forced) {
 			setStage("done");
 			return;
 		}
@@ -51,11 +64,7 @@ export function HelloLoader() {
 
 		const ticks: ReturnType<typeof setTimeout>[] = [];
 		for (let i = 1; i < GREETINGS.length; i++) {
-			ticks.push(
-				setTimeout(() => {
-					setIndex(i);
-				}, i * PER_GREETING_MS),
-			);
+			ticks.push(setTimeout(() => setIndex(i), i * PER_GREETING_MS));
 		}
 		const fadeAt = setTimeout(
 			() => setStage("fading"),
@@ -90,8 +99,8 @@ export function HelloLoader() {
 		>
 			<div className="font-display text-[clamp(3rem,9vw,6rem)] font-medium leading-none tracking-tight text-fg">
 				<span
-					key={GREETINGS[index]}
-					className="inline-block animate-[fade-in_var(--duration-fast)_var(--ease-out)]"
+					key={`${GREETINGS[index]}-${index}`}
+					className="inline-block animate-[fade-in_300ms_var(--ease-out)]"
 				>
 					{GREETINGS[index]}.
 				</span>

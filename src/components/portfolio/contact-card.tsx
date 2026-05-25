@@ -1,8 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { Card } from "#/components/ui/card";
 import { Pill } from "#/components/ui/pill";
 import { siteMeta } from "#/content/site";
-import { cn } from "#/lib/utils";
 
 type RowProps = {
 	label: string;
@@ -24,57 +24,52 @@ function ContactRow({
 	const externalAttrs = external
 		? { target: "_blank" as const, rel: "noreferrer" }
 		: undefined;
-	const rowClass =
-		"flex items-center gap-6 rounded-md border border-border/70 bg-bg-elev/60 px-5 py-4 transition-[colors,box-shadow] duration-base hover:border-accent/60 hover:shadow-glow focus-visible:outline-none focus-visible:border-accent/70 focus-visible:shadow-glow-strong";
+	const inner = (
+		<>
+			<span className="w-24 shrink-0 font-mono text-base text-muted">
+				{label}
+			</span>
+			<span aria-hidden="true" className="font-mono text-base text-muted">
+				→
+			</span>
+			<span className="flex-1 font-mono text-base text-link">{value}</span>
+		</>
+	);
 
-	const labelEl = (
-		<span className="w-24 shrink-0 font-mono text-base text-muted">
-			{label}
-		</span>
-	);
-	const arrowEl = (
-		<span aria-hidden="true" className="font-mono text-base text-muted">
-			→
-		</span>
-	);
-	const valueEl = (
-		<span className="flex-1 font-mono text-base text-link">{value}</span>
-	);
+	const className = "flex items-center gap-6 px-5 py-4";
 
 	if (href) {
 		return (
-			<a
+			<Card
+				as="a"
+				interactive
 				data-testid={testId}
 				href={href}
 				{...externalAttrs}
-				className={rowClass}
+				className={className}
 			>
-				{labelEl}
-				{arrowEl}
-				{valueEl}
-			</a>
+				{inner}
+			</Card>
 		);
 	}
 	if (onClick) {
 		return (
-			<button
+			<Card
+				as="button"
+				interactive
 				type="button"
 				data-testid={testId}
 				onClick={onClick}
-				className={cn(rowClass, "text-left")}
+				className={`${className} text-left`}
 			>
-				{labelEl}
-				{arrowEl}
-				{valueEl}
-			</button>
+				{inner}
+			</Card>
 		);
 	}
 	return (
-		<div className={rowClass} data-testid={testId}>
-			{labelEl}
-			{arrowEl}
-			{valueEl}
-		</div>
+		<Card data-testid={testId} className={className}>
+			{inner}
+		</Card>
 	);
 }
 

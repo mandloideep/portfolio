@@ -152,12 +152,12 @@ export function Prompt({ onOpenPalette }: Props) {
 		}
 	}
 
-	const prefix = mode === "shell" ? "deep@portfolio:~ $" : "deep@portfolio:~ ❯";
 	const rows = Math.min(8, Math.max(1, value.split("\n").length));
 	const streaming =
 		useStore(terminalStore, (s) =>
 			s.blocks.some((b) => b.kind === "activity"),
 		) && value.length === 0;
+	const symbol = mode === "shell" ? "$" : "❯";
 
 	return (
 		<form
@@ -167,33 +167,36 @@ export function Prompt({ onOpenPalette }: Props) {
 				e.preventDefault();
 				void handleSubmit();
 			}}
-			className="flex items-start gap-2.5 border-t border-border bg-bg-elev/60 px-5 py-3.5 font-mono text-base focus-within:bg-bg-elev/80 transition-colors duration-base"
+			className="flex items-start gap-2.5 border-t border-border bg-bg-elev/60 px-5 py-3.5 font-mono text-base transition-colors duration-base focus-within:bg-bg-elev/80"
 		>
 			<label htmlFor="terminal-prompt" className="sr-only">
 				Terminal prompt
 			</label>
-			<span className="flex shrink-0 items-center gap-2 pt-[3px] text-accent font-semibold select-none">
+			<span className="flex shrink-0 items-center gap-2 pt-[3px] font-semibold select-none">
 				<span className="status-dot" aria-hidden="true" />
-				{prefix}
+				<span>
+					<span className="text-prompt-user">deep</span>
+					<span className="text-prompt-symbol">@</span>
+					<span className="text-prompt-host">portfolio</span>
+					<span className="text-prompt-symbol">:~ {symbol}</span>
+				</span>
 			</span>
-			<div className="relative flex-1">
-				<textarea
-					id="terminal-prompt"
-					ref={textareaRef}
-					data-testid="prompt-input"
-					value={value}
-					onChange={(e) => setValue(e.target.value)}
-					onKeyDown={onKeyDown}
-					rows={rows}
-					autoComplete="off"
-					autoCorrect="off"
-					autoCapitalize="off"
-					spellCheck={false}
-					aria-busy={streaming}
-					className="w-full resize-none bg-transparent text-fg outline-none placeholder:text-muted/70 font-mono caret-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 rounded-sm"
-					placeholder="type /help"
-				/>
-			</div>
+			<textarea
+				id="terminal-prompt"
+				ref={textareaRef}
+				data-testid="prompt-input"
+				value={value}
+				onChange={(e) => setValue(e.target.value)}
+				onKeyDown={onKeyDown}
+				rows={rows}
+				autoComplete="off"
+				autoCorrect="off"
+				autoCapitalize="off"
+				spellCheck={false}
+				aria-busy={streaming}
+				className="flex-1 resize-none bg-transparent font-mono text-fg caret-accent outline-none placeholder:text-muted/70"
+				placeholder="type /help"
+			/>
 		</form>
 	);
 }
