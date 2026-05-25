@@ -1,5 +1,5 @@
 import { act, fireEvent, render } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pushHistory, terminalStore } from "#/store/terminal";
 
 const navigateMock = vi.fn();
@@ -9,6 +9,22 @@ vi.mock("@tanstack/react-router", () => ({
 
 // Import after mock so the hook resolves to the mocked navigate.
 import { Prompt } from "./prompt";
+import { abortAgentStream, isAgentStreaming } from "./use-agent-stream";
+
+function sseBody(chunks: string[]): ReadableStream<Uint8Array> {
+	const enc = new TextEncoder();
+	let i = 0;
+	return new ReadableStream({
+		pull(controller) {
+			if (i >= chunks.length) {
+				controller.close();
+				return;
+			}
+			controller.enqueue(enc.encode(chunks[i] ?? ""));
+			i += 1;
+		},
+	});
+}
 
 beforeEach(() => {
 	window.localStorage.clear();
@@ -21,6 +37,11 @@ beforeEach(() => {
 		cwd: "~",
 	}));
 	navigateMock.mockReset();
+	abortAgentStream();
+});
+
+afterEach(() => {
+	vi.restoreAllMocks();
 });
 
 function renderPrompt() {
@@ -53,14 +74,89 @@ describe("Prompt", () => {
 		expect(input.value).toBe("");
 	});
 
-	it("emits placeholder system block for free text", async () => {
+	it("streams an agent response for free text", async () => {
+		const fetchMock = vi
+			.fn<typeof fetch>()
+			.mockImplementation(
+				async () =>
+					new Response(
+						sseBody([
+							`event: token\ndata: ${JSON.stringify("hi back")}\n\n`,
+							`event: done\ndata: ${JSON.stringify({ tokens: 2 })}\n\n`,
+						]),
+						{ status: 200 },
+					),
+			);
+		vi.stubGlobal("fetch", fetchMock);
+
 		const { input } = renderPrompt();
 		fireEvent.change(input, { target: { value: "hello there" } });
 		await act(async () => {
 			fireEvent.keyDown(input, { key: "Enter" });
 		});
-		const last = terminalStore.state.blocks.at(-1);
-		expect(last?.kind).toBe("system");
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			"/api/agent",
+			expect.objectContaining({ method: "POST" }),
+		);
+		const markdown = terminalStore.state.blocks.find(
+			(b) => b.kind === "markdown",
+		);
+		expect(markdown && "text" in markdown && markdown.text).toBe("hi back");
+	});
+
+	it("Ctrl+C aborts an active stream", async () => {
+		const stream = new ReadableStream<Uint8Array>({
+			start(controller) {
+				const enc = new TextEncoder();
+				controller.enqueue(
+					enc.encode(`event: token\ndata: ${JSON.stringify("partial")}\n\n`),
+				);
+			},
+		});
+		const fetchMock = vi
+			.fn<typeof fetch>()
+			.mockImplementation(async (_, init) => {
+				const sig = (init as RequestInit | undefined)?.signal;
+				sig?.addEventListener("abort", () => {
+					stream.cancel("abort").catch(() => {});
+				});
+				return new Response(stream, { status: 200 });
+			});
+		vi.stubGlobal("fetch", fetchMock);
+
+		const { input } = renderPrompt();
+		fireEvent.change(input, { target: { value: "long answer please" } });
+		const pending = act(async () => {
+			fireEvent.keyDown(input, { key: "Enter" });
+			await new Promise((r) => setTimeout(r, 20));
+		});
+		await pending;
+		expect(isAgentStreaming()).toBe(true);
+
+		await act(async () => {
+			fireEvent.keyDown(input, { key: "c", ctrlKey: true });
+			await new Promise((r) => setTimeout(r, 20));
+		});
+
+		expect(isAgentStreaming()).toBe(false);
+		const system = terminalStore.state.blocks.find(
+			(b) => b.kind === "system" && b.text === "^C aborted",
+		);
+		expect(system).toBeDefined();
+	});
+
+	it("Ctrl+C is a no-op when no stream is active (so copy still works)", () => {
+		const { input } = renderPrompt();
+		// Should not throw, should not prevent default.
+		const event = new KeyboardEvent("keydown", {
+			key: "c",
+			ctrlKey: true,
+			bubbles: true,
+			cancelable: true,
+		});
+		input.dispatchEvent(event);
+		expect(event.defaultPrevented).toBe(false);
 	});
 
 	it("Shift+Enter does not submit", () => {

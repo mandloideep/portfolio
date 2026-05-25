@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { projects } from "#/content/site";
+import { DEFAULT_MODEL_ID, modelStore } from "#/store/model";
 import { emit as _emit, pushHistory, terminalStore } from "#/store/terminal";
 import { themeStore } from "#/store/theme";
 import { autocomplete, parseInput, runCommand } from "./commands";
@@ -16,6 +17,7 @@ beforeEach(() => {
 		cwd: "~",
 	}));
 	themeStore.setState(() => ({ slug: "nord-green" }));
+	modelStore.setState(() => ({ activeModel: DEFAULT_MODEL_ID }));
 });
 
 function lastBlock() {
@@ -226,6 +228,50 @@ describe("runCommand", () => {
 		await runCommand("/help", { navigate: noopNavigate, submit: noopSubmit });
 		const text = (lastBlock() as { text: string }).text;
 		expect(text).toContain("/exit");
+	});
+
+	it("/model with no args shows the current model", async () => {
+		await runCommand("/model", { navigate: noopNavigate, submit: noopSubmit });
+		const b = lastBlock();
+		expect(b?.kind).toBe("output");
+		expect((b as { text: string }).text).toContain(DEFAULT_MODEL_ID);
+	});
+
+	it("/model list dumps the allowlist", async () => {
+		await runCommand("/model list", {
+			navigate: noopNavigate,
+			submit: noopSubmit,
+		});
+		const text = (lastBlock() as { text: string }).text;
+		expect(text).toContain("google/gemini-2.5-flash-lite");
+		expect(text).toContain("anthropic/claude-haiku-4.5");
+	});
+
+	it("/model <id> switches and persists for an allowlisted id", async () => {
+		await runCommand("/model anthropic/claude-haiku-4.5", {
+			navigate: noopNavigate,
+			submit: noopSubmit,
+		});
+		expect(modelStore.state.activeModel).toBe("anthropic/claude-haiku-4.5");
+		expect(window.localStorage.getItem("portfolio.terminal.model")).toBe(
+			"anthropic/claude-haiku-4.5",
+		);
+		expect(lastBlock()?.kind).toBe("output");
+	});
+
+	it("/model <unknown> emits an error and leaves the active model alone", async () => {
+		await runCommand("/model not/real", {
+			navigate: noopNavigate,
+			submit: noopSubmit,
+		});
+		expect(modelStore.state.activeModel).toBe(DEFAULT_MODEL_ID);
+		expect(lastBlock()?.kind).toBe("error");
+	});
+
+	it("/help lists /model", async () => {
+		await runCommand("/help", { navigate: noopNavigate, submit: noopSubmit });
+		const text = (lastBlock() as { text: string }).text;
+		expect(text).toContain("/model");
 	});
 
 	it("/github + /resume open links (smoke)", async () => {

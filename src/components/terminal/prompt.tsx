@@ -8,6 +8,7 @@ import {
 } from "react";
 import { autocomplete } from "#/lib/terminal/commands";
 import { clearBlocks, setHistoryCursor, terminalStore } from "#/store/terminal";
+import { abortAgentStream, isAgentStreaming } from "./use-agent-stream";
 import { useSubmit } from "./use-submit";
 
 type Props = {
@@ -117,6 +118,15 @@ export function Prompt({ onOpenPalette }: Props) {
 			if (!after.includes("\n")) {
 				e.preventDefault();
 				setFromHistory(1);
+			}
+			return;
+		}
+		if (e.ctrlKey && e.key.toLowerCase() === "c") {
+			// Only intercept while a stream is running so the browser's native
+			// copy shortcut still works when the user has selected text.
+			if (isAgentStreaming()) {
+				e.preventDefault();
+				abortAgentStream();
 			}
 			return;
 		}

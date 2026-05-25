@@ -11,6 +11,7 @@ import {
 	setHistoryCursor,
 	setMode,
 	terminalStore,
+	updateBlock,
 } from "./terminal";
 
 beforeEach(() => {
@@ -73,6 +74,22 @@ describe("terminal store", () => {
 		const raw = window.localStorage.getItem(HISTORY_STORAGE_KEY);
 		expect(raw).not.toBeNull();
 		expect(JSON.parse(raw as string)).toEqual(["/help"]);
+	});
+
+	it("updateBlock patches an existing block's text", () => {
+		const block = makeBlock("markdown", { text: "Hel" });
+		appendBlock(block);
+		updateBlock(block.id, { text: "Hello" });
+		const updated = terminalStore.state.blocks[0];
+		expect(updated && "text" in updated && updated.text).toBe("Hello");
+	});
+
+	it("updateBlock is a no-op for unknown ids", () => {
+		const block = makeBlock("markdown", { text: "x" });
+		appendBlock(block);
+		updateBlock("nope", { text: "y" });
+		const after = terminalStore.state.blocks[0];
+		expect(after && "text" in after && after.text).toBe("x");
 	});
 
 	it("setHistoryCursor / setBooted / setMode mutate state", () => {

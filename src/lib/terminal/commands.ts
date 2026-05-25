@@ -1,5 +1,6 @@
 import { projects, siteMeta } from "#/content/site";
 import { isThemeSlug, type ThemeSlug, themes } from "#/content/themes";
+import { OPENROUTER_MODELS } from "#/lib/openrouter";
 import { makeBlock } from "#/lib/terminal/blocks";
 import {
 	getCorpusEntry,
@@ -7,6 +8,7 @@ import {
 	listProjectSlugs,
 } from "#/lib/terminal/corpus";
 import { formatTwoCol } from "#/lib/terminal/format";
+import { modelStore, setModel } from "#/store/model";
 import {
 	appendBlock,
 	clearBlocks,
@@ -197,6 +199,35 @@ const exit: Command = {
 	},
 };
 
+const model: Command = {
+	name: "/model",
+	description: "show or switch the agent model: /model [list|<id>]",
+	handler: ({ args }) => {
+		const sub = args[0];
+		if (!sub) {
+			const current = modelStore.state.activeModel;
+			const label =
+				OPENROUTER_MODELS.find((m) => m.id === current)?.label ?? current;
+			emit("output", `model: ${current} (${label})`);
+			return;
+		}
+		if (sub === "list") {
+			const rows: Array<[string, string]> = OPENROUTER_MODELS.map((m) => [
+				m.id,
+				m.label,
+			]);
+			emit("output", `models (use /model <id>):\n${formatTwoCol(rows)}`);
+			return;
+		}
+		if (!setModel(sub)) {
+			const known = OPENROUTER_MODELS.map((m) => m.id).join(", ");
+			emit("error", `unknown model: ${sub}. known: ${known}.`);
+			return;
+		}
+		emit("output", `model set to ${sub}`);
+	},
+};
+
 const projectsCmd: Command = {
 	name: "/projects",
 	description: "list projects (no args) or open one: /projects <slug>",
@@ -235,6 +266,7 @@ export const commands: Command[] = [
 	contact,
 	ui,
 	theme,
+	model,
 	github,
 	resume,
 	exit,

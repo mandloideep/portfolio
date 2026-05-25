@@ -2,18 +2,18 @@ import { Streamdown } from "streamdown";
 import { cn } from "#/lib/utils";
 
 /**
- * Renders a `markdown` block's text via streamdown (already in deps; Phase 6
- * will reuse it for SSE-streamed agent responses).
+ * Renders a `markdown` block's text via streamdown.
  *
- * Theming is left to Tailwind typography (`prose`) + the theme tokens defined
- * in `src/styles.css`. Default streamdown shiki theme is fine for v1 — the
- * agent corpus is mostly prose.
+ * Streaming mode is used unconditionally so the same component covers both
+ * "agent response that grows token-by-token" (Phase 6 SSE) and "static
+ * corpus dump" (content commands). `parseIncompleteMarkdown` handles the
+ * partial-fence case gracefully and is a no-op when the text is complete.
  */
 export function MarkdownBlock({ text }: { text: string }) {
 	return (
 		<Streamdown
-			mode="static"
-			parseIncompleteMarkdown={false}
+			mode="streaming"
+			parseIncompleteMarkdown={true}
 			className={cn(
 				"prose prose-invert prose-sm max-w-none text-fg",
 				"prose-headings:text-fg prose-headings:font-semibold",

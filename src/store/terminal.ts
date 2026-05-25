@@ -59,6 +59,18 @@ export function clearBlocks(): void {
 	terminalStore.setState((s) => ({ ...s, blocks: [] }));
 }
 
+/**
+ * Patch the `text` of an existing block. Used by the agent stream consumer
+ * to accumulate tokens into one growing markdown block. No-op if `id` isn't
+ * in `blocks`.
+ */
+export function updateBlock(id: string, patch: { text: string }): void {
+	terminalStore.setState((s) => ({
+		...s,
+		blocks: s.blocks.map((b) => (b.id === id ? { ...b, text: patch.text } : b)),
+	}));
+}
+
 export function pushHistory(line: string): void {
 	const trimmed = line.trim();
 	if (!trimmed) return;
