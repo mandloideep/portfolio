@@ -56,7 +56,7 @@ export function ProjectRow({
 				onClick={() => onToggle(project.slug)}
 				aria-expanded={expanded}
 				aria-controls={panelId}
-				className="flex w-full flex-col gap-2 rounded-card px-4 py-3 text-left font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-row sm:items-center sm:gap-4"
+				className="flex min-h-12 w-full flex-col gap-2 rounded-card px-4 py-3 text-left font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-row sm:items-center sm:gap-4"
 			>
 				<span className="flex shrink-0 items-center gap-3">
 					<span className="text-base text-accent">/{project.slug}</span>
@@ -80,7 +80,7 @@ export function ProjectRow({
 			{expanded ? (
 				<div
 					id={panelId}
-					className="border-t border-border/60 px-5 py-5 sm:px-7 sm:py-6"
+					className="border-t border-border/60 px-4 py-4 sm:px-7 sm:py-6"
 				>
 					<ul className="flex flex-col gap-2.5 font-mono text-base leading-relaxed text-fg/90">
 						{project.bullets.map((b) => (
@@ -106,7 +106,7 @@ export function ProjectRow({
 					</div>
 
 					<div
-						className="mt-5 flex flex-wrap items-center gap-5 font-mono text-sm"
+						className="mt-5 flex flex-wrap items-center gap-4 font-mono text-base sm:gap-5 sm:text-sm"
 						data-testid={`project-links-${project.slug}`}
 					>
 						{popup ? (
@@ -114,7 +114,7 @@ export function ProjectRow({
 								type="button"
 								data-testid={`project-link-readme-${project.slug}`}
 								onClick={() => popup.open(project.slug)}
-								className="inline-flex items-center gap-1.5 text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
+								className="inline-flex min-h-9 items-center gap-1.5 text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline sm:min-h-0"
 							>
 								<span aria-hidden="true" className="text-accent">
 									→
@@ -129,7 +129,7 @@ export function ProjectRow({
 								target="_blank"
 								rel="noopener noreferrer"
 								data-testid={`project-link-live-${project.slug}`}
-								className="inline-flex items-center gap-1.5 text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
+								className="inline-flex min-h-9 items-center gap-1.5 text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline sm:min-h-0"
 							>
 								<span aria-hidden="true" className="text-accent">
 									→
@@ -144,7 +144,7 @@ export function ProjectRow({
 								target="_blank"
 								rel="noopener noreferrer"
 								data-testid={`project-link-repo-${project.slug}`}
-								className="inline-flex items-center gap-1.5 text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
+								className="inline-flex min-h-9 items-center gap-1.5 text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline sm:min-h-0"
 							>
 								<span aria-hidden="true" className="text-accent">
 									→

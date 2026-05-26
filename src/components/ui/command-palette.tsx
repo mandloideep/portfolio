@@ -76,7 +76,7 @@ export function CommandPaletteDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
 				showCloseButton={false}
-				className="bg-bg border-border p-0"
+				className="bg-bg border-border p-0 sm:max-w-lg max-w-none w-full h-[100dvh] sm:h-auto rounded-none sm:rounded-card top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]"
 				onOpenAutoFocus={(e) => e.preventDefault()}
 			>
 				<DialogHeader className="sr-only">
@@ -107,7 +107,7 @@ export function CommandPaletteDialog({
 						}
 					}}
 					placeholder={placeholder}
-					className="w-full bg-transparent px-4 py-3 text-fg outline-none border-b border-border font-mono text-sm placeholder:text-muted/70"
+					className="w-full bg-transparent px-4 py-4 text-fg outline-none border-b border-border font-mono text-base placeholder:text-muted/70 sm:py-3 sm:text-sm"
 					autoComplete="off"
 					autoCorrect="off"
 					autoCapitalize="off"
@@ -115,7 +115,7 @@ export function CommandPaletteDialog({
 				/>
 				<ul
 					data-testid="palette-list"
-					className="max-h-72 overflow-y-auto py-1 font-mono text-sm"
+					className="max-h-[calc(100dvh-4rem)] overflow-y-auto py-1 font-mono text-base sm:max-h-72 sm:text-sm"
 				>
 					{filtered.length === 0 ? (
 						<li className="px-4 py-2 text-muted">{emptyMessage}</li>
@@ -164,7 +164,7 @@ function renderGrouped(
 					onClick={() => pick(a)}
 					onMouseEnter={() => setActive(i)}
 					className={cn(
-						"flex w-full items-center justify-between gap-3 px-4 py-2 text-left",
+						"flex w-full items-center justify-between gap-3 px-4 py-3 text-left sm:py-2",
 						i === active ? "bg-border/50 text-fg" : "text-fg hover:bg-border/30",
 					)}
 				>

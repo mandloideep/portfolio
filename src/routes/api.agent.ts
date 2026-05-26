@@ -239,10 +239,12 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 			any?: (s: AbortSignal[]) => AbortSignal;
 		}
 	).any;
-	const compose = (signals: AbortSignal[]): AbortSignal =>
-		typeof anyFn === "function"
-			? anyFn.call(AbortSignal, signals)
-			: signals[0]!;
+	const compose = (signals: AbortSignal[]): AbortSignal => {
+		if (typeof anyFn === "function") return anyFn.call(AbortSignal, signals);
+		const first = signals[0];
+		if (!first) throw new Error("compose() requires at least one signal");
+		return first;
+	};
 	const mainTimeout = AbortSignal.timeout(env.REQUEST_TIMEOUT_MS);
 	const upstreamSignal = compose([request.signal, mainTimeout]);
 

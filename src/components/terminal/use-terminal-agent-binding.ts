@@ -40,7 +40,6 @@ export function useTerminalAgentBinding(): void {
 		});
 		// `actions.abort` is stable; reading status through the live session
 		// reference avoids re-registering on every status flip.
-		// biome-ignore lint/correctness/useExhaustiveDependencies: see above
 	}, [actions, session]);
 
 	// Track which turn's blocks we've appended. Refs (not state) so per-token

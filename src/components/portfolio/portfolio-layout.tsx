@@ -9,6 +9,7 @@ import { useDensity } from "#/hooks/use-density";
 import { DesktopChatIcon } from "./desktop-chat-icon";
 import { DesktopTerminalIcon } from "./desktop-terminal-icon";
 import { Footer } from "./footer";
+import { MobileNav } from "./mobile-nav-drawer";
 import { PortfolioPalette } from "./portfolio-palette";
 import { type TopTab, TopTabs } from "./top-tabs";
 
@@ -45,10 +46,11 @@ export function PortfolioLayout({ children }: { children: ReactNode }) {
 	return (
 		<div
 			data-page="portfolio"
-			className="surface-grain relative flex min-h-screen items-start justify-center bg-bg p-4 md:p-8"
+			className="surface-grain relative flex min-h-[100dvh] items-start justify-center bg-bg p-0 sm:p-4 md:p-8"
+			style={{ paddingTop: "env(safe-area-inset-top)" }}
 		>
 			<TerminalFrame
-				className="max-w-[min(82rem,90vw)]"
+				className="max-w-[min(82rem,100vw)] sm:max-w-[min(82rem,90vw)]"
 				title={`${siteMeta.name.split(" ")[0]?.toLowerCase()} — portfolio`}
 				closeTo="/terminal"
 				controls={
@@ -59,6 +61,7 @@ export function PortfolioLayout({ children }: { children: ReactNode }) {
 						<ThemeSwitcher />
 					</>
 				}
+				mobileChrome={<MobileNav items={TABS} />}
 				chrome={<TopTabs items={TABS} />}
 			>
 				<main id="main" className="flex flex-col">

@@ -49,7 +49,10 @@ export function ChatThread() {
 					/>
 				))}
 			</div>
-			<div className="sticky bottom-0 border-t border-border/60 bg-bg/80 px-4 pt-2 pb-3 backdrop-blur-md sm:px-6">
+			<div
+				className="sticky bottom-0 border-t border-border/60 bg-bg/80 px-4 pt-2 pb-3 backdrop-blur-md sm:px-6"
+				style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+			>
 				<div className="mx-auto flex w-full max-w-4xl flex-col gap-2">
 					<button
 						type="button"
@@ -100,8 +103,8 @@ function ChatBubble({ turn, isActive, isLast }: ChatBubbleProps) {
 	if (turn.role === "user") {
 		return (
 			<div className="flex justify-end">
-				<div className="max-w-[78%] rounded-2xl rounded-tr-md bg-accent/10 px-4 py-2.5 text-fg">
-					<p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+				<div className="max-w-[88%] rounded-card rounded-tr-chip bg-accent/10 px-4 py-2.5 text-fg sm:max-w-[78%]">
+					<p className="whitespace-pre-wrap break-words text-base leading-relaxed sm:text-sm">
 						{turn.content}
 					</p>
 				</div>
@@ -118,7 +121,7 @@ function ChatBubble({ turn, isActive, isLast }: ChatBubbleProps) {
 		<div className="flex gap-3">
 			<ChatAvatar
 				size="sm"
-				className="mt-1 hidden shrink-0 sm:inline-flex"
+				className="mt-1 inline-flex shrink-0"
 				ariaLabel="assistant"
 			/>
 			<div

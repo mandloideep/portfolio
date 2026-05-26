@@ -61,7 +61,7 @@ export function StatusFooter() {
 	return (
 		<div
 			data-testid="status-footer"
-			className="flex items-center justify-between gap-3 border-t border-border bg-bg-elev/95 px-4 py-2.5 font-mono text-meta uppercase tracking-tab text-muted [font-variant-numeric:tabular-nums]"
+			className="hidden items-center justify-between gap-3 border-t border-border bg-bg-elev/95 px-4 py-2.5 font-mono text-meta uppercase tracking-tab text-muted [font-variant-numeric:tabular-nums] sm:flex"
 		>
 			<div className="flex items-center gap-2.5 min-w-0">
 				<span className="rounded-chip border border-border/70 bg-bg/60 px-1.5 py-0.5 font-semibold tracking-tab text-fg/90">

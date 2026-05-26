@@ -5,7 +5,7 @@ import { Card } from "./ui/card";
 import { Eyebrow } from "./ui/eyebrow";
 import { RuleAccent } from "./ui/rule-accent";
 
-const PREVIEW_HEIGHT = "h-44";
+const PREVIEW_HEIGHT = "h-32 sm:h-44";
 
 type ModeChooserProps = {
 	onPick: (m: Mode) => void;
@@ -24,7 +24,7 @@ export function ModeChooser({ onPick, currentMode }: ModeChooserProps) {
 	return (
 		<main
 			data-page="chooser"
-			className="surface-grain relative flex min-h-screen flex-col items-center justify-center gap-12 bg-bg px-6 py-16"
+			className="surface-grain relative flex min-h-[100dvh] flex-col items-center justify-center gap-8 bg-bg px-4 py-10 sm:gap-12 sm:px-6 sm:py-16"
 			aria-labelledby="chooser-heading"
 		>
 			<div className="flex max-w-2xl flex-col items-center gap-3 text-center">

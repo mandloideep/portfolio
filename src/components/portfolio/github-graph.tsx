@@ -7,12 +7,15 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "#/components/ui/tooltip";
+import { useIsMobile } from "#/hooks/use-is-mobile";
 import type {
 	ContributionDay,
 	ContributionWeek,
 	GithubGraphResponse,
 } from "#/routes/api.github-graph";
 import { LanguagePills } from "./language-pills";
+
+const MOBILE_WEEKS = 13;
 
 type FetchState =
 	| { status: "loading" }
@@ -143,28 +146,32 @@ function StatCell({
 }
 
 export function HeatmapGrid({ weeks }: { weeks: ContributionWeek[] }) {
+	const isMobile = useIsMobile();
+	const [focused, setFocused] = useState<ContributionDay | null>(null);
+	const visibleWeeks = isMobile ? weeks.slice(-MOBILE_WEEKS) : weeks;
+
 	const max = useMemo(() => {
 		let m = 0;
-		for (const w of weeks) {
+		for (const w of visibleWeeks) {
 			for (const d of w.days) {
 				if (d.count > m) m = d.count;
 			}
 		}
 		return m;
-	}, [weeks]);
+	}, [visibleWeeks]);
 
 	const monthLabels = useMemo(
 		() =>
-			buildMonthLabels(weeks).map((label, i) => ({
-				key: weeks[i]?.days[0]?.date ?? `idx-${i}`,
+			buildMonthLabels(visibleWeeks).map((label, i) => ({
+				key: visibleWeeks[i]?.days[0]?.date ?? `idx-${i}`,
 				label,
 			})),
-		[weeks],
+		[visibleWeeks],
 	);
 
 	return (
 		<TooltipProvider delayDuration={150}>
-			<div className="flex flex-col gap-2 overflow-x-auto">
+			<div className="flex flex-col gap-2 overflow-x-auto sm:overflow-x-auto">
 				<div
 					data-testid="heatmap"
 					className="grid gap-2"
@@ -172,7 +179,7 @@ export function HeatmapGrid({ weeks }: { weeks: ContributionWeek[] }) {
 						gridTemplateColumns: "auto 1fr",
 					}}
 				>
-					<div className="grid grid-rows-7 gap-[3px] pt-5 text-muted text-[10px]">
+					<div className="grid grid-rows-7 gap-0.5 pt-5 text-muted text-meta">
 						{WEEKDAYS.map((w) => (
 							<span
 								key={w.id}
@@ -185,9 +192,9 @@ export function HeatmapGrid({ weeks }: { weeks: ContributionWeek[] }) {
 					</div>
 					<div className="flex flex-col gap-1">
 						<div
-							className="grid text-muted text-[10px]"
+							className="grid text-muted text-meta"
 							style={{
-								gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))`,
+								gridTemplateColumns: `repeat(${visibleWeeks.length}, minmax(0, 1fr))`,
 							}}
 						>
 							{monthLabels.map((m) => (
@@ -201,26 +208,47 @@ export function HeatmapGrid({ weeks }: { weeks: ContributionWeek[] }) {
 							))}
 						</div>
 						<div
-							className="grid grid-flow-col grid-rows-7 gap-[3px]"
+							className="grid grid-flow-col grid-rows-7 gap-0.5"
 							style={{
 								gridAutoColumns: "minmax(0, 1fr)",
 							}}
 						>
-							{weeks.flatMap((w) =>
+							{visibleWeeks.flatMap((w) =>
 								w.days.map((d) => (
-									<HeatmapCell key={d.date} day={d} max={max} />
+									<HeatmapCell
+										key={d.date}
+										day={d}
+										max={max}
+										onFocus={() => setFocused(d)}
+									/>
 								)),
 							)}
 						</div>
 					</div>
 				</div>
+				{/* Live caption — touch users can't hover; tap a cell to read its date + count here. */}
+				<p
+					data-testid="heatmap-caption"
+					aria-live="polite"
+					className="min-h-5 text-meta text-muted sm:hidden"
+				>
+					{focused ? describeDay(focused) : "tap a cell to inspect"}
+				</p>
 				<HeatmapLegend />
 			</div>
 		</TooltipProvider>
 	);
 }
 
-function HeatmapCell({ day, max }: { day: ContributionDay; max: number }) {
+function HeatmapCell({
+	day,
+	max,
+	onFocus,
+}: {
+	day: ContributionDay;
+	max: number;
+	onFocus?: () => void;
+}) {
 	const label = describeDay(day);
 	return (
 		<Tooltip>
@@ -230,7 +258,9 @@ function HeatmapCell({ day, max }: { day: ContributionDay; max: number }) {
 					aria-label={label}
 					data-count={day.count}
 					data-date={day.date}
-					className={`size-3 rounded-[2px] ${intensityClass(day.count, max)}`}
+					onFocus={onFocus}
+					onClick={onFocus}
+					className={`size-3 rounded-chip ${intensityClass(day.count, max)}`}
 				/>
 			</TooltipTrigger>
 			<TooltipContent>{label}</TooltipContent>
@@ -246,7 +276,7 @@ function HeatmapLegend() {
 				<span
 					key={step}
 					data-testid={`legend-${step}`}
-					className={`inline-block size-3 rounded-[2px] ${step}`}
+					className={`inline-block size-3 rounded-chip ${step}`}
 					aria-hidden
 				/>
 			))}
@@ -264,13 +294,13 @@ function HeatmapSkeleton() {
 	return (
 		<div
 			data-testid="heatmap-skeleton"
-			className="grid grid-flow-col grid-rows-7 gap-[3px]"
+			className="grid grid-flow-col grid-rows-7 gap-0.5"
 			style={{ gridAutoColumns: "minmax(0, 1fr)" }}
 		>
 			{SKELETON_KEYS.map((key) => (
 				<div
 					key={key}
-					className="size-3 animate-pulse rounded-[2px] bg-border/30"
+					className="size-3 animate-pulse rounded-chip bg-border/30"
 				/>
 			))}
 		</div>

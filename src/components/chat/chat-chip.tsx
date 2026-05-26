@@ -33,7 +33,7 @@ type AnchorProps = CommonProps &
 type ChatChipProps = ButtonProps | AnchorProps;
 
 const BASE =
-	"inline-flex h-7 items-center gap-1.5 px-2 font-mono text-meta uppercase tracking-tab transition-colors duration-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+	"inline-flex h-9 items-center gap-1.5 px-2 font-mono text-meta uppercase tracking-tab transition-colors duration-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:h-7";
 
 // Matches the DensityToggle / ThemeSwitcher primitives so every chip in the
 // chat header reads as part of the same family.

@@ -27,7 +27,7 @@ export function TopTabs({ items, className }: TopTabsProps) {
 			aria-label="Page sections"
 			data-testid="top-tabs"
 			className={cn(
-				"flex items-center gap-2 overflow-x-auto px-4 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+				"hidden items-center gap-2 overflow-x-auto px-4 py-2.5 sm:flex [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
 				className,
 			)}
 		>

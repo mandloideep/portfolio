@@ -38,7 +38,7 @@ export function Scrollback() {
 			role="log"
 			aria-live="polite"
 			aria-label="terminal scrollback"
-			className="terminal-surface h-[60vh] overflow-y-auto bg-bg px-5 py-4 font-mono text-base leading-body [font-variant-numeric:tabular-nums] [&>*+*]:mt-2"
+			className="terminal-surface flex-1 min-h-0 overflow-y-auto bg-bg px-4 py-4 font-mono text-base leading-body [font-variant-numeric:tabular-nums] [&>*+*]:mt-2 sm:flex-none sm:h-[60vh] sm:px-5"
 		>
 			{blocks.map((b) => (
 				<BlockRow key={b.id} block={b} />

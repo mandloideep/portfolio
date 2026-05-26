@@ -103,7 +103,7 @@ export function QuickPromptCards({ className }: { className?: string }) {
 			data-testid="chat-quick-prompts"
 			data-variant="cards"
 			className={cn(
-				"grid w-full max-w-2xl grid-cols-2 gap-3 sm:grid-cols-5",
+				"grid w-full max-w-2xl grid-cols-1 gap-2 sm:grid-cols-5 sm:gap-3",
 				className,
 			)}
 		>
@@ -118,16 +118,16 @@ export function QuickPromptCards({ className }: { className?: string }) {
 						disabled={disabled}
 						data-testid={`chat-quick-${p.key}`}
 						onClick={() => send(p.prompt)}
-						className="group flex flex-col items-center justify-center gap-2 rounded-card border border-border/70 bg-bg/40 px-3 py-4 text-fg/90 transition-colors duration-base hover:bg-accent/10 hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+						className="group flex flex-row items-center justify-start gap-3 rounded-card border border-border/70 bg-bg/40 px-4 py-3 text-left text-fg/90 transition-colors duration-base hover:bg-accent/10 hover:text-accent disabled:cursor-not-allowed disabled:opacity-50 sm:flex-col sm:items-center sm:justify-center sm:gap-2 sm:px-3 sm:py-4 sm:text-center"
 					>
 						<Icon
 							className={cn(
-								"size-5 transition-colors duration-base",
+								"size-5 shrink-0 transition-colors duration-base",
 								p.iconClass,
 							)}
 							aria-hidden="true"
 						/>
-						<span className="text-sm font-medium">{p.label}</span>
+						<span className="text-base font-medium sm:text-sm">{p.label}</span>
 					</Card>
 				);
 			})}
@@ -142,7 +142,7 @@ export function QuickPromptPills({ className }: { className?: string }) {
 			data-testid="chat-quick-prompts"
 			data-variant="pills"
 			className={cn(
-				"flex flex-wrap items-center justify-center gap-2",
+				"-mx-4 flex items-center gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden",
 				className,
 			)}
 		>
@@ -155,7 +155,7 @@ export function QuickPromptPills({ className }: { className?: string }) {
 						disabled={disabled}
 						data-testid={`chat-quick-${p.key}`}
 						onClick={() => send(p.prompt)}
-						className="inline-flex h-7 items-center gap-1 rounded-card border border-border/70 bg-bg/40 px-2.5 font-mono text-meta uppercase tracking-tab text-muted transition-colors duration-base hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+						className="inline-flex h-9 shrink-0 items-center gap-1 rounded-card border border-border/70 bg-bg/40 px-3 font-mono text-meta uppercase tracking-tab text-muted transition-colors duration-base hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:h-7 sm:px-2.5"
 					>
 						<Icon className={cn("size-3", p.iconClass)} aria-hidden="true" />
 						{p.label}

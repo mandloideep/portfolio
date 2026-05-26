@@ -37,7 +37,7 @@ export function ProjectsBento() {
 	return (
 		<ProjectPopupProvider>
 			<div data-testid="projects-bento" className="flex flex-col gap-2.5">
-				<div className="flex items-center gap-3 px-4 pb-1 font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
+				<div className="hidden items-center gap-3 px-4 pb-1 font-mono text-eyebrow uppercase tracking-eyebrow text-muted sm:flex">
 					<span className="w-32">name</span>
 					<span className="w-20">status</span>
 					<span className="flex-1">description</span>

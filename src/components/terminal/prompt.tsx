@@ -1,4 +1,5 @@
 import { useStore } from "@tanstack/react-store";
+import { ArrowUp } from "lucide-react";
 import {
 	type KeyboardEvent,
 	useCallback,
@@ -7,6 +8,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { useIsMobile } from "#/hooks/use-is-mobile";
 import { wordCount } from "#/lib/prompt-guards";
 import { autocomplete } from "#/lib/terminal/commands";
 import { abortTour, isTourRunning } from "#/lib/terminal/tour";
@@ -35,6 +37,7 @@ type Props = {
  */
 export function Prompt({ onOpenPalette }: Props) {
 	const mode = useStore(terminalStore, (s) => s.mode);
+	const isMobile = useIsMobile();
 	const [value, setValue] = useState("");
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const ctrlCArmedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -50,18 +53,20 @@ export function Prompt({ onOpenPalette }: Props) {
 
 	useEffect(() => {
 		// Refocus the prompt whenever the user clicks anywhere that isn't
-		// a button, input, or the palette dialog.
+		// a button, input, or the palette dialog. Skipped on touch devices —
+		// auto-refocus fights the soft keyboard UX.
 		function handler(e: MouseEvent) {
 			const target = e.target as HTMLElement | null;
 			if (!target) return;
 			if (target.closest("button, a, input, textarea, [role=dialog]")) return;
 			focusPrompt();
 		}
+		if (isMobile) return;
 		document.addEventListener("click", handler);
 		return () => document.removeEventListener("click", handler);
-	}, [focusPrompt]);
+	}, [focusPrompt, isMobile]);
 
-	function setFromHistory(direction: -1 | 1) {
+	const setFromHistory = useCallback((direction: -1 | 1) => {
 		const { history, historyCursor } = terminalStore.state;
 		if (history.length === 0) return;
 		let next: number | null;
@@ -79,7 +84,21 @@ export function Prompt({ onOpenPalette }: Props) {
 		}
 		setHistoryCursor(next);
 		setValue(next === null ? "" : (history[next] ?? ""));
-	}
+	}, []);
+
+	useEffect(() => {
+		// External controls (mobile command rail) can dispatch this event
+		// to drive history without re-implementing the cursor logic.
+		function onStep(e: Event) {
+			const ce = e as CustomEvent<{ direction: -1 | 1 }>;
+			if (ce.detail?.direction === -1 || ce.detail?.direction === 1) {
+				setFromHistory(ce.detail.direction);
+				textareaRef.current?.focus();
+			}
+		}
+		document.addEventListener("terminal:history-step", onStep);
+		return () => document.removeEventListener("terminal:history-step", onStep);
+	}, [setFromHistory]);
 
 	function handleTab() {
 		const matches = autocomplete(value, mode);
@@ -205,7 +224,10 @@ export function Prompt({ onOpenPalette }: Props) {
 		}
 	}
 
-	const rows = Math.min(8, Math.max(1, value.split("\n").length));
+	const rows = Math.min(
+		isMobile ? 4 : 8,
+		Math.max(1, value.split("\n").length),
+	);
 	const streaming =
 		useStore(terminalStore, (s) =>
 			s.blocks.some((b) => b.kind === "activity"),
@@ -228,7 +250,8 @@ export function Prompt({ onOpenPalette }: Props) {
 				e.preventDefault();
 				void handleSubmit();
 			}}
-			className="flex items-baseline gap-2.5 border-t border-border bg-bg-elev/60 px-5 py-3.5 font-mono text-base transition-colors duration-base focus-within:bg-bg-elev/80"
+			className="sticky bottom-0 z-overlay flex items-baseline gap-2.5 border-t border-border bg-bg-elev/95 px-4 py-3 font-mono text-base transition-colors duration-base focus-within:bg-bg-elev sm:static sm:bg-bg-elev/60 sm:px-5 sm:py-3.5"
+			style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
 		>
 			<label htmlFor="terminal-prompt" className="sr-only">
 				Terminal prompt
@@ -268,6 +291,16 @@ export function Prompt({ onOpenPalette }: Props) {
 					{words}/{WORD_CAP}
 				</span>
 			) : null}
+			{/* Mobile send button — soft keyboards send Enter as newline by default. */}
+			<button
+				type="submit"
+				data-testid="prompt-send"
+				aria-label="send"
+				disabled={value.length === 0}
+				className="inline-flex size-10 shrink-0 items-center justify-center self-end rounded-pill bg-accent text-bg transition-transform duration-base hover:scale-105 focus-visible:scale-105 focus-visible:outline-none disabled:opacity-40 sm:hidden"
+			>
+				<ArrowUp className="size-5" aria-hidden="true" />
+			</button>
 			{/* Honeypot — invisible, never auto-filled by humans. */}
 			<input
 				type="text"

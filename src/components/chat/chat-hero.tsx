@@ -24,9 +24,9 @@ export function ChatHero() {
 	return (
 		<section
 			data-testid="chat-hero"
-			className="relative flex flex-1 flex-col items-center px-6 pt-6 pb-12 sm:pt-10"
+			className="relative flex flex-1 flex-col items-center px-4 pt-4 pb-8 sm:px-6 sm:pt-10 sm:pb-12"
 		>
-			<div className="flex w-full flex-1 flex-col items-center justify-center gap-8 py-8 text-center">
+			<div className="flex w-full flex-1 flex-col items-center justify-center gap-6 py-4 text-center sm:gap-8 sm:py-8">
 				<div className="flex flex-col items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-700">
 					<p className="flex items-center gap-2 font-mono text-meta uppercase tracking-tab text-muted">
 						<span aria-hidden="true" className="text-prompt-user">
@@ -34,7 +34,7 @@ export function ChatHero() {
 						</span>
 						<span>cat ~/whoami</span>
 					</p>
-					<p className="font-display text-2xl font-medium text-fg">
+					<p className="font-display text-xl font-medium text-fg sm:text-2xl">
 						Hey, I'm {firstName} <span aria-hidden="true">👋</span>
 					</p>
 					<h1 className="font-display text-display font-medium leading-tight tracking-tight text-fg whitespace-nowrap">

@@ -378,9 +378,9 @@ export async function readQuota(args: {
 			: row.premiumCount
 		: row.count;
 	const effectiveWindowStart = isPremium
-		? premiumStale
+		? premiumStale || !row.premiumWindowStart
 			? null
-			: new Date(row.premiumWindowStart!)
+			: new Date(row.premiumWindowStart)
 		: new Date(row.windowStart);
 	return {
 		remaining: enforce ? Math.max(0, (limit ?? 0) - usedCount) : null,

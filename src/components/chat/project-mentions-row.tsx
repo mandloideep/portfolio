@@ -47,7 +47,7 @@ export function ProjectMentionsRow({
 						data-project-slug={slug}
 						aria-haspopup="dialog"
 						onClick={() => popup.open(slug)}
-						className="inline-flex items-center gap-1 rounded-pill border border-border/70 bg-bg-elev/60 px-2.5 py-1 font-mono text-meta uppercase tracking-tab text-fg/90 transition-colors hover:border-accent/60 hover:text-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+						className="inline-flex min-h-9 items-center gap-1 rounded-pill border border-border/70 bg-bg-elev/60 px-3 py-1.5 font-mono text-meta uppercase tracking-tab text-fg/90 transition-colors hover:border-accent/60 hover:text-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent sm:min-h-0 sm:px-2.5 sm:py-1"
 					>
 						{project.title}
 						<ArrowUpRight className="size-3" aria-hidden="true" />
