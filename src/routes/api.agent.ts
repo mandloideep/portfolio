@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { classifyPrompt } from "#/lib/classifier";
+import { pickCheckingQuip } from "#/lib/classifier-quips";
 import { assembleContext } from "#/lib/context";
-import { getLlmConfig, getServerEnv } from "#/lib/env";
+import { getClassifierConfig, getLlmConfig, getServerEnv } from "#/lib/env";
 import { lookupIp } from "#/lib/ipinfo";
 import { checkAndRecordLlmCall } from "#/lib/llm-rate-limit";
 import {
@@ -201,36 +202,12 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 		});
 	}
 
-	// On-topic pre-flight classifier. Pinned to LLM_FREE_MODEL so it never
-	// burns the premium quota — even if the user picked a premium model for
-	// the main reply. Fail-open on errors.
-	const classifierModel =
-		env.LLM_FREE_MODEL ?? env.CLASSIFIER_MODEL ?? "gemma-4-31b-it";
-	if (env.CLASSIFIER_ENABLED) {
-		// Skip classifier when it would exceed model rate limits — better to
-		// let the prompt through than to refuse over gating overhead.
-		const classifierQuota = await checkAndRecordLlmCall({
-			provider,
-			model: classifierModel,
-		});
-		if (classifierQuota.allowed) {
-			try {
-				const verdict = await classifyPrompt({
-					prompt: parsed.data.message,
-					provider,
-					apiKey,
-					model: classifierModel,
-					signal: request.signal,
-				});
-				if (verdict === "UNSAFE") {
-					return sseSingle("error", { message: "off_topic" });
-				}
-			} catch (err) {
-				// eslint-disable-next-line no-console
-				console.warn("[api.agent] classifier failed (fail-open)", err);
-			}
-		}
-	}
+	// On-topic pre-flight classifier. Routed through `getClassifierConfig`
+	// so it can run on a separate provider/model from the main reply
+	// (currently OpenRouter's free nvidia/nemotron — fast and decoupled
+	// from the per-visitor premium quota).
+	const classifier = getClassifierConfig(env);
+	const classifierEnabled = env.CLASSIFIER_ENABLED && classifier !== null;
 
 	const { system, contextDocs, files } = assembled;
 	const messages: ChatMessage[] = [
@@ -244,16 +221,21 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 		{ role: "user", content: parsed.data.message },
 	];
 
-	// Compose abort signal: client disconnect OR per-request timeout.
-	const timeout = AbortSignal.timeout(env.REQUEST_TIMEOUT_MS);
-	const upstreamSignal: AbortSignal =
-		typeof (
-			AbortSignal as unknown as { any?: (s: AbortSignal[]) => AbortSignal }
-		).any === "function"
-			? (
-					AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }
-				).any([request.signal, timeout])
-			: request.signal;
+	// Compose abort signal: client disconnect OR per-request timeout. The
+	// main reply gets the full REQUEST_TIMEOUT_MS budget; the classifier
+	// runs on its own shorter signal so a slow classifier doesn't eat into
+	// the main reply's window.
+	const anyFn = (
+		AbortSignal as unknown as {
+			any?: (s: AbortSignal[]) => AbortSignal;
+		}
+	).any;
+	const compose = (signals: AbortSignal[]): AbortSignal =>
+		typeof anyFn === "function"
+			? anyFn.call(AbortSignal, signals)
+			: signals[0]!;
+	const mainTimeout = AbortSignal.timeout(env.REQUEST_TIMEOUT_MS);
+	const upstreamSignal = compose([request.signal, mainTimeout]);
 
 	const stream = new ReadableStream<Uint8Array>({
 		async start(controller) {
@@ -263,15 +245,65 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 					enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
 				);
 			};
+			// Perceptible gap between activity events so the user sees them
+			// appear one-by-one instead of in a single render batch when
+			// the underlying work is fast (e.g. classifier allowlist hit).
+			const ACTIVITY_PACE_MS = 220;
+			const tick = () =>
+				new Promise<void>((r) => setTimeout(r, ACTIVITY_PACE_MS));
 
 			write("quota", {
 				remaining: rate.remaining,
 				resetsAt: rate.resetsAt.toISOString(),
 			});
 
+			// On-topic pre-flight inside the stream so the user sees a
+			// "checking…" activity line during the ~1s round-trip (or just
+			// for visual rhythm if the verdict is cached / allowlisted).
+			if (classifierEnabled && classifier) {
+				const classifierQuota = await checkAndRecordLlmCall({
+					provider: classifier.provider,
+					model: classifier.model,
+				});
+				if (classifierQuota.allowed) {
+					write("activity", {
+						step: "checking",
+						note: pickCheckingQuip(),
+						model: classifier.model,
+					});
+					// Classifier gets its own short deadline so a slow
+					// classifier never burns the main reply's budget.
+					const classifierTimeout = AbortSignal.timeout(8_000);
+					const classifierSignal = compose([request.signal, classifierTimeout]);
+					try {
+						const verdict = await classifyPrompt({
+							prompt: parsed.data.message,
+							provider: classifier.provider,
+							apiKey: classifier.apiKey,
+							model: classifier.model,
+							signal: classifierSignal,
+						});
+						if (verdict === "UNSAFE") {
+							write("error", { message: "off_topic" });
+							controller.close();
+							return;
+						}
+					} catch (err) {
+						// eslint-disable-next-line no-console
+						console.warn("[api.agent] classifier failed (fail-open)", err);
+					}
+					// If the classifier finished faster than ACTIVITY_PACE_MS
+					// (allowlist hit, cached verdict), pad to keep the next
+					// activity line from rendering in the same React batch.
+					await tick();
+				}
+			}
+
 			try {
 				write("activity", { step: "reading", files });
+				await tick();
 				write("activity", { step: "calling", model, provider });
+				await tick();
 
 				let totalTokens = 0;
 				let lastUsage:

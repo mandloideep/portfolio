@@ -90,9 +90,9 @@ describe("getServerEnv", () => {
 		expect(env.WORD_CAP).toBe(30);
 		expect(env.BLOCK_VPN).toBe(true);
 		expect(env.CLASSIFIER_ENABLED).toBe(true);
-		expect(env.MAX_OUTPUT_TOKENS).toBe(400);
+		expect(env.MAX_OUTPUT_TOKENS).toBe(2048);
 		expect(env.MIN_REQUEST_INTERVAL_MS).toBe(2000);
-		expect(env.REQUEST_TIMEOUT_MS).toBe(20_000);
+		expect(env.REQUEST_TIMEOUT_MS).toBe(45_000);
 		expect(env.DAILY_TOKEN_BUDGET).toBe(200_000);
 		expect(env.PER_IP_TOKEN_BUDGET).toBe(20_000);
 	});

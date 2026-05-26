@@ -40,7 +40,8 @@ export type ClassifyArgs = {
  * LLM failure — the caller is expected to fail open.
  */
 // Common greetings + conversational openers. Short-circuiting these saves a
-// Gemma call per visit and removes a class of false positives.
+// Gemma call per visit and removes a class of false positives. Matching is
+// against the message stripped to alphanumerics + single spaces.
 const ALWAYS_SAFE = new Set([
 	"hi",
 	"hey",
@@ -59,13 +60,25 @@ const ALWAYS_SAFE = new Set([
 	"bye",
 	"cya",
 	"see you",
+	"hi whats up",
+	"hey whats up",
+	"hello whats up",
+	"whats up",
+	"how are you",
+	"how is it going",
+	"hows it going",
+	"who are you",
+	"what can you do",
+	"what is this",
+	"help",
 ]);
 
 export async function classifyPrompt(args: ClassifyArgs): Promise<Verdict> {
 	const normalized = args.prompt
-		.trim()
 		.toLowerCase()
-		.replace(/[!?.,]+$/u, "");
+		.replace(/[^a-z0-9\s]/g, "")
+		.replace(/\s+/g, " ")
+		.trim();
 	if (normalized.length === 0 || ALWAYS_SAFE.has(normalized)) {
 		return "SAFE";
 	}
@@ -83,11 +96,12 @@ export async function classifyPrompt(args: ClassifyArgs): Promise<Verdict> {
 			{ role: "user", content: args.prompt },
 		],
 		signal: args.signal,
-		// Gemma 4 is a reasoning model and always emits ~150 tokens of
-		// `<thought>...</thought>` before the final answer. We strip that
-		// server-side, but the budget needs to cover both the thought + the
-		// SAFE/UNSAFE token. 384 is comfortable.
-		maxTokens: 384,
+		// Budget covers both reasoning models (Nemotron, which emits ~80
+		// tokens of reasoning into a separate `reasoning` field) and
+		// non-reasoning models (Flash Lite, which only emits the verdict).
+		// 256 is comfortable for both — the model stops when it has the
+		// answer, so this doesn't slow non-reasoning calls.
+		maxTokens: 256,
 		temperature: 0,
 	});
 

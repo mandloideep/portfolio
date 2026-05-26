@@ -198,6 +198,7 @@ function formatActivity(data: unknown): string {
 		step?: string;
 		files?: string[];
 		model?: string;
+		note?: string;
 	};
 	if (obj.step === "reading") {
 		const files = obj.files ?? [];
@@ -207,6 +208,9 @@ function formatActivity(data: unknown): string {
 	}
 	if (obj.step === "calling") {
 		return obj.model ? `· calling ${obj.model}` : "· calling model";
+	}
+	if (obj.step === "checking") {
+		return `· ${obj.note ?? "checking prompt…"}`;
 	}
 	return `· ${JSON.stringify(data)}`;
 }

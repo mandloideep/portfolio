@@ -64,6 +64,10 @@ const ServerEnvSchema = z
 			)
 			.transform((v) => v === "true"),
 		WORD_CAP: z.coerce.number().int().positive().default(30),
+		// Classifier runs on a fast non-reasoning model (Gemini 2.5 Flash
+		// Lite) so the round-trip is ~1s instead of Gemma's ~5s reasoning
+		// delay. Cheap enough at ~$0.00005/call that 1k visitor messages
+		// cost about a nickel.
 		CLASSIFIER_ENABLED: z
 			.preprocess(
 				(v) => (typeof v === "string" ? v.toLowerCase() : v),
@@ -71,16 +75,28 @@ const ServerEnvSchema = z
 			)
 			.transform((v) => v === "true"),
 		CLASSIFIER_MODEL: optionalString,
+		// Optional dedicated provider for the classifier. When unset, the
+		// classifier inherits the main `LLM_PROVIDER`. Setting to
+		// `openrouter` lets us route the classifier to a free reasoning
+		// model on OpenRouter while keeping Gemini for the main reply.
+		CLASSIFIER_PROVIDER: z.enum(["openrouter", "gemini"]).optional(),
 		// Free model pinned for classifier + commentary. Defaults to Gemma 4 31B
 		// so gating logic never touches the premium quota.
 		LLM_FREE_MODEL: optionalString,
-		MAX_OUTPUT_TOKENS: z.coerce.number().int().positive().default(400),
+		// Generous because Gemma's reasoning block eats 200–400 tokens
+		// before the visible reply starts. 2048 leaves comfortable room for
+		// the actual answer after thoughts. Gemma is free + unlimited TPM,
+		// so this only affects latency on long replies, not cost.
+		MAX_OUTPUT_TOKENS: z.coerce.number().int().positive().default(2048),
 		MIN_REQUEST_INTERVAL_MS: z.coerce
 			.number()
 			.int()
 			.nonnegative()
 			.default(2000),
-		REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(20_000),
+		// Gemma 4 31B is a reasoning model — complex prompts can spend
+		// 15-25s in <thought> before the first visible token streams.
+		// 45s leaves comfortable headroom over the worst-case thinking.
+		REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(45_000),
 	})
 	.superRefine((env, ctx) => {
 		if (env.LLM_PROVIDER === "openrouter" && !env.OPENROUTER_API_KEY) {
@@ -155,6 +171,32 @@ export function getLlmConfig(env: ServerEnv = getServerEnv()): {
 			? overrideDefault
 			: getDefaultModelForProvider(provider);
 	return { provider, apiKey, defaultModel };
+}
+
+/**
+ * Resolve the classifier's (provider, apiKey, model). The classifier can
+ * optionally run on a different provider than the main reply — handy when
+ * we want a free, fast model from OpenRouter (e.g. nvidia/nemotron) while
+ * the user-visible answer comes from Gemini.
+ *
+ * Falls back to the main provider when `CLASSIFIER_PROVIDER` is unset.
+ */
+export function getClassifierConfig(env: ServerEnv = getServerEnv()): {
+	provider: Provider;
+	apiKey: string;
+	model: string;
+} | null {
+	const main = getLlmConfig(env);
+	const provider = env.CLASSIFIER_PROVIDER ?? main.provider;
+	const apiKey =
+		provider === "gemini" ? env.GEMINI_API_KEY : env.OPENROUTER_API_KEY;
+	if (!apiKey) return null; // No key for this provider → classifier disabled.
+	const model =
+		env.CLASSIFIER_MODEL ??
+		(provider === "openrouter"
+			? "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+			: "gemini-2.5-flash-lite");
+	return { provider, apiKey, model };
 }
 
 /** Test-only: clear the cached env so the next call re-parses process.env. */

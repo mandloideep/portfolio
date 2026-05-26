@@ -10,14 +10,15 @@ vi.mock("#/lib/env", () => ({
 		GITHUB_TOKEN: "test-token",
 		GITHUB_USERNAME: "deep",
 		RATE_LIMIT_SALT: "test-salt",
-		RATE_LIMIT_MAX: 5,
+		RATE_LIMIT_MAX: 15,
+		PREMIUM_LIMIT: 5,
 		RATE_LIMIT_WINDOW_MS: 86_400_000,
 		DAILY_TOKEN_BUDGET: 200_000,
 		PER_IP_TOKEN_BUDGET: 20_000,
 		BLOCK_VPN: false,
 		WORD_CAP: 30,
 		CLASSIFIER_ENABLED: false,
-		MAX_OUTPUT_TOKENS: 400,
+		MAX_OUTPUT_TOKENS: 2048,
 		MIN_REQUEST_INTERVAL_MS: 0,
 		REQUEST_TIMEOUT_MS: 20_000,
 	}),
@@ -26,7 +27,12 @@ vi.mock("#/lib/env", () => ({
 		apiKey: "test-or",
 		defaultModel: "google/gemini-2.5-flash-lite",
 	}),
+	getClassifierConfig: () => null, // classifier disabled in tests
 	_resetEnvCacheForTests: () => {},
+}));
+vi.mock("#/lib/llm-rate-limit", () => ({
+	checkAndRecordLlmCall: vi.fn(async () => ({ allowed: true })),
+	MODEL_QUOTAS: {},
 }));
 
 // Storage-touching modules: stub them with no-op happy-path returns so the
