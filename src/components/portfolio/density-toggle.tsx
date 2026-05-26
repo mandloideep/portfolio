@@ -35,7 +35,7 @@ export function DensityToggle({ className }: { className?: string }) {
 			data-testid="density-toggle"
 			data-density={current}
 			className={cn(
-				"inline-flex items-center gap-0.5 rounded-md border border-border/70 bg-bg/40 p-0.5 font-mono text-meta text-muted",
+				"inline-flex items-center gap-0.5 rounded-card border border-border/70 bg-bg/40 p-0.5 font-mono text-meta text-muted",
 				className,
 			)}
 		>
@@ -45,7 +45,7 @@ export function DensityToggle({ className }: { className?: string }) {
 				data-testid="density-down"
 				onClick={() => step(-1)}
 				disabled={index === 0}
-				className="inline-flex h-6 w-6 items-center justify-center rounded-sm transition-colors duration-base hover:text-accent disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				className="inline-flex h-6 w-6 items-center justify-center rounded-chip transition-colors duration-base hover:text-accent disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
 				<Minus className="h-3 w-3" aria-hidden="true" />
 			</button>
@@ -58,7 +58,7 @@ export function DensityToggle({ className }: { className?: string }) {
 				data-testid="density-up"
 				onClick={() => step(1)}
 				disabled={index === DENSITIES.length - 1}
-				className="inline-flex h-6 w-6 items-center justify-center rounded-sm transition-colors duration-base hover:text-accent disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				className="inline-flex h-6 w-6 items-center justify-center rounded-chip transition-colors duration-base hover:text-accent disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
 				<Plus className="h-3 w-3" aria-hidden="true" />
 			</button>

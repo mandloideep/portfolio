@@ -72,7 +72,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 								alt={`${project.title} preview`}
 								loading="lazy"
 								data-testid="project-modal-poster"
-								className="w-full rounded-md border border-border/70 object-cover"
+								className="w-full rounded-card border border-border/70 object-cover"
 							/>
 						) : null}
 

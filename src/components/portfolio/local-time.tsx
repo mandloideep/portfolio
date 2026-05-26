@@ -32,7 +32,7 @@ export function LocalTime({ className }: LocalTimeProps) {
 		<span
 			data-testid="local-time"
 			className={cn(
-				"inline-flex items-center gap-2 font-mono text-xs text-muted",
+				"inline-flex items-center gap-2 font-mono text-meta text-muted",
 				className,
 			)}
 		>

@@ -28,7 +28,7 @@ export function SkillsGrid({ className }: { className?: string }) {
 							<span
 								key={item}
 								data-slot="badge"
-								className="inline-flex items-center rounded-sm border border-border/70 bg-bg-elev/60 px-2 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-fg/90"
+								className="inline-flex items-center rounded-chip border border-border/70 bg-bg-elev/60 px-2 py-1 font-mono text-eyebrow uppercase tracking-wide text-fg/90"
 							>
 								{item}
 							</span>

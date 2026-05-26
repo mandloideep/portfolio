@@ -44,7 +44,7 @@ export function TopTabs({ items, className }: TopTabsProps) {
 						data-active={isActive ? "true" : "false"}
 						aria-current={isActive ? "page" : undefined}
 						className={cn(
-							"relative shrink-0 isolate overflow-hidden rounded-md border px-3.5 py-1.5 font-mono text-base transition-colors duration-base",
+							"relative shrink-0 isolate overflow-hidden rounded-card border px-3.5 py-1.5 font-mono text-base transition-colors duration-base",
 							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0",
 							isActive
 								? "border-accent/70 bg-accent/10 text-accent shadow-tab-active"

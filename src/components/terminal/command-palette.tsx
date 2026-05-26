@@ -120,7 +120,7 @@ export function CommandPalette({ open, onOpenChange }: Props) {
 									)}
 								>
 									<span className="text-accent">{c.name}</span>
-									<span className="text-muted text-xs">{c.description}</span>
+									<span className="text-muted text-meta">{c.description}</span>
 								</button>
 							</li>
 						))

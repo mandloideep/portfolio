@@ -23,7 +23,7 @@ export function MarkdownBlock({ text }: { text: string }) {
 				"prose-headings:font-semibold prose-headings:tracking-tight",
 				"prose-a:text-link prose-a:no-underline hover:prose-a:underline",
 				"prose-code:rounded prose-code:border prose-code:border-border/60 prose-code:bg-bg-elev prose-code:px-1.5 prose-code:py-0.5 prose-code:text-accent prose-code:font-medium prose-code:before:content-none prose-code:after:content-none",
-				"prose-pre:rounded-md prose-pre:border prose-pre:border-border/60 prose-pre:bg-bg-elev",
+				"prose-pre:rounded-card prose-pre:border prose-pre:border-border/60 prose-pre:bg-bg-elev",
 				"prose-blockquote:border-l-2 prose-blockquote:border-accent prose-blockquote:not-italic prose-blockquote:text-fg/90",
 				"prose-strong:text-fg prose-em:text-fg/95",
 				"prose-hr:border-border/60",

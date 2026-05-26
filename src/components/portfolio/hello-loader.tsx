@@ -94,7 +94,7 @@ export function HelloLoader() {
 			aria-label="Welcome"
 			data-testid="hello-loader"
 			data-stage={stage}
-			className="fixed inset-0 z-modal flex items-center justify-center bg-bg transition-opacity duration-300"
+			className="fixed inset-0 z-modal flex items-center justify-center bg-bg transition-opacity duration-slow"
 			style={{ opacity: stage === "fading" ? 0 : 1 }}
 		>
 			<div className="font-display text-[clamp(3rem,9vw,6rem)] font-medium leading-none tracking-tight text-fg">

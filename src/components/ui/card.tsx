@@ -33,7 +33,7 @@ export function Card<T extends ElementType = "div">({
 	return (
 		<Tag
 			className={cn(
-				"rounded-md border text-left transition-[border-color,box-shadow,transform] duration-base",
+				"rounded-card border text-left transition-[border-color,box-shadow,transform] duration-base",
 				TONE_CLASS[tone],
 				tone === "default" && "hover:border-border",
 				interactive &&

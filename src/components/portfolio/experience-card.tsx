@@ -73,7 +73,7 @@ export function ExperienceCard({
 				onClick={() => setExpanded((v) => !v)}
 				aria-expanded={expanded}
 				aria-controls={panelId}
-				className="flex w-full flex-col gap-1 rounded-md px-5 py-4 text-left font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				className="flex w-full flex-col gap-1 rounded-card px-5 py-4 text-left font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
 				<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
 					<div className="flex flex-wrap items-center gap-2.5">

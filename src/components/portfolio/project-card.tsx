@@ -78,16 +78,16 @@ export function ProjectCard({
 			ref={magneticRef}
 			data-testid={`project-card-${project.slug}`}
 			data-size={size}
-			className={cn("group relative h-full w-full rounded-xl", className)}
+			className={cn("group relative h-full w-full rounded-card", className)}
 		>
 			<button
 				type="button"
 				data-testid={`project-card-open-${project.slug}`}
 				onClick={() => onOpen(project.slug)}
 				aria-label={`Open details for ${project.title}`}
-				className="absolute inset-0 z-10 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				className="absolute inset-0 z-10 rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			/>
-			<MagicCard className="h-full rounded-xl border-border/80">
+			<MagicCard className="h-full rounded-card border-border/80">
 				<div
 					className={cn(
 						"flex h-full flex-col gap-3 p-5",

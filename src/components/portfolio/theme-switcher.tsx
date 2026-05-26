@@ -19,7 +19,7 @@ export function ThemeSwitcher() {
 					data-testid="theme-switcher"
 					variant="ghost"
 					size="sm"
-					className="h-7 gap-1.5 rounded-md border border-border/70 bg-bg/40 px-2 font-mono text-meta text-muted hover:bg-accent/10 hover:text-accent"
+					className="h-7 gap-1.5 rounded-card border border-border/70 bg-bg/40 px-2 font-mono text-meta text-muted hover:bg-accent/10 hover:text-accent"
 				>
 					<Palette className="size-3" aria-hidden="true" />
 					<span className="hidden sm:inline">{activeName}</span>
@@ -52,7 +52,7 @@ export function ThemeSwitcher() {
 							</span>
 							<span className="flex flex-col">
 								<span className="text-sm text-fg">{t.name}</span>
-								<span className="text-xs text-muted">{t.vibe}</span>
+								<span className="text-meta text-muted">{t.vibe}</span>
 							</span>
 						</DropdownMenuItem>
 					);

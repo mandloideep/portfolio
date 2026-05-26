@@ -71,7 +71,7 @@ export function ModeChooser({ onPick, currentMode }: ModeChooserProps) {
 				{currentMode ? (
 					<>
 						<span>remembered:</span>
-						<code className="rounded-sm border border-border/70 bg-bg-elev/60 px-1.5 py-0.5 normal-case tracking-normal text-fg/90">
+						<code className="rounded-chip border border-border/70 bg-bg-elev/60 px-1.5 py-0.5 normal-case tracking-normal text-fg/90">
 							{currentMode === "terminal" ? "/terminal" : "/portfolio"}
 						</code>
 						<span aria-hidden="true">·</span>
@@ -79,7 +79,7 @@ export function ModeChooser({ onPick, currentMode }: ModeChooserProps) {
 							type="button"
 							data-testid="chooser-toggle"
 							onClick={() => onPick(opposite)}
-							className="inline-flex items-center gap-1.5 rounded-sm border border-border/70 bg-bg-elev/60 px-2 py-0.5 normal-case tracking-normal text-link transition-colors duration-base hover:border-accent/60 hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:border-accent/70 focus-visible:bg-accent/10 focus-visible:text-accent"
+							className="inline-flex items-center gap-1.5 rounded-chip border border-border/70 bg-bg-elev/60 px-2 py-0.5 normal-case tracking-normal text-link transition-colors duration-base hover:border-accent/60 hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:border-accent/70 focus-visible:bg-accent/10 focus-visible:text-accent"
 						>
 							<span>/?choose=1</span>
 							<span aria-hidden="true">
@@ -129,7 +129,7 @@ function ChoiceCard({
 		>
 			<div
 				className={cn(
-					"flex flex-col justify-center overflow-hidden rounded-md border border-border/70 bg-bg p-4 transition-colors duration-base group-hover:border-accent/40",
+					"flex flex-col justify-center overflow-hidden rounded-card border border-border/70 bg-bg p-4 transition-colors duration-base group-hover:border-accent/40",
 					PREVIEW_MIN_HEIGHT,
 				)}
 			>
@@ -192,13 +192,13 @@ function PortfolioPreview() {
 	return (
 		<div className="flex flex-col gap-3">
 			<div className="flex flex-wrap items-center gap-1.5">
-				<span className="rounded-sm border border-accent/60 bg-accent/10 px-1.5 py-px font-mono text-meta tracking-tab text-accent">
+				<span className="rounded-chip border border-accent/60 bg-accent/10 px-1.5 py-px font-mono text-meta tracking-tab text-accent">
 					[whoami]
 				</span>
-				<span className="rounded-sm border border-border/70 bg-bg-elev px-1.5 py-px font-mono text-meta text-muted">
+				<span className="rounded-chip border border-border/70 bg-bg-elev px-1.5 py-px font-mono text-meta text-muted">
 					[/projects]
 				</span>
-				<span className="rounded-sm border border-border/70 bg-bg-elev px-1.5 py-px font-mono text-meta text-muted">
+				<span className="rounded-chip border border-border/70 bg-bg-elev px-1.5 py-px font-mono text-meta text-muted">
 					[/contact]
 				</span>
 			</div>
@@ -206,11 +206,11 @@ function PortfolioPreview() {
 				Selected work
 			</div>
 			<div className="grid grid-cols-3 gap-1.5">
-				<div className="col-span-2 h-6 rounded-sm border border-border/70 bg-bg-elev" />
-				<div className="h-6 rounded-sm border border-border/70 bg-bg-elev" />
-				<div className="h-6 rounded-sm border border-border/70 bg-bg-elev" />
-				<div className="h-6 rounded-sm border border-accent/60 bg-accent/15" />
-				<div className="h-6 rounded-sm border border-border/70 bg-bg-elev" />
+				<div className="col-span-2 h-6 rounded-chip border border-border/70 bg-bg-elev" />
+				<div className="h-6 rounded-chip border border-border/70 bg-bg-elev" />
+				<div className="h-6 rounded-chip border border-border/70 bg-bg-elev" />
+				<div className="h-6 rounded-chip border border-accent/60 bg-accent/15" />
+				<div className="h-6 rounded-chip border border-border/70 bg-bg-elev" />
 			</div>
 		</div>
 	);

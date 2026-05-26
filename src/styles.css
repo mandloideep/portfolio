@@ -42,6 +42,27 @@
 	--color-error: var(--error);
 	--color-ring: var(--ring);
 
+	/* Aliases for shadcn-style primitives (button, dropdown-menu, dialog,
+	 * tooltip, card, …). They expect a parallel set of token names; we
+	 * bridge each one to a portfolio token so the primitives stay vendor-
+	 * pristine but still take part in theme switching. Prefer the portfolio
+	 * names (`bg-bg`, `text-fg`, …) in new code. */
+	--color-background: var(--bg);
+	--color-foreground: var(--fg);
+	--color-popover: var(--bg-elev);
+	--color-popover-foreground: var(--fg);
+	--color-card: var(--bg-elev);
+	--color-card-foreground: var(--fg);
+	--color-muted-foreground: var(--muted);
+	--color-primary: var(--accent);
+	--color-primary-foreground: var(--bg);
+	--color-secondary: var(--bg-elev);
+	--color-secondary-foreground: var(--fg);
+	--color-accent-foreground: var(--bg);
+	--color-destructive: var(--error);
+	--color-destructive-foreground: var(--bg);
+	--color-input: var(--border);
+
 	/* ─── Font families ─────────────────────────────────────────────── */
 	--font-display: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
 	--font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI",

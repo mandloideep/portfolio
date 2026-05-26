@@ -54,7 +54,7 @@ export function ProjectRow({
 				onClick={() => onToggle(project.slug)}
 				aria-expanded={expanded}
 				aria-controls={panelId}
-				className="flex w-full flex-col gap-2 rounded-md px-4 py-3 text-left font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-row sm:items-center sm:gap-4"
+				className="flex w-full flex-col gap-2 rounded-card px-4 py-3 text-left font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-row sm:items-center sm:gap-4"
 			>
 				<span className="flex shrink-0 items-center gap-3">
 					<span className="text-base text-accent">/{project.slug}</span>

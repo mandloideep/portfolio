@@ -115,14 +115,14 @@ function HeatmapStats({
 
 function StatCell({ value, label }: { value: number; label: string }) {
 	return (
-		<div className="rounded-md border border-border/60 bg-bg/40 px-4 py-3">
+		<div className="rounded-card border border-border/60 bg-bg/40 px-4 py-3">
 			<dd>
 				<NumberTicker
 					value={value}
 					className="font-mono text-3xl text-accent"
 				/>
 			</dd>
-			<dt className="mt-1 text-muted text-xs uppercase tracking-wider">
+			<dt className="mt-1 text-muted text-eyebrow uppercase tracking-wider">
 				{label}
 			</dt>
 		</div>
@@ -227,7 +227,7 @@ function HeatmapCell({ day, max }: { day: ContributionDay; max: number }) {
 
 function HeatmapLegend() {
 	return (
-		<div className="flex items-center gap-2 self-end text-muted text-xs">
+		<div className="flex items-center gap-2 self-end text-muted text-meta">
 			<span>Less</span>
 			{LEGEND_STEPS.map((step) => (
 				<span
