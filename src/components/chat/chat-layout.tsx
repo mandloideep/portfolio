@@ -1,17 +1,26 @@
+/**
+ * <ChatLayout> — shared shell for the chat surface.
+ *
+ * Header reads as four symmetric chips:
+ *   [brand]   [M | L | XL]   [model · name ⌄]   [ ⓘ ]
+ *
+ * Left-aligned brand, right-aligned info, with model controls between them.
+ * All chips share the <ChatChip> shape so the chrome reads symmetric.
+ */
+
+import { Info } from "lucide-react";
 import type { ReactNode } from "react";
-import { useAgentSession } from "#/components/agent/agent-engine-provider";
+import { useState } from "react";
 import { ModelSwitcher } from "#/components/agent/model-switcher";
-import { QuotaIndicator } from "#/components/agent/quota-indicator";
+import { ChatChip } from "#/components/chat/chat-chip";
+import { ChatInfoPopover } from "#/components/chat/chat-info-popover";
+import { ModelTierChips } from "#/components/chat/model-tier-chips";
+import { siteMeta } from "#/content/site";
 
 type ChatLayoutProps = {
 	children: ReactNode;
 };
 
-/**
- * Shared shell for the chat surface: page background, header (model +
- * quota + optional "new chat" affordance), and a centered content column.
- * The actual hero / thread variants are rendered into `children`.
- */
 export function ChatLayout({ children }: ChatLayoutProps) {
 	return (
 		<div className="surface-grain relative flex min-h-screen flex-col bg-bg text-fg">
@@ -24,32 +33,33 @@ export function ChatLayout({ children }: ChatLayoutProps) {
 }
 
 function ChatHeader() {
-	const { actions, state } = useAgentSession();
-	const hasHistory = state.history.length > 0;
+	const [infoOpen, setInfoOpen] = useState(false);
 	return (
-		<header className="flex items-center justify-between gap-3 border-b border-border/70 bg-bg-elev/80 px-6 py-3 font-mono text-meta uppercase tracking-tab text-muted backdrop-blur-sm">
-			<div className="flex items-center gap-3">
-				<a
-					href="/?choose=1"
-					className="rounded-chip border border-border/70 bg-bg/60 px-2 py-0.5 text-fg/90 transition-colors duration-base hover:border-accent/60 hover:text-accent"
-				>
-					chat
-				</a>
-				{hasHistory ? (
-					<button
-						type="button"
-						data-testid="chat-new"
-						onClick={() => actions.clear()}
-						className="rounded-chip border border-transparent px-2 py-0.5 text-muted normal-case tracking-normal transition-colors duration-base hover:border-border/70 hover:text-fg focus-visible:border-border/70 focus-visible:text-fg focus-visible:outline-none"
-					>
-						new chat
-					</button>
-				) : null}
-			</div>
-			<div className="flex items-center gap-3">
+		<header className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
+			<ChatChip as="a" href="/?choose=1" data-testid="chat-brand-chip">
+				<span aria-hidden="true" className="text-prompt-user">
+					$
+				</span>
+				<span className="hidden sm:inline">{siteMeta.name.toLowerCase()}</span>
+				<span className="sm:hidden">chat</span>
+			</ChatChip>
+
+			<div className="flex items-center gap-2">
+				<div className="hidden sm:block">
+					<ModelTierChips />
+				</div>
 				<ModelSwitcher variant="header" />
-				<QuotaIndicator />
+				<ChatChip
+					onClick={() => setInfoOpen(true)}
+					aria-label="about this chat"
+					data-testid="chat-info-trigger"
+					className="px-2"
+				>
+					<Info className="size-3.5" aria-hidden="true" />
+				</ChatChip>
 			</div>
+
+			<ChatInfoPopover open={infoOpen} onOpenChange={setInfoOpen} />
 		</header>
 	);
 }

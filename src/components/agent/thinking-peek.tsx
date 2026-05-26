@@ -7,8 +7,8 @@
  * `useSyncExternalStore`, so a 200-token reasoning burst doesn't re-render
  * the rest of the chat — only this leaf paints.
  *
- * Aesthetic: dimmed italic muted text, monospace, a small ▾/▸ chevron in
- * front. No raw hex; tokens-only.
+ * Aesthetic: dimmed muted text, monospace, pulsing accent dot while live, a
+ * chevron in front. Tokens only.
  */
 
 import { useSyncExternalStore } from "react";
@@ -44,15 +44,22 @@ export function ThinkingPeek({ className }: { className?: string }) {
 			open={isStreaming}
 			data-testid="thinking-peek"
 			className={cn(
-				"group rounded-card border border-border/60 bg-bg/30 px-3 py-2 text-muted/80 italic",
+				"group rounded-card border border-border/60 bg-bg/30 px-3 py-2 text-muted",
 				className,
 			)}
 		>
-			<summary className="cursor-pointer select-none list-none text-meta uppercase tracking-tab text-muted/70 [&::-webkit-details-marker]:hidden">
-				<span className="mr-1.5 inline-block transition-transform group-open:rotate-90">
+			<summary className="flex cursor-pointer select-none list-none items-center gap-2 text-meta uppercase tracking-tab text-muted/80 [&::-webkit-details-marker]:hidden">
+				<span
+					aria-hidden="true"
+					className={cn(
+						"inline-block size-1.5 rounded-full",
+						isStreaming ? "animate-pulse bg-accent" : "bg-muted/40",
+					)}
+				/>
+				<span className="inline-block transition-transform group-open:rotate-90">
 					▸
 				</span>
-				{isStreaming ? "thinking · streaming" : "thought"}
+				<span>{isStreaming ? "thinking…" : "thought"}</span>
 				{hasFinishedThinking && state.activeTurnId ? (
 					<ThinkingSummary turnId={state.activeTurnId} />
 				) : null}
@@ -66,15 +73,11 @@ function ThinkingSummary({ turnId }: { turnId: string }) {
 	const session = useAgentSession();
 	const turn = session.state.history.find((t) => t.id === turnId);
 	if (!turn || !turn.thinking) return null;
-	const ms = turn.thinkingMs;
-	const tokens = turn.thinkingTokens;
-	const parts: string[] = [];
-	if (typeof ms === "number") parts.push(`${ms}ms`);
-	if (typeof tokens === "number") parts.push(`${tokens} tokens`);
-	if (parts.length === 0) return null;
+	const caption = formatThoughtCaption(turn.thinkingMs, turn.thinkingTokens);
+	if (!caption) return null;
 	return (
-		<span className="ml-2 text-muted/60 normal-case tracking-normal">
-			· {parts.join(" · ")}
+		<span className="ml-auto text-muted/60 normal-case tracking-normal">
+			{caption}
 		</span>
 	);
 }
@@ -91,27 +94,27 @@ export function ThinkingPeekStatic({
 	className?: string;
 }) {
 	if (!turn.thinking) return null;
-	const ms = turn.thinkingMs;
-	const tokens = turn.thinkingTokens;
-	const parts: string[] = [];
-	if (typeof ms === "number") parts.push(`${ms}ms`);
-	if (typeof tokens === "number") parts.push(`${tokens} tokens`);
+	const caption = formatThoughtCaption(turn.thinkingMs, turn.thinkingTokens);
 	return (
 		<details
 			data-testid="thinking-peek-static"
 			className={cn(
-				"group rounded-card border border-border/60 bg-bg/30 px-3 py-2 text-muted/80 italic",
+				"group rounded-card border border-border/60 bg-bg/30 px-3 py-2 text-muted",
 				className,
 			)}
 		>
-			<summary className="cursor-pointer select-none list-none text-meta uppercase tracking-tab text-muted/70 [&::-webkit-details-marker]:hidden">
-				<span className="mr-1.5 inline-block transition-transform group-open:rotate-90">
+			<summary className="flex cursor-pointer select-none list-none items-center gap-2 text-meta uppercase tracking-tab text-muted/80 [&::-webkit-details-marker]:hidden">
+				<span
+					aria-hidden="true"
+					className="inline-block size-1.5 rounded-full bg-muted/40"
+				/>
+				<span className="inline-block transition-transform group-open:rotate-90">
 					▸
 				</span>
-				thought
-				{parts.length > 0 ? (
-					<span className="ml-2 text-muted/60 normal-case tracking-normal">
-						· {parts.join(" · ")}
+				<span>thought</span>
+				{caption ? (
+					<span className="ml-auto text-muted/60 normal-case tracking-normal">
+						{caption}
 					</span>
 				) : null}
 			</summary>
@@ -124,8 +127,8 @@ function ThinkingBody({ text, clip }: { text: string; clip: boolean }) {
 	return (
 		<div
 			className={cn(
-				"mt-2 whitespace-pre-wrap text-sm leading-relaxed",
-				clip && "relative max-h-32 overflow-hidden",
+				"mt-2 whitespace-pre-wrap border-l-2 border-border/60 pl-3 text-sm italic leading-relaxed text-muted/90",
+				clip ? "relative max-h-32 overflow-hidden" : "max-h-64 overflow-y-auto",
 			)}
 		>
 			{text}
@@ -137,4 +140,17 @@ function ThinkingBody({ text, clip }: { text: string; clip: boolean }) {
 			) : null}
 		</div>
 	);
+}
+
+function formatThoughtCaption(
+	ms: number | undefined,
+	tokens: number | undefined,
+): string | null {
+	const parts: string[] = [];
+	if (typeof ms === "number") {
+		parts.push(ms >= 1000 ? `for ${(ms / 1000).toFixed(1)}s` : `for ${ms}ms`);
+	}
+	if (typeof tokens === "number") parts.push(`${tokens} tok`);
+	if (parts.length === 0) return null;
+	return `· ${parts.join(" · ")}`;
 }

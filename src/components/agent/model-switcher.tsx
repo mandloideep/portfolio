@@ -69,8 +69,9 @@ export function ModelSwitcher({
 					data-testid="model-switcher-trigger"
 					aria-label={`active model: ${activeModel.label}. click to switch.`}
 					className={cn(
-						"inline-flex items-center gap-1 truncate rounded-chip border border-border/70 bg-bg/60 px-1.5 py-0.5 text-meta uppercase tracking-tab text-fg/90 transition-colors hover:border-accent/60 hover:text-fg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent",
-						variant === "footer" && "font-mono",
+						variant === "header"
+							? "inline-flex h-8 items-center gap-1.5 truncate rounded-pill border border-border/70 bg-bg-elev/70 px-3 font-mono text-meta uppercase tracking-tab text-fg/90 shadow-sm transition-colors duration-base hover:border-accent/60 hover:text-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+							: "inline-flex items-center gap-1 truncate rounded-chip border border-border/70 bg-bg/60 px-1.5 py-0.5 font-mono text-meta uppercase tracking-tab text-fg/90 transition-colors hover:border-accent/60 hover:text-fg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent",
 						className,
 					)}
 				>
