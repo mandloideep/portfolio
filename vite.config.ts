@@ -19,7 +19,16 @@ const config = defineConfig({
 				{ path: "/", prerender: { enabled: true } },
 				{ path: "/terminal", prerender: { enabled: true } },
 			],
-			prerender: { failOnError: true, concurrency: 4 },
+			// crawlLinks:false — the prerender plugin's URL normalization
+			// (ufo.withTrailingSlash) mangles query-string links such as
+			// `/?choose=1` into `/?choose=1/`, which then 500s when the
+			// route's Zod search-param schema rejects the trailing slash.
+			// We only need the explicitly listed pages prerendered.
+			prerender: {
+				failOnError: true,
+				concurrency: 4,
+				crawlLinks: false,
+			},
 		}),
 		viteReact(),
 	],

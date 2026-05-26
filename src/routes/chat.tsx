@@ -19,6 +19,7 @@ export const Route = createFileRoute("/chat")({
 				description: CHAT_DESCRIPTION,
 				path: "/chat",
 				siteMeta,
+				ogImage: "/og/chat.png",
 			}),
 		],
 	}),

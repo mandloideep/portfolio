@@ -12,7 +12,11 @@ import {
 } from "#/lib/env";
 import { lookupIp } from "#/lib/ipinfo";
 import { checkAndRecordLlmCall } from "#/lib/llm-rate-limit";
+import { logger } from "#/lib/logger";
 import { type ChatMessage, streamLlm } from "#/lib/openrouter";
+// Import for side-effect: initializes Sentry server-side when SENTRY_DSN
+// is set. Safe to import multiple times — guarded internally.
+import "#/lib/sentry-server";
 import {
 	hasDisallowedContent,
 	isBrowserUserAgent,
@@ -73,7 +77,21 @@ function sseSingle(event: string, data: unknown): Response {
 	return new Response(body, { status: 200, headers: SSE_HEADERS });
 }
 
+/**
+ * Hard cap on the JSON request body. The Zod schema enforces per-field caps
+ * (message.max(4000), history.max(20)) but Node/TanStack-Start has no body
+ * size limit at the HTTP layer — a multi-MB POST would be buffered before
+ * Zod ever sees it. Traefik enforces the real cap in production; this is
+ * defense-in-depth for any non-proxied path.
+ */
+const MAX_BODY_BYTES = 131_072; // 128 KB
+
 export async function handleAgentRequest(request: Request): Promise<Response> {
+	const contentLength = Number(request.headers.get("content-length") ?? 0);
+	if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+		return jsonError(413, "payload_too_large");
+	}
+
 	let body: unknown;
 	try {
 		body = await request.json();
@@ -176,9 +194,18 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 					: undefined,
 		});
 	} catch (err) {
-		// Storage failures shouldn't black-hole the agent — log and fail-open.
-		// eslint-disable-next-line no-console
-		console.error("[api.agent] rate-limit check failed", err);
+		logger.error({ err }, "[api.agent] rate-limit check failed");
+		// Fail-closed in production: a DB outage shouldn't open the door to
+		// unlimited usage. In dev we keep fail-open so a missing postgres
+		// doesn't break local work.
+		if (env.NODE_ENV === "production") {
+			return sseSingle("rate_limited", {
+				remaining: 0,
+				resetsAt: new Date(Date.now() + 30_000).toISOString(),
+				reason: "service_degraded",
+				tier,
+			});
+		}
 		rate = {
 			allowed: true,
 			remaining: tier === "premium" ? env.PREMIUM_LIMIT : null,
@@ -248,6 +275,20 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 	const mainTimeout = AbortSignal.timeout(env.REQUEST_TIMEOUT_MS);
 	const upstreamSignal = compose([request.signal, mainTimeout]);
 
+	// Hoisted out of start() so the cancel() handler can record partial
+	// usage when the client aborts mid-stream. Without this, a user who
+	// aborts repeatedly accumulates uncounted token spend against their
+	// per-IP budget.
+	let streamedTokens = 0;
+	let usageRecorded = false;
+	const recordUsage = (tokens: number) => {
+		if (usageRecorded || !Number.isFinite(tokens) || tokens <= 0) return;
+		usageRecorded = true;
+		addUsage({ ipHash, tokens }).catch((err) => {
+			logger.error({ err }, "[api.agent] addUsage failed");
+		});
+	};
+
 	const stream = new ReadableStream<Uint8Array>({
 		async start(controller) {
 			const enc = new TextEncoder();
@@ -309,8 +350,7 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 							return;
 						}
 					} catch (err) {
-						// eslint-disable-next-line no-console
-						console.warn("[api.agent] classifier failed (fail-open)", err);
+						logger.warn({ err }, "[api.agent] classifier failed (fail-open)");
 					}
 					// If the classifier finished faster than ACTIVITY_PACE_MS
 					// (allowlist hit, cached verdict), pad to keep the next
@@ -360,6 +400,7 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 							thinkingEndedAt = Date.now();
 						}
 						totalTokens += 1;
+						streamedTokens = totalTokens;
 						write("token", ev.text);
 					} else {
 						lastUsage = ev.usage;
@@ -377,20 +418,22 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 				});
 				// Tally usage for the daily budget + per-IP cap. Fire-and-forget so
 				// a DB blip doesn't stall the response close.
-				addUsage({ ipHash, tokens: used }).catch((err) => {
-					// eslint-disable-next-line no-console
-					console.error("[api.agent] addUsage failed", err);
-				});
+				recordUsage(used);
 			} catch (err) {
 				const message = err instanceof Error ? err.message : "stream_failed";
 				write("error", { message });
+				// Record what we streamed before the failure so partial usage
+				// still counts against the budget.
+				recordUsage(streamedTokens);
 			} finally {
 				controller.close();
 			}
 		},
 		cancel() {
-			// The fetch above is bound to upstreamSignal; cancelling the response
-			// stream surfaces back through the consumer when they `getReader()`.
+			// Client disconnected mid-stream. Charge them for what they
+			// received so a user can't escape the per-IP token cap by
+			// aborting every stream.
+			recordUsage(streamedTokens);
 		},
 	});
 

@@ -1,0 +1,2 @@
+CREATE INDEX "idx_agent_prompt_cache_created_at" ON "agent_prompt_cache" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "idx_llm_call_log_provider_model_ts" ON "llm_call_log" USING btree ("provider","model","called_at");

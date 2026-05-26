@@ -1,9 +1,11 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { getContext } from "./integrations/tanstack-query/root-provider";
+import { initSentryClient } from "./lib/sentry-client";
 import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
+	initSentryClient();
 	const context = getContext();
 
 	const router = createTanStackRouter({

@@ -25,6 +25,7 @@ export const Route = createFileRoute("/github")({
 				description: DESCRIPTION,
 				path: "/github",
 				siteMeta,
+				ogImage: "/og/github.png",
 			}),
 		],
 	}),

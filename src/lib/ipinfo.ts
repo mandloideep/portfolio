@@ -41,10 +41,15 @@ export async function lookupIp(
 		return v;
 	}
 
-	const url = `https://ipinfo.io/${encodeURIComponent(ip)}/json?token=${encodeURIComponent(token)}`;
+	// Send the token via Authorization header rather than ?token= so it
+	// doesn't leak into Traefik / CDN access logs or referrer headers.
+	const url = `https://ipinfo.io/${encodeURIComponent(ip)}/json`;
 	let data: IpInfoResponse = {};
 	try {
-		const res = await fetchImpl(url, { signal: options.signal });
+		const res = await fetchImpl(url, {
+			signal: options.signal,
+			headers: { Authorization: `Bearer ${token}` },
+		});
 		if (res.ok) {
 			data = (await res.json()) as IpInfoResponse;
 		}

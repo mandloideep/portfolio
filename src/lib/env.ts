@@ -114,6 +114,14 @@ const ServerEnvSchema = z
 		// 15-25s in <thought> before the first visible token streams.
 		// 45s leaves comfortable headroom over the worst-case thinking.
 		REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(45_000),
+
+		// Optional observability hooks.
+		SENTRY_DSN: optionalString,
+		BUDGET_ALERT_WEBHOOK_URL: optionalString,
+
+		NODE_ENV: z
+			.enum(["development", "test", "production"])
+			.default("development"),
 	})
 	.superRefine((env, ctx) => {
 		// Either or both keys may be set. We need at least one so the
@@ -129,7 +137,37 @@ const ServerEnvSchema = z
 		// The preferred provider (LLM_PROVIDER) is the one we try first when
 		// choosing a default model. If it has no key, fall back to the other
 		// provider silently — but if neither has one, the check above fires.
+
+		// In production, RATE_LIMIT_SALT must be set to a non-default secret.
+		// Without it, agent IPs would be hashed with a public literal,
+		// defeating the privacy goal.
+		if (env.NODE_ENV === "production") {
+			if (!env.RATE_LIMIT_SALT || env.RATE_LIMIT_SALT === LEGACY_DEFAULT_SALT) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["RATE_LIMIT_SALT"],
+					message:
+						"RATE_LIMIT_SALT must be set to a random secret in production (use `openssl rand -hex 32`).",
+				});
+			}
+		}
+
+		// VPN blocking depends on IPInfo lookups. If BLOCK_VPN is on but no
+		// token is configured, the privacy lookup is a no-op and the block
+		// silently does nothing. Enforced only in production so dev/test —
+		// where the default BLOCK_VPN=true is fine without a real token —
+		// keeps working.
+		if (env.NODE_ENV === "production" && env.BLOCK_VPN && !env.IPINFO_TOKEN) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["IPINFO_TOKEN"],
+				message:
+					"IPINFO_TOKEN is required when BLOCK_VPN=true. Set the token, or set BLOCK_VPN=false to disable VPN blocking.",
+			});
+		}
 	});
+
+const LEGACY_DEFAULT_SALT = "portfolio-default-salt";
 
 export type ServerEnv = z.infer<typeof ServerEnvSchema>;
 

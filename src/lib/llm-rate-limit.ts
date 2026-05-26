@@ -1,6 +1,6 @@
 import { and, eq, gte, sql } from "drizzle-orm";
 import { db } from "#/db";
-import { llmCallLog } from "#/db/schema";
+import { agentPromptCache, llmCallLog } from "#/db/schema";
 import type { Provider } from "#/lib/openrouter";
 
 export type ModelQuota = { rpm: number; rpd: number };
@@ -116,13 +116,19 @@ export async function checkAndRecordLlmCall(
 			.insert(llmCallLog)
 			.values({ provider: args.provider, model: args.model, calledAt: now });
 
-		// Best-effort prune: keep the table bounded. Drop rows older than
-		// ~26 hours so the per-day window is always covered. Run ~1% of the
-		// time to avoid making admission slower.
+		// Best-effort prune: keep the tables bounded. Drop call-log rows
+		// older than ~26 hours so the per-day window is always covered, and
+		// classifier-cache rows older than 7 days (verdicts stale beyond
+		// that anyway). Run ~1% of the time to avoid making admission
+		// slower.
 		if (Math.random() < 0.01) {
-			const cutoff = new Date(now.getTime() - 26 * 60 * 60_000);
+			const callLogCutoff = new Date(now.getTime() - 26 * 60 * 60_000);
 			db.delete(llmCallLog)
-				.where(sql`${llmCallLog.calledAt} < ${cutoff}`)
+				.where(sql`${llmCallLog.calledAt} < ${callLogCutoff}`)
+				.catch(() => {});
+			const cacheCutoff = new Date(now.getTime() - 7 * 24 * 60 * 60_000);
+			db.delete(agentPromptCache)
+				.where(sql`${agentPromptCache.createdAt} < ${cacheCutoff}`)
 				.catch(() => {});
 		}
 

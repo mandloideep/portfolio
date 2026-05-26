@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { db } from "#/db";
 import { agentRateLimits, agentUsageDaily } from "#/db/schema";
+import { logger } from "#/lib/logger";
 
 export type PrivacyVerdict = {
 	country?: string;
@@ -442,9 +443,9 @@ export async function isDailyBudgetExhausted(budget: number): Promise<boolean> {
 		const used = rows[0]?.tokens ?? 0;
 		return used >= budget;
 	} catch (err) {
-		console.warn(
+		logger.warn(
+			{ err: err instanceof Error ? err.message : err },
 			"[rate-limit] daily budget lookup failed; treating as not exhausted",
-			err instanceof Error ? err.message : err,
 		);
 		return false;
 	}

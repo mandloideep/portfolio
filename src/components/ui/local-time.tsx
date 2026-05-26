@@ -18,7 +18,6 @@ export interface LocalTimeProps {
 	className?: string;
 }
 
-// TODO(phase-6.1): pair with a "last commit" pill once /api/github-graph lands.
 export function LocalTime({ className }: LocalTimeProps) {
 	const [time, setTime] = useState<string>(PLACEHOLDER);
 

@@ -18,6 +18,7 @@ export const Route = createFileRoute("/terminal")({
 				description: TERMINAL_DESCRIPTION,
 				path: "/terminal",
 				siteMeta,
+				ogImage: "/og/terminal.png",
 			}),
 		],
 	}),

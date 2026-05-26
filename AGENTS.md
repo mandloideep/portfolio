@@ -90,17 +90,26 @@ docker compose up -d db
 pnpm dev
 ```
 
-### Production
-```bash
-# Build & run prod container (Neon is external — set DATABASE_URL in .env.production):
-docker compose -f docker-compose.prod.yml up -d --build
-```
+### Production — Hetzner VPS + Dokploy
+
+Production runs on a Hetzner VPS managed by [Dokploy](https://dokploy.com).
+Dokploy handles Docker orchestration, Traefik with auto-TLS, env vars, and
+scheduled tasks. See **[DEPLOYMENT.md](DEPLOYMENT.md)** for full setup: env
+vars, Traefik middlewares (security headers + cache headers + body-size
+limit), pre-deploy migration command, and budget-alert cron config.
+
+Key conventions:
+- Env vars live in Dokploy → Service → Environment (not in `.env.production` on disk).
+- Migrations run as a pre-deploy step (`pnpm release:migrate`).
+- Security headers are set via Traefik middleware, not in app code.
+- Sentry is opt-in via `SENTRY_DSN` (server) and `VITE_SENTRY_DSN` (client).
 
 ### Migrations
 ```bash
-pnpm db:generate    # produces SQL in ./drizzle
-pnpm db:push        # applies against $DATABASE_URL (use unpooled URL for Neon)
-pnpm db:studio      # local UI
+pnpm db:generate     # produces SQL in ./drizzle
+pnpm db:push         # dev/manual apply against $DATABASE_URL
+pnpm release:migrate # alias for db:push, used in Dokploy pre-deploy hook
+pnpm db:studio       # local UI
 ```
 
 ## Architectural decisions
@@ -159,11 +168,7 @@ pnpm db:studio      # local UI
 
 ## Next steps
 
-1. Set `ANTHROPIC_API_KEY` (or another provider's key) in `.env.local`.
-2. `docker compose up -d db && pnpm db:push` to apply the initial schema.
-3. Replace the demo routes (`src/routes/demo/*`) with portfolio-specific pages.
-4. Add Magic UI hero / showcase components per `CLAUDE.md`'s sourcing rule.
-5. Configure deployment target — Cloudflare/Netlify/Railway/Nitro via
-   `@tanstack/cli create --deployment ...` add-ons if you decide to move off
-   the Docker prod image.
+Deployment target is **Hetzner VPS + Dokploy** — see [DEPLOYMENT.md](DEPLOYMENT.md)
+for the full pre-launch checklist (env vars, Traefik middlewares, migrations,
+Sentry, budget alerts, smoke tests).
 

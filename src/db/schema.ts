@@ -1,6 +1,7 @@
 import {
 	boolean,
 	date,
+	index,
 	integer,
 	pgTable,
 	serial,
@@ -40,14 +41,27 @@ export const agentRateLimits = pgTable("agent_rate_limits", {
 
 // Per-(provider, model) call log for sliding-window RPM and UTC-day RPD
 // rate-limit checks. Row-per-call lets us compute both with one indexed scan.
-export const llmCallLog = pgTable("llm_call_log", {
-	id: serial().primaryKey(),
-	provider: text("provider").notNull(),
-	model: text("model").notNull(),
-	calledAt: timestamp("called_at", { withTimezone: true })
-		.notNull()
-		.defaultNow(),
-});
+export const llmCallLog = pgTable(
+	"llm_call_log",
+	{
+		id: serial().primaryKey(),
+		provider: text("provider").notNull(),
+		model: text("model").notNull(),
+		calledAt: timestamp("called_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(t) => [
+		// Hot path: every chat message reads the last 60s + current UTC day
+		// for (provider, model). Without this composite, the scan grows
+		// linearly with traffic.
+		index("idx_llm_call_log_provider_model_ts").on(
+			t.provider,
+			t.model,
+			t.calledAt,
+		),
+	],
+);
 
 // Global daily token budget. One row per UTC date — keeps the circuit
 // breaker arithmetic dead simple.
@@ -59,10 +73,16 @@ export const agentUsageDaily = pgTable("agent_usage_daily", {
 
 // Cache for on-topic classifier verdicts. Hash of the lowercased trimmed
 // prompt → SAFE/UNSAFE. Repeat questions are free after the first verdict.
-export const agentPromptCache = pgTable("agent_prompt_cache", {
-	promptHash: text("prompt_hash").primaryKey(),
-	verdict: text("verdict").notNull(), // "SAFE" | "UNSAFE"
-	createdAt: timestamp("created_at", { withTimezone: true })
-		.notNull()
-		.defaultNow(),
-});
+// The created_at index supports the periodic prune that drops rows older
+// than 7 days (see src/lib/llm-rate-limit.ts).
+export const agentPromptCache = pgTable(
+	"agent_prompt_cache",
+	{
+		promptHash: text("prompt_hash").primaryKey(),
+		verdict: text("verdict").notNull(), // "SAFE" | "UNSAFE"
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(t) => [index("idx_agent_prompt_cache_created_at").on(t.createdAt)],
+);
