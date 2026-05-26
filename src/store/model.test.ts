@@ -36,7 +36,12 @@ describe("modelStore", () => {
 		const ok = setModel(target);
 		expect(ok).toBe(true);
 		expect(getModel()).toBe(target);
-		expect(window.localStorage.getItem(MODEL_STORAGE_KEY)).toBe(target);
+		const stored = window.localStorage.getItem(MODEL_STORAGE_KEY);
+		expect(stored).toBeTruthy();
+		expect(JSON.parse(stored ?? "{}")).toMatchObject({
+			version: 2,
+			model: target,
+		});
 	});
 
 	it("setModel rejects unknown ids without mutating state", () => {

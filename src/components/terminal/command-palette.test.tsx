@@ -7,6 +7,7 @@ vi.mock("@tanstack/react-router", () => ({
 	useNavigate: () => navigateMock,
 }));
 
+import { AgentTestWrapper } from "#/components/agent/test-utils";
 import { CommandPalette } from "./command-palette";
 
 beforeEach(() => {
@@ -25,6 +26,7 @@ function renderPalette(open = true) {
 	const onOpenChange = vi.fn();
 	const utils = render(
 		<CommandPalette open={open} onOpenChange={onOpenChange} />,
+		{ wrapper: AgentTestWrapper },
 	);
 	return { ...utils, onOpenChange };
 }

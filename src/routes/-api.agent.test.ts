@@ -2,34 +2,54 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Same mock shape as -api.github-graph.test.ts: getServerEnv refuses to run
 // from jsdom, so we stub it out.
-vi.mock("#/lib/env", () => ({
-	getServerEnv: () => ({
+vi.mock("#/lib/env", async () => {
+	const models = await import("#/lib/agent/models");
+	const env = {
 		LLM_PROVIDER: "openrouter",
 		OPENROUTER_API_KEY: "test-or",
-		OPENROUTER_DEFAULT_MODEL: "google/gemini-2.5-flash-lite",
+		GEMINI_API_KEY: "test-gemini",
+		OPENROUTER_DEFAULT_MODEL: "google/gemma-4-26b-a4b-it:free",
 		GITHUB_TOKEN: "test-token",
 		GITHUB_USERNAME: "deep",
 		RATE_LIMIT_SALT: "test-salt",
-		RATE_LIMIT_MAX: 15,
-		PREMIUM_LIMIT: 5,
+		RATE_LIMIT_MAX: 1000,
+		FREE_MODEL_PER_IP_LIMIT: 0,
+		PREMIUM_LIMIT: 10,
 		RATE_LIMIT_WINDOW_MS: 86_400_000,
 		DAILY_TOKEN_BUDGET: 200_000,
-		PER_IP_TOKEN_BUDGET: 20_000,
+		PER_IP_TOKEN_BUDGET: 40_000,
 		BLOCK_VPN: false,
 		WORD_CAP: 30,
 		CLASSIFIER_ENABLED: false,
 		MAX_OUTPUT_TOKENS: 2048,
 		MIN_REQUEST_INTERVAL_MS: 0,
 		REQUEST_TIMEOUT_MS: 20_000,
-	}),
-	getLlmConfig: () => ({
-		provider: "openrouter",
-		apiKey: "test-or",
-		defaultModel: "google/gemini-2.5-flash-lite",
-	}),
-	getClassifierConfig: () => null, // classifier disabled in tests
-	_resetEnvCacheForTests: () => {},
-}));
+	};
+	return {
+		getServerEnv: () => env,
+		getLlmConfig: () => ({
+			provider: "openrouter",
+			apiKey: "test-or",
+			defaultModel: "google/gemma-4-26b-a4b-it:free",
+		}),
+		getModelConfig: (_env: unknown, id: string) => {
+			const m = models.getModel(id);
+			if (!m) return null;
+			return {
+				provider: m.provider,
+				apiKey: m.provider === "gemini" ? "test-gemini" : "test-or",
+				model: id,
+			};
+		},
+		resolveDefaultModel: () =>
+			models.getModel("google/gemma-4-26b-a4b-it:free") ?? models.MODELS[0],
+		getAvailableCatalog: () => models.MODELS,
+		getApiKeyForProvider: (_env: unknown, p: string) =>
+			p === "gemini" ? "test-gemini" : "test-or",
+		getClassifierConfig: () => null, // classifier disabled in tests
+		_resetEnvCacheForTests: () => {},
+	};
+});
 vi.mock("#/lib/llm-rate-limit", () => ({
 	checkAndRecordLlmCall: vi.fn(async () => ({ allowed: true })),
 	MODEL_QUOTAS: {},
@@ -201,7 +221,7 @@ describe("handleAgentRequest", () => {
 		const body = JSON.parse(
 			(fetchMock.mock.calls[0]?.[1]?.body ?? "{}") as string,
 		);
-		expect(body.model).toBe("google/gemini-2.5-flash-lite");
+		expect(body.model).toBe("google/gemma-4-26b-a4b-it:free");
 	});
 
 	it("honours a model from the allowlist", async () => {
@@ -216,7 +236,7 @@ describe("handleAgentRequest", () => {
 		const res = await handleAgentRequest(
 			postRequest({
 				message: "hi",
-				model: "anthropic/claude-haiku-4.5",
+				model: "gemma-4-31b-it",
 			}),
 		);
 		await readSseEvents(res);
@@ -224,7 +244,7 @@ describe("handleAgentRequest", () => {
 		const body = JSON.parse(
 			(fetchMock.mock.calls[0]?.[1]?.body ?? "{}") as string,
 		);
-		expect(body.model).toBe("anthropic/claude-haiku-4.5");
+		expect(body.model).toBe("gemma-4-31b-it");
 	});
 
 	it("emits an error event when OpenRouter fails", async () => {

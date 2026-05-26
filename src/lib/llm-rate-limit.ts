@@ -14,13 +14,19 @@ export const MODEL_QUOTAS: Record<string, ModelQuota> = {
 	"gemma-4-31b-it": { rpm: 15, rpd: 1500 },
 	"gemma-4-26b-a4b-it": { rpm: 15, rpd: 1500 },
 	"gemini-2.5-flash-lite": { rpm: 10, rpd: 20 },
-	// OpenRouter free-tier nemotron used for the classifier. The actual
-	// limit depends on the account's lifetime credit purchase (50/day
-	// without credits, 1000/day with $10+). We pick a conservative middle
-	// number; if OR returns 429 we fail-open via the catch block below.
+	// OpenRouter free-tier Gemma 4 26B A4B (Mixture-of-Experts). Account
+	// holds the $10 lifetime credit, so the per-account free-tier daily
+	// budget is 1000/day (shared across ALL :free models on the account).
+	// If credits are ever removed, drop both :free rows back to 50/day.
+	// OpenRouter still 429s upstream when Google throttles the pool —
+	// that's the case where switching to the Gemini-direct Gemma is the
+	// only fix.
+	"google/gemma-4-26b-a4b-it:free": { rpm: 20, rpd: 1000 },
+	// OpenRouter free-tier nemotron used for the classifier. Shares the
+	// same per-account 1000/day pool as the row above.
 	"nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": {
 		rpm: 20,
-		rpd: 200,
+		rpd: 1000,
 	},
 };
 

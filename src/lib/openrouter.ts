@@ -1,29 +1,38 @@
 /**
- * LLM client — supports two providers behind one OpenAI-compatible API:
+ * Provider-agnostic LLM client speaking the OpenAI Chat Completions wire
+ * format. Two upstream providers:
  *   • `openrouter`  → https://openrouter.ai/api/v1/chat/completions
  *   • `gemini`      → https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
  *
- * Both speak the same SSE shape, so the parser is shared. Provider selection
- * is driven by:
- *   • server side  → `LLM_PROVIDER` env var (see src/lib/env.ts)
- *   • client side  → `import.meta.env.VITE_LLM_PROVIDER`
- * Both default to `openrouter` for back-compat.
- *
- * File stays named `openrouter.ts` to avoid churning every import. The
- * provider-agnostic surface is exported alongside the legacy names.
+ * Each model in the unified catalog (`src/lib/agent/models.ts`) carries its
+ * own `provider` — `streamLlm({ provider, ... })` simply dispatches to the
+ * matching endpoint. File stays named `openrouter.ts` to avoid churning
+ * every import; the catalog + types are re-exported from `agent/models.ts`.
  */
 
-// ─── Providers ──────────────────────────────────────────────────────────
+import {
+	getModel,
+	isModelAllowed,
+	isPremiumModel,
+	isProvider,
+	type LlmModel,
+	MODELS,
+	PROVIDERS,
+	type Provider,
+} from "#/lib/agent/models";
 
-export const PROVIDERS = ["openrouter", "gemini"] as const;
-export type Provider = (typeof PROVIDERS)[number];
+export { PROVIDERS, isProvider, isPremiumModel, isModelAllowed };
+export type { Provider, LlmModel };
 
-export function isProvider(value: unknown): value is Provider {
-	return (
-		typeof value === "string" &&
-		(PROVIDERS as readonly string[]).includes(value)
-	);
-}
+/** Legacy export retained for older tests that imported the per-provider
+ *  table directly. Derived from the unified catalog. */
+export const OPENROUTER_MODELS: readonly LlmModel[] = MODELS.filter(
+	(m) => m.provider === "openrouter",
+);
+/** @see OPENROUTER_MODELS */
+export const GEMINI_MODELS: readonly LlmModel[] = MODELS.filter(
+	(m) => m.provider === "gemini",
+);
 
 const ENDPOINTS: Record<Provider, string> = {
 	openrouter: "https://openrouter.ai/api/v1/chat/completions",
@@ -31,86 +40,35 @@ const ENDPOINTS: Record<Provider, string> = {
 		"https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
 };
 
-// ─── Model catalogues ───────────────────────────────────────────────────
-
-export type LlmModel = {
-	id: string;
-	label: string;
-	/**
-	 * `true` for paid-only models (Gemini 2.5 Flash Lite under our setup).
-	 * Premium models are capped at a lower per-visitor count to bound spend.
-	 */
-	premium?: boolean;
-};
-
-export const OPENROUTER_MODELS = [
-	{
-		id: "google/gemini-2.5-flash-lite",
-		label: "Gemini 2.5 Flash Lite (default)",
-	},
-	{ id: "meta-llama/llama-3.3-8b-instruct", label: "Llama 3.3 8B" },
-	{ id: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5" },
-	{ id: "openai/gpt-5-mini", label: "GPT-5 Mini" },
-	{ id: "deepseek/deepseek-chat", label: "DeepSeek Chat" },
-] as const satisfies readonly LlmModel[];
-
-export const GEMINI_MODELS = [
-	{
-		id: "gemma-4-31b-it",
-		label: "Gemma 4 31B (default · free)",
-	},
-	{
-		id: "gemma-4-26b-a4b-it",
-		label: "Gemma 4 26B (free)",
-	},
-	{
-		id: "gemini-2.5-flash-lite",
-		label: "Gemini 2.5 Flash Lite (premium · 5/day)",
-		premium: true,
-	},
-] as const satisfies readonly LlmModel[];
-
-/** True when the model is paid (counts toward the premium sub-budget). */
-export function isPremiumModel(id: string): boolean {
-	const all: readonly LlmModel[] = [...OPENROUTER_MODELS, ...GEMINI_MODELS];
-	const hit = all.find((m) => m.id === id);
-	return hit?.premium === true;
-}
-
-const MODELS_BY_PROVIDER: Record<Provider, readonly LlmModel[]> = {
-	openrouter: OPENROUTER_MODELS,
-	gemini: GEMINI_MODELS,
-};
-
-export type OpenRouterModelId = (typeof OPENROUTER_MODELS)[number]["id"];
-export type GeminiModelId = (typeof GEMINI_MODELS)[number]["id"];
-export type LlmModelId = OpenRouterModelId | GeminiModelId;
+// ─── Legacy compat shims ────────────────────────────────────────────────
+// Some callers (`/model list` slash command, status footer label lookups,
+// older imports in the env validator) still ask "what models does provider
+// P expose?". We derive the per-provider view from the unified catalog so
+// adding a model in one place updates every consumer.
 
 export function getModelsForProvider(p: Provider): readonly LlmModel[] {
-	return MODELS_BY_PROVIDER[p];
+	return MODELS.filter((m) => m.provider === p);
 }
 
 export function getDefaultModelForProvider(p: Provider): string {
-	const models = MODELS_BY_PROVIDER[p];
-	// Type-narrowed: every entry in MODELS_BY_PROVIDER has ≥ 1 model.
-	return models[0]?.id ?? "";
+	const first = MODELS.find((m) => m.provider === p);
+	return first?.id ?? "";
 }
 
 export function isModelForProvider(p: Provider, id: string): boolean {
-	return MODELS_BY_PROVIDER[p].some((m) => m.id === id);
+	return getModel(id)?.provider === p;
 }
 
-/** Legacy alias preserved for callers that already validated against the
- *  OpenRouter model list. New code should use `isModelForProvider`. */
-export function isOpenRouterModel(id: string): id is OpenRouterModelId {
+/** Legacy alias preserved for callers that validated against the
+ *  OpenRouter-only list. New code should use `isModelAllowed`. */
+export function isOpenRouterModel(id: string): boolean {
 	return isModelForProvider("openrouter", id);
 }
 
-// ─── Active-provider lookups ────────────────────────────────────────────
-
 /**
- * Client-side active provider. Reads `import.meta.env.VITE_LLM_PROVIDER`
- * with `openrouter` as the fallback so existing setups keep working.
+ * Client-side default provider (only used by the legacy `/model` command for
+ * its info line). Reads `import.meta.env.VITE_LLM_PROVIDER` with `openrouter`
+ * as the fallback so existing setups keep working.
  */
 export function getActiveProviderClient(): Provider {
 	const raw = (import.meta as { env?: Record<string, string | undefined> }).env
@@ -132,6 +90,7 @@ export type LlmUsage = {
 };
 
 export type LlmEvent =
+	| { type: "thinking"; text: string }
 	| { type: "token"; text: string }
 	| { type: "done"; usage?: LlmUsage };
 
@@ -196,57 +155,95 @@ export async function* streamLlm(
 		);
 	}
 
-	yield* stripThoughtBlocks(parseSseStream(res.body, args.signal));
+	yield* splitThinkingFromContent(parseSseStream(res.body, args.signal));
 }
 
 /**
- * Gemma 4 always leads its response with a `<thought>...</thought>` block
- * of internal reasoning that we don't want to render. Buffer incoming token
- * deltas until we've consumed the closing tag, then start yielding only the
- * visible content. Models that don't emit `<thought>` are unaffected.
+ * Gemma 4 leads its response with a `<thought>...</thought>` block of
+ * internal reasoning. Some providers (OpenRouter on nemotron, others) emit
+ * reasoning in a sibling `delta.reasoning` field — handled in `parseFrame`
+ * which yields those as `type: "thinking"` directly.
+ *
+ * For the `<thought>` variant, buffer incoming token deltas until we've
+ * decided whether the response opens with a thought block; emit buffered
+ * thought content as `thinking` events and the post-`</thought>` tail as
+ * `token` events. Models that don't emit `<thought>` pass through
+ * unchanged.
  */
-async function* stripThoughtBlocks(
+export async function* splitThinkingFromContent(
 	source: AsyncGenerator<LlmEvent, void, void>,
 ): AsyncGenerator<LlmEvent, void, void> {
 	let buffer = "";
-	let stripped = false;
+	let inThought = false;
+	let decided = false;
 	for await (const ev of source) {
+		if (ev.type === "thinking") {
+			// Provider emitted reasoning in a sibling field — pass through.
+			yield ev;
+			continue;
+		}
 		if (ev.type !== "token") {
 			yield ev;
 			continue;
 		}
-		if (stripped) {
+		if (decided && !inThought) {
 			yield ev;
 			continue;
 		}
 		buffer += ev.text;
-		// Wait until we know whether this response opens with `<thought>`.
-		if (buffer.length < 10 && !buffer.startsWith("<")) {
-			stripped = true;
-			yield { type: "token", text: buffer };
+		if (!decided) {
+			// Wait until we know whether this response opens with `<thought>`.
+			if (buffer.length < 10 && !buffer.startsWith("<")) {
+				decided = true;
+				inThought = false;
+				yield { type: "token", text: buffer };
+				buffer = "";
+				continue;
+			}
+			if (!buffer.startsWith("<thought>") && !"<thought>".startsWith(buffer)) {
+				decided = true;
+				inThought = false;
+				yield { type: "token", text: buffer };
+				buffer = "";
+				continue;
+			}
+			if (buffer.startsWith("<thought>")) {
+				decided = true;
+				inThought = true;
+				buffer = buffer.slice("<thought>".length);
+				if (buffer.length > 0 && !buffer.includes("</thought>")) {
+					yield { type: "thinking", text: buffer };
+					buffer = "";
+				}
+				// fall through to thinking-buffer handling below
+			} else {
+				// Still might be the opening tag; keep buffering.
+				continue;
+			}
+		}
+		if (inThought) {
+			const closeIdx = buffer.indexOf("</thought>");
+			if (closeIdx === -1) {
+				// Stream the thinking content as it arrives.
+				if (buffer.length > 0) {
+					yield { type: "thinking", text: buffer };
+					buffer = "";
+				}
+				continue;
+			}
+			// Emit the slice before the close tag as thinking; switch to token.
+			const head = buffer.slice(0, closeIdx);
+			const tail = buffer.slice(closeIdx + "</thought>".length);
+			if (head.length > 0) yield { type: "thinking", text: head };
+			inThought = false;
 			buffer = "";
-			continue;
+			if (tail.length > 0) yield { type: "token", text: tail };
 		}
-		if (!buffer.startsWith("<thought>") && !"<thought>".startsWith(buffer)) {
-			// Prefix doesn't match the opening tag — release as-is.
-			stripped = true;
-			yield { type: "token", text: buffer };
-			buffer = "";
-			continue;
-		}
-		const closeIdx = buffer.indexOf("</thought>");
-		if (closeIdx === -1) {
-			// Still inside the thought; keep buffering, don't yield.
-			continue;
-		}
-		const tail = buffer.slice(closeIdx + "</thought>".length);
-		stripped = true;
-		buffer = "";
-		if (tail.length > 0) yield { type: "token", text: tail };
 	}
-	if (!stripped && buffer.length > 0) {
-		// Defensive: stream ended mid-buffer. Emit whatever we held back.
-		yield { type: "token", text: buffer };
+	// Stream ended mid-buffer — flush whatever we held back so we don't
+	// silently drop a partial reply.
+	if (buffer.length > 0) {
+		yield { type: inThought ? "thinking" : "token", text: buffer };
 	}
 }
 
@@ -320,6 +317,7 @@ async function safeText(res: Response): Promise<string> {
 // ─── SSE parser (shared across providers) ───────────────────────────────
 
 type FrameOutcome =
+	| { kind: "thinking"; text: string; usage?: LlmUsage }
 	| { kind: "token"; text: string; usage?: LlmUsage }
 	| { kind: "usage"; usage: LlmUsage }
 	| { kind: "done"; usage?: LlmUsage }
@@ -367,6 +365,9 @@ export async function* parseSseStream(
 				const outcome = parseFrame(frame);
 				if (outcome.kind === "usage") {
 					lastUsage = outcome.usage;
+				} else if (outcome.kind === "thinking") {
+					if (outcome.usage) lastUsage = outcome.usage;
+					yield { type: "thinking", text: outcome.text };
 				} else if (outcome.kind === "token") {
 					if (outcome.usage) lastUsage = outcome.usage;
 					yield { type: "token", text: outcome.text };
@@ -381,7 +382,10 @@ export async function* parseSseStream(
 		const tail = buffer.trim();
 		if (tail.length > 0) {
 			const outcome = parseFrame(tail);
-			if (outcome.kind === "token") {
+			if (outcome.kind === "thinking") {
+				if (outcome.usage) lastUsage = outcome.usage;
+				yield { type: "thinking", text: outcome.text };
+			} else if (outcome.kind === "token") {
 				if (outcome.usage) lastUsage = outcome.usage;
 				yield { type: "token", text: outcome.text };
 			} else if (outcome.kind === "done") {
@@ -408,11 +412,21 @@ function parseFrame(frame: string): FrameOutcome {
 		if (!payload) continue;
 		try {
 			const json = JSON.parse(payload) as {
-				choices?: Array<{ delta?: { content?: string } }>;
+				choices?: Array<{
+					delta?: { content?: string; reasoning?: string };
+				}>;
 				usage?: LlmUsage;
 			};
 			if (json.usage) usage = json.usage;
-			const text = json.choices?.[0]?.delta?.content;
+			const delta = json.choices?.[0]?.delta;
+			// Providers that surface reasoning in a sibling field (e.g.
+			// OpenRouter's nemotron) — emit as `thinking` so the splitter
+			// keeps them out of the visible answer.
+			const reasoning = delta?.reasoning;
+			if (typeof reasoning === "string" && reasoning.length > 0) {
+				return { kind: "thinking", text: reasoning, usage };
+			}
+			const text = delta?.content;
 			if (typeof text === "string" && text.length > 0) {
 				return { kind: "token", text, usage };
 			}

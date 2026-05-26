@@ -1,9 +1,13 @@
 import { z } from "zod";
 import {
-	getDefaultModelForProvider,
-	isModelForProvider,
+	getAvailableModels,
+	getDefaultModel,
+	getModel,
+	getProviderForModel,
+	isModelAllowed,
+	type LlmModel,
 	type Provider,
-} from "#/lib/openrouter";
+} from "#/lib/agent/models";
 
 /**
  * Server-side env validation.
@@ -13,12 +17,14 @@ import {
  * (route loaders, API handlers, build scripts). The parse runs once and the
  * result is cached.
  *
- * Provider selection:
- *   • `LLM_PROVIDER=openrouter|gemini` picks the active provider. Defaults
- *     to `openrouter` if unset.
- *   • Each provider requires its own API key. The other key is optional —
- *     handy when you keep both configured and flip via `LLM_PROVIDER`.
- *   • `*_DEFAULT_MODEL` overrides the provider's first-in-list default.
+ * Provider model:
+ *   • Both `OPENROUTER_API_KEY` and `GEMINI_API_KEY` may be set. The unified
+ *     model catalog auto-filters to models whose provider key is configured,
+ *     so a dev with only one key still gets a working subset.
+ *   • At least one of the two keys must be set.
+ *   • `LLM_PROVIDER` picks the *preferred* provider for the default model
+ *     when both keys are present. It no longer gates which models the
+ *     catalog exposes.
  */
 
 // `.env` templates ship every key as `KEY=` (empty string). Treat blanks as
@@ -45,18 +51,29 @@ const ServerEnvSchema = z
 
 		// Rate limiting + abuse defenses.
 		RATE_LIMIT_SALT: optionalString,
-		// Total messages per IP per day (any model). Bumped to 15 because Gemma's
-		// free-tier headroom is huge; premium use is capped separately.
-		RATE_LIMIT_MAX: z.coerce.number().int().positive().default(15),
-		// Sub-budget for paid models (currently just Gemini 2.5 Flash Lite).
-		PREMIUM_LIMIT: z.coerce.number().int().positive().default(5),
+		// Legacy per-IP daily message cap. Now only consulted for free
+		// models when `FREE_MODEL_PER_IP_LIMIT > 0`; free models otherwise
+		// rely on Google's shared per-minute / per-UTC-day quotas. Premium
+		// uses `PREMIUM_LIMIT` instead. Default raised to 1000 so any
+		// remaining reads don't accidentally cap free traffic.
+		RATE_LIMIT_MAX: z.coerce.number().int().positive().default(1000),
+		// Per-IP daily message cap for free models. `0` (default) = unlimited
+		// per-visitor; only the shared per-minute (rolling 60s) and per-UTC-day
+		// model quotas apply. Set > 0 as an escape hatch if a visitor abuses.
+		FREE_MODEL_PER_IP_LIMIT: z.coerce.number().int().nonnegative().default(0),
+		// Per-IP daily cap for premium models (Gemini 2.5 Flash Lite).
+		// Default 10 keeps us comfortably under Google's 20 RPD ceiling.
+		PREMIUM_LIMIT: z.coerce.number().int().positive().default(10),
 		RATE_LIMIT_WINDOW_MS: z.coerce
 			.number()
 			.int()
 			.positive()
 			.default(24 * 60 * 60 * 1000),
 		DAILY_TOKEN_BUDGET: z.coerce.number().int().positive().default(200_000),
-		PER_IP_TOKEN_BUDGET: z.coerce.number().int().positive().default(20_000),
+		// Per-IP token budget. Bumped from 20k because per-IP message count
+		// is now unlimited on free models, so this becomes the primary
+		// anti-abuse guardrail.
+		PER_IP_TOKEN_BUDGET: z.coerce.number().int().positive().default(40_000),
 		BLOCK_VPN: z
 			.preprocess(
 				(v) => (typeof v === "string" ? v.toLowerCase() : v),
@@ -99,20 +116,19 @@ const ServerEnvSchema = z
 		REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(45_000),
 	})
 	.superRefine((env, ctx) => {
-		if (env.LLM_PROVIDER === "openrouter" && !env.OPENROUTER_API_KEY) {
+		// Either or both keys may be set. We need at least one so the
+		// catalog filter has something to expose.
+		if (!env.OPENROUTER_API_KEY && !env.GEMINI_API_KEY) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				path: ["OPENROUTER_API_KEY"],
-				message: "OPENROUTER_API_KEY is required when LLM_PROVIDER=openrouter",
+				message:
+					"At least one of OPENROUTER_API_KEY or GEMINI_API_KEY must be set.",
 			});
 		}
-		if (env.LLM_PROVIDER === "gemini" && !env.GEMINI_API_KEY) {
-			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
-				path: ["GEMINI_API_KEY"],
-				message: "GEMINI_API_KEY is required when LLM_PROVIDER=gemini",
-			});
-		}
+		// The preferred provider (LLM_PROVIDER) is the one we try first when
+		// choosing a default model. If it has no key, fall back to the other
+		// provider silently — but if neither has one, the check above fires.
 	});
 
 export type ServerEnv = z.infer<typeof ServerEnvSchema>;
@@ -143,34 +159,79 @@ export function getServerEnv(
 	return result.data;
 }
 
+/** Return the API key for a given provider, or `null` when not configured. */
+export function getApiKeyForProvider(
+	env: ServerEnv,
+	p: Provider,
+): string | null {
+	if (p === "gemini") return env.GEMINI_API_KEY ?? null;
+	return env.OPENROUTER_API_KEY ?? null;
+}
+
+/** The model catalog visible to this deploy (filtered by which keys are set). */
+export function getAvailableCatalog(
+	env: ServerEnv = getServerEnv(),
+): readonly LlmModel[] {
+	return getAvailableModels(env);
+}
+
 /**
- * Resolve the API key + default model + canonical id for the active
- * provider. Throws with a clear message if the requested provider lacks
- * a key — the superRefine above usually catches this earlier, but this
- * guards against direct callers that bypass `getServerEnv()`.
+ * Resolve the full per-model config (provider + apiKey + canonical id). The
+ * api route uses this once per request after validating the user-requested
+ * model against the available catalog.
+ */
+export function getModelConfig(
+	env: ServerEnv,
+	id: string,
+): { provider: Provider; apiKey: string; model: string } | null {
+	const provider = getProviderForModel(id);
+	if (!provider) return null;
+	const apiKey = getApiKeyForProvider(env, provider);
+	if (!apiKey) return null;
+	return { provider, apiKey, model: id };
+}
+
+/**
+ * Pick a default model when the caller hasn't requested one. Honors the
+ * preferred provider (`LLM_PROVIDER`) when both keys are present and the
+ * preferred provider has a free model; otherwise falls back to the first
+ * free model whose key is set, then to any model.
+ */
+export function resolveDefaultModel(env: ServerEnv = getServerEnv()): LlmModel {
+	const available = getAvailableCatalog(env);
+	const overrideId =
+		env.LLM_PROVIDER === "gemini"
+			? env.GEMINI_DEFAULT_MODEL
+			: env.OPENROUTER_DEFAULT_MODEL;
+	if (overrideId && isModelAllowed(overrideId)) {
+		const m = getModel(overrideId);
+		if (m && available.includes(m)) return m;
+	}
+	const preferredFree = available.find(
+		(m) => m.provider === env.LLM_PROVIDER && m.tier === "free",
+	);
+	if (preferredFree) return preferredFree;
+	return getDefaultModel(env);
+}
+
+/**
+ * Legacy single-provider config shape. Kept so existing callers (tests,
+ * commentary route) keep working — returns the provider + key + id of the
+ * default model. New code should use `getModelConfig(env, modelId)`.
  */
 export function getLlmConfig(env: ServerEnv = getServerEnv()): {
 	provider: Provider;
 	apiKey: string;
 	defaultModel: string;
 } {
-	const provider = env.LLM_PROVIDER;
-	const apiKey =
-		provider === "gemini" ? env.GEMINI_API_KEY : env.OPENROUTER_API_KEY;
+	const model = resolveDefaultModel(env);
+	const apiKey = getApiKeyForProvider(env, model.provider);
 	if (!apiKey) {
 		throw new Error(
-			`No API key configured for LLM_PROVIDER=${provider}. Set ${provider === "gemini" ? "GEMINI_API_KEY" : "OPENROUTER_API_KEY"}.`,
+			`No API key configured for the default model's provider (${model.provider}). Set ${model.provider === "gemini" ? "GEMINI_API_KEY" : "OPENROUTER_API_KEY"}.`,
 		);
 	}
-	const overrideDefault =
-		provider === "gemini"
-			? env.GEMINI_DEFAULT_MODEL
-			: env.OPENROUTER_DEFAULT_MODEL;
-	const defaultModel =
-		overrideDefault && isModelForProvider(provider, overrideDefault)
-			? overrideDefault
-			: getDefaultModelForProvider(provider);
-	return { provider, apiKey, defaultModel };
+	return { provider: model.provider, apiKey, defaultModel: model.id };
 }
 
 /**

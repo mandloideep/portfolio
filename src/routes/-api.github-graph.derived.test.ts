@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
 	aggregateLanguages,
+	type ContributionWeek,
 	computeActiveDayPct,
 	computeBestDay,
 	computeBestWeek,
 	computeTopWeekday,
-	type ContributionWeek,
 	sumLastNDays,
 } from "./api.github-graph";
 

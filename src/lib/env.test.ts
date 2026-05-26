@@ -44,24 +44,26 @@ describe("getServerEnv", () => {
 		expect(env.LLM_PROVIDER).toBe("openrouter");
 	});
 
-	it("throws when LLM_PROVIDER=openrouter but no key", () => {
+	it("throws when no LLM provider key is set", () => {
+		// With dual-key support, the rule is now "at least one key required",
+		// not "the LLM_PROVIDER's key required".
 		expect(() =>
 			getServerEnv({
 				LLM_PROVIDER: "openrouter",
 				GITHUB_TOKEN: "t",
 				GITHUB_USERNAME: "u",
 			}),
-		).toThrow(/OPENROUTER_API_KEY/);
+		).toThrow(/OPENROUTER_API_KEY|GEMINI_API_KEY/);
 	});
 
-	it("throws when LLM_PROVIDER=gemini but no key", () => {
-		expect(() =>
-			getServerEnv({
-				LLM_PROVIDER: "gemini",
-				GITHUB_TOKEN: "t",
-				GITHUB_USERNAME: "u",
-			}),
-		).toThrow(/GEMINI_API_KEY/);
+	it("accepts a gemini-only deploy with no OPENROUTER_API_KEY", () => {
+		const env = getServerEnv({
+			LLM_PROVIDER: "gemini",
+			GEMINI_API_KEY: "AIza-xxx",
+			GITHUB_TOKEN: "t",
+			GITHUB_USERNAME: "u",
+		});
+		expect(env.LLM_PROVIDER).toBe("gemini");
 	});
 
 	it("treats empty-string optional keys as absent (regression: bootstrap-template leftover)", () => {
@@ -84,8 +86,11 @@ describe("getServerEnv", () => {
 
 	it("exposes rate-limit + abuse-defense defaults", () => {
 		const env = getServerEnv(completeOpenRouter);
-		expect(env.RATE_LIMIT_MAX).toBe(15);
-		expect(env.PREMIUM_LIMIT).toBe(5);
+		// RATE_LIMIT_MAX is now only a legacy soft ceiling — free models
+		// run uncapped per-IP via FREE_MODEL_PER_IP_LIMIT=0.
+		expect(env.RATE_LIMIT_MAX).toBe(1000);
+		expect(env.FREE_MODEL_PER_IP_LIMIT).toBe(0);
+		expect(env.PREMIUM_LIMIT).toBe(10);
 		expect(env.RATE_LIMIT_WINDOW_MS).toBe(86_400_000);
 		expect(env.WORD_CAP).toBe(30);
 		expect(env.BLOCK_VPN).toBe(true);
@@ -94,7 +99,7 @@ describe("getServerEnv", () => {
 		expect(env.MIN_REQUEST_INTERVAL_MS).toBe(2000);
 		expect(env.REQUEST_TIMEOUT_MS).toBe(45_000);
 		expect(env.DAILY_TOKEN_BUDGET).toBe(200_000);
-		expect(env.PER_IP_TOKEN_BUDGET).toBe(20_000);
+		expect(env.PER_IP_TOKEN_BUDGET).toBe(40_000);
 	});
 
 	it("coerces BLOCK_VPN=false to boolean false", () => {
@@ -116,12 +121,14 @@ describe("getServerEnv", () => {
 });
 
 describe("getLlmConfig", () => {
-	it("returns openrouter config with the validated default model", () => {
+	it("returns openrouter config for the default openrouter free model", () => {
 		const env = getServerEnv(completeOpenRouter);
 		const cfg = getLlmConfig(env);
 		expect(cfg.provider).toBe("openrouter");
 		expect(cfg.apiKey).toBe("sk-or-xxx");
-		expect(cfg.defaultModel).toBe("google/gemini-2.5-flash-lite");
+		// Default falls back to the first available free model on the
+		// preferred provider — the OpenRouter Gemma slug.
+		expect(cfg.defaultModel).toBe("google/gemma-4-26b-a4b-it:free");
 	});
 
 	it("returns gemini config when LLM_PROVIDER=gemini", () => {
@@ -132,7 +139,7 @@ describe("getLlmConfig", () => {
 		expect(cfg.defaultModel).toBe("gemma-4-31b-it");
 	});
 
-	it("falls back to the canonical default when GEMINI_DEFAULT_MODEL is unknown", () => {
+	it("falls back to the catalog default when GEMINI_DEFAULT_MODEL is unknown", () => {
 		const env = getServerEnv({
 			LLM_PROVIDER: "gemini",
 			GEMINI_API_KEY: "AIza-xxx",

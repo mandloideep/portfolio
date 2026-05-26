@@ -1,60 +1,60 @@
 import { useStore } from "@tanstack/react-store";
 import { useEffect } from "react";
+import { ModelSwitcher } from "#/components/agent/model-switcher";
+import { QuotaIndicator } from "#/components/agent/quota-indicator";
 import { themes } from "#/content/themes";
 import { modelStore } from "#/store/model";
-import { quotaStore, setQuota } from "#/store/quota";
+import { setQuota } from "#/store/quota";
 import { terminalStore } from "#/store/terminal";
 import { themeStore } from "#/store/theme";
 
 /**
  * Persistent bottom strip inside the terminal chrome window. Surfaces the
- * pieces of state the user is most likely to forget: current prompt mode,
- * active theme, active OpenRouter model.
+ * pieces of state the user is most likely to forget: prompt mode, active
+ * theme, current agent model (now a clickable popover trigger), and the
+ * tier-aware quota chip (`∞` for free Gemma, `N/cap` for premium).
  *
- * Visual treatment: three columns separated by vertical pipes, uppercase
- * eyebrow type for the metadata, value rendered in fg with tabular numerals
- * so model+token labels don't jitter as state changes.
+ * The model + quota slots come from the shared agent primitives so the
+ * chat surface gets the same chrome for free.
  */
 export function StatusFooter() {
 	const themeSlug = useStore(themeStore, (s) => s.slug);
 	const mode = useStore(terminalStore, (s) => s.mode);
-	const activeModel = useStore(modelStore, (s) => s.activeModel);
-	const remaining = useStore(quotaStore, (s) => s.remaining);
-	const limit = useStore(quotaStore, (s) => s.limit);
+	const activeModelId = useStore(modelStore, (s) => s.activeModel);
 	const themeName = themes.find((t) => t.slug === themeSlug)?.name ?? themeSlug;
-	const modelLabel = shortModelName(activeModel);
 
+	// Paint the initial quota chip on mount. Subsequent updates flow
+	// through the engine's SSE `quota` events.
 	useEffect(() => {
 		let cancelled = false;
-		fetch("/api/agent/quota", { cache: "no-store" })
+		const params = new URLSearchParams({ model: activeModelId });
+		fetch(`/api/agent/quota?${params.toString()}`, { cache: "no-store" })
 			.then((r) => (r.ok ? r.json() : null))
 			.then(
 				(
 					data: {
-						remaining?: number;
-						limit?: number;
-						resetsAt?: string;
+						remaining?: number | null;
+						limit?: number | null;
+						unlimited?: boolean;
+						tier?: "free" | "premium";
+						resetsAt?: string | null;
 					} | null,
 				) => {
 					if (cancelled || !data) return;
-					if (typeof data.remaining !== "number") return;
-					const next: Partial<{
-						remaining: number;
-						limit: number;
-						resetsAt: string | null;
-					}> = {
-						remaining: data.remaining,
+					setQuota({
+						remaining: data.remaining ?? null,
+						unlimited: data.unlimited === true,
+						tier: data.tier ?? "free",
+						limit: typeof data.limit === "number" ? data.limit : 0,
 						resetsAt: data.resetsAt ?? null,
-					};
-					if (typeof data.limit === "number") next.limit = data.limit;
-					setQuota(next);
+					});
 				},
 			)
 			.catch(() => {});
 		return () => {
 			cancelled = true;
 		};
-	}, []);
+	}, [activeModelId]);
 
 	return (
 		<div
@@ -77,40 +77,12 @@ export function StatusFooter() {
 				<span className="select-none text-muted/40" aria-hidden="true">
 					|
 				</span>
-				<span className="truncate" data-testid="status-model">
-					<span className="text-muted/70">model/</span>
-					<span className="text-fg/90">{modelLabel}</span>
-				</span>
+				<ModelSwitcher variant="footer" />
 				<span className="select-none text-muted/40" aria-hidden="true">
 					|
 				</span>
-				<span
-					className="truncate"
-					data-testid="status-quota"
-					title="messages remaining in your daily quota"
-				>
-					<span className="text-muted/70">msgs/</span>
-					<span
-						className={
-							remaining === null
-								? "text-fg/60"
-								: remaining === 0
-									? "text-error"
-									: remaining <= 1
-										? "text-accent-alt"
-										: "text-fg/90"
-						}
-					>
-						{remaining === null ? `?/${limit}` : `${remaining}/${limit}`}
-					</span>
-				</span>
+				<QuotaIndicator />
 			</div>
 		</div>
 	);
-}
-
-function shortModelName(id: string): string {
-	// "anthropic/claude-haiku-4.5" → "claude-haiku-4.5"
-	const slash = id.indexOf("/");
-	return slash === -1 ? id : id.slice(slash + 1);
 }

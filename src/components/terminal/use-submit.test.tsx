@@ -8,6 +8,7 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 // Import after mock so the hook resolves to the mocked navigate.
+import { AgentTestWrapper } from "#/components/agent/test-utils";
 import { useSubmit } from "./use-submit";
 
 function sseBody(chunks: string[]): ReadableStream<Uint8Array> {
@@ -69,7 +70,9 @@ describe("useSubmit — agent mode (existing)", () => {
 			);
 		vi.stubGlobal("fetch", fetchMock);
 
-		const { result } = renderHook(() => useSubmit());
+		const { result } = renderHook(() => useSubmit(), {
+			wrapper: AgentTestWrapper,
+		});
 		await act(async () => {
 			await result.current("hello there");
 		});
@@ -83,7 +86,9 @@ describe("useSubmit — agent mode (existing)", () => {
 	});
 
 	it("runs slash commands in agent mode", async () => {
-		const { result } = renderHook(() => useSubmit());
+		const { result } = renderHook(() => useSubmit(), {
+			wrapper: AgentTestWrapper,
+		});
 		await act(async () => {
 			await result.current("/clear");
 		});
@@ -97,7 +102,9 @@ describe("useSubmit — shell mode", () => {
 	});
 
 	it("dispatches to shell command registry", async () => {
-		const { result } = renderHook(() => useSubmit());
+		const { result } = renderHook(() => useSubmit(), {
+			wrapper: AgentTestWrapper,
+		});
 		await act(async () => {
 			await result.current("whoami");
 		});
@@ -105,7 +112,9 @@ describe("useSubmit — shell mode", () => {
 	});
 
 	it("`deep` flips back to agent mode and emits a system block", async () => {
-		const { result } = renderHook(() => useSubmit());
+		const { result } = renderHook(() => useSubmit(), {
+			wrapper: AgentTestWrapper,
+		});
 		await act(async () => {
 			await result.current("deep");
 		});
@@ -114,7 +123,9 @@ describe("useSubmit — shell mode", () => {
 	});
 
 	it("`claude` also flips back to agent mode", async () => {
-		const { result } = renderHook(() => useSubmit());
+		const { result } = renderHook(() => useSubmit(), {
+			wrapper: AgentTestWrapper,
+		});
 		await act(async () => {
 			await result.current("claude");
 		});
@@ -122,7 +133,9 @@ describe("useSubmit — shell mode", () => {
 	});
 
 	it("`open ui` navigates to /", async () => {
-		const { result } = renderHook(() => useSubmit());
+		const { result } = renderHook(() => useSubmit(), {
+			wrapper: AgentTestWrapper,
+		});
 		await act(async () => {
 			await result.current("open ui");
 		});
@@ -130,7 +143,9 @@ describe("useSubmit — shell mode", () => {
 	});
 
 	it("slash commands in shell mode are command-not-found", async () => {
-		const { result } = renderHook(() => useSubmit());
+		const { result } = renderHook(() => useSubmit(), {
+			wrapper: AgentTestWrapper,
+		});
 		await act(async () => {
 			await result.current("/help");
 		});

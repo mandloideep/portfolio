@@ -12,23 +12,36 @@ export type PrivacyVerdict = {
 
 export type RateCheck = {
 	allowed: boolean;
-	remaining: number;
+	/**
+	 * Number of messages remaining inside the window. For free models with
+	 * `freeIpLimit === 0`, the count is uncapped and `remaining` is `null`
+	 * (the SSE serializer emits `null`; status footers render `∞`).
+	 */
+	remaining: number | null;
 	resetsAt: Date;
+	/** True when no per-IP message count applies (free + unlimited). */
+	unlimited: boolean;
+	tier: "free" | "premium";
 	blockedReason?: string;
 };
 
 export type RateCheckArgs = {
 	ipHash: string;
-	limit: number;
+	tier: "free" | "premium";
+	/**
+	 * Per-IP cap for premium models (only consulted when tier === "premium").
+	 */
+	premiumLimit: number;
+	/**
+	 * Per-IP daily cap for free models. `0` = unlimited (only the shared
+	 * model RPM/RPD apply); `> 0` enforces a per-visitor count. The cap is
+	 * shared across all free models so a visitor can't multiply their
+	 * budget by switching slugs.
+	 */
+	freeIpLimit: number;
 	windowMs: number;
 	cooldownMs: number;
 	perIpTokenBudget: number;
-	/**
-	 * Sub-budget for paid models. When `isPremium` is true the check also
-	 * enforces `premiumCount < premiumLimit`.
-	 */
-	premiumLimit: number;
-	isPremium: boolean;
 	/**
 	 * Called only on the *first* request from a new ipHash. Returns the
 	 * privacy verdict from IPInfo (or wherever). If omitted, no privacy
@@ -77,13 +90,25 @@ export function hashIp(ip: string, salt: string): string {
 export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 	const {
 		ipHash,
-		limit,
+		tier,
 		windowMs,
 		cooldownMs,
 		perIpTokenBudget,
 		premiumLimit,
-		isPremium,
+		freeIpLimit,
 	} = args;
+	const isPremium = tier === "premium";
+	const enforceCount = isPremium || freeIpLimit > 0;
+	const limit = isPremium
+		? premiumLimit
+		: freeIpLimit > 0
+			? freeIpLimit
+			: Number.POSITIVE_INFINITY;
+	const unlimited = !enforceCount;
+	const computeRemaining = (count: number): number | null => {
+		if (unlimited) return null;
+		return Math.max(0, limit - count);
+	};
 	const now = new Date();
 
 	// Read existing row first so we know whether to run the privacy lookup.
@@ -99,6 +124,8 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 			allowed: false,
 			remaining: 0,
 			resetsAt: nextWindow(row.windowStart, windowMs),
+			unlimited: false,
+			tier,
 			blockedReason: row.blockedReason,
 		};
 	}
@@ -127,6 +154,8 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 				allowed: false,
 				remaining: 0,
 				resetsAt: new Date(now.getTime() + windowMs),
+				unlimited: false,
+				tier,
 				blockedReason: privacy.reason ?? "vpn",
 			};
 		}
@@ -146,8 +175,10 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 		});
 		return {
 			allowed: true,
-			remaining: Math.max(0, limit - 1),
+			remaining: computeRemaining(1),
 			resetsAt: new Date(now.getTime() + windowMs),
+			unlimited,
+			tier,
 		};
 	}
 
@@ -167,8 +198,10 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 			.where(eq(agentRateLimits.ipHash, ipHash));
 		return {
 			allowed: true,
-			remaining: Math.max(0, limit - 1),
+			remaining: computeRemaining(1),
 			resetsAt: new Date(now.getTime() + windowMs),
+			unlimited,
+			tier,
 		};
 	}
 
@@ -179,28 +212,35 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 	if (sinceLast < cooldownMs) {
 		return {
 			allowed: false,
-			remaining: Math.max(0, limit - row.count),
+			remaining: computeRemaining(row.count),
 			resetsAt,
+			unlimited,
+			tier,
 			blockedReason: "cooldown",
 		};
 	}
 
-	// Per-IP token budget.
+	// Per-IP token budget — the primary anti-abuse guardrail for unlimited
+	// free traffic.
 	if (row.tokenCount >= perIpTokenBudget) {
 		return {
 			allowed: false,
 			remaining: 0,
 			resetsAt,
+			unlimited: false,
+			tier,
 			blockedReason: "ip_token_budget",
 		};
 	}
 
-	// Message count limit.
-	if (row.count >= limit) {
+	// Free-model per-IP count cap (only when freeIpLimit > 0).
+	if (!isPremium && freeIpLimit > 0 && row.count >= freeIpLimit) {
 		return {
 			allowed: false,
 			remaining: 0,
 			resetsAt,
+			unlimited: false,
+			tier,
 			blockedReason: "limit_reached",
 		};
 	}
@@ -209,8 +249,10 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 	if (isPremium && row.premiumCount >= premiumLimit) {
 		return {
 			allowed: false,
-			remaining: Math.max(0, limit - row.count),
+			remaining: 0,
 			resetsAt,
+			unlimited: false,
+			tier,
 			blockedReason: "premium_exhausted",
 		};
 	}
@@ -226,19 +268,36 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 
 	return {
 		allowed: true,
-		remaining: Math.max(0, limit - (row.count + 1)),
+		remaining: computeRemaining(row.count + 1),
 		resetsAt,
+		unlimited,
+		tier,
 	};
 }
 
 /**
  * Read-only quota check used by `GET /api/agent/quota`. Doesn't mutate.
+ *
+ * For free models with `freeIpLimit === 0` returns `remaining: null` and
+ * `unlimited: true`. For premium models reports usage against `premiumLimit`.
  */
-export async function readQuota(
-	ipHash: string,
-	limit: number,
-	windowMs: number,
-): Promise<{ remaining: number; resetsAt: Date }> {
+export async function readQuota(args: {
+	ipHash: string;
+	tier: "free" | "premium";
+	premiumLimit: number;
+	freeIpLimit: number;
+	windowMs: number;
+}): Promise<{
+	remaining: number | null;
+	limit: number | null;
+	unlimited: boolean;
+	tier: "free" | "premium";
+	resetsAt: Date;
+}> {
+	const { ipHash, tier, premiumLimit, freeIpLimit, windowMs } = args;
+	const isPremium = tier === "premium";
+	const enforce = isPremium || freeIpLimit > 0;
+	const limit = isPremium ? premiumLimit : freeIpLimit > 0 ? freeIpLimit : null;
 	const existing = await db
 		.select()
 		.from(agentRateLimits)
@@ -248,7 +307,10 @@ export async function readQuota(
 	const now = new Date();
 	if (!row) {
 		return {
-			remaining: limit,
+			remaining: enforce ? (limit ?? 0) : null,
+			limit,
+			unlimited: !enforce,
+			tier,
 			resetsAt: new Date(now.getTime() + windowMs),
 		};
 	}
@@ -256,12 +318,19 @@ export async function readQuota(
 		now.getTime() - new Date(row.windowStart).getTime() >= windowMs;
 	if (windowExpired) {
 		return {
-			remaining: limit,
+			remaining: enforce ? (limit ?? 0) : null,
+			limit,
+			unlimited: !enforce,
+			tier,
 			resetsAt: new Date(now.getTime() + windowMs),
 		};
 	}
+	const usedCount = isPremium ? row.premiumCount : row.count;
 	return {
-		remaining: Math.max(0, limit - row.count),
+		remaining: enforce ? Math.max(0, (limit ?? 0) - usedCount) : null,
+		limit,
+		unlimited: !enforce,
+		tier,
 		resetsAt: new Date(new Date(row.windowStart).getTime() + windowMs),
 	};
 }

@@ -60,14 +60,29 @@ export function clearBlocks(): void {
 }
 
 /**
- * Patch the `text` of an existing block. Used by the agent stream consumer
- * to accumulate tokens into one growing markdown block. No-op if `id` isn't
- * in `blocks`.
+ * Patch fields of an existing block. Used by the agent stream consumer to
+ * accumulate tokens into one growing markdown block, and by the thinking
+ * binding to flip the thinking block's `collapsed` / summary fields when
+ * the answer starts. No-op if `id` isn't in `blocks`.
+ *
+ * The patch shape is intentionally open — the binding knows which fields
+ * are valid for which kind, and the discriminated union prevents stale
+ * fields from leaking onto the wrong kind.
  */
-export function updateBlock(id: string, patch: { text: string }): void {
+export type BlockPatch = {
+	text?: string;
+	collapsed?: boolean;
+	durationMs?: number;
+	tokens?: number;
+};
+
+export function updateBlock(id: string, patch: BlockPatch): void {
 	terminalStore.setState((s) => ({
 		...s,
-		blocks: s.blocks.map((b) => (b.id === id ? { ...b, text: patch.text } : b)),
+		blocks: s.blocks.map((b) => {
+			if (b.id !== id) return b;
+			return { ...b, ...patch } as typeof b;
+		}),
 	}));
 }
 

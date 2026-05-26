@@ -72,6 +72,51 @@ export function BlockRow({ block }: { block: Block }) {
 					<span>{block.text}</span>
 				</div>
 			);
+		case "thinking":
+			return (
+				<div data-block="thinking" className="text-muted/85">
+					<details
+						open={!block.collapsed}
+						className="group rounded-card border border-border/60 bg-bg/30 px-3 py-2 italic"
+					>
+						<summary className="cursor-pointer select-none list-none text-meta uppercase tracking-tab text-muted/70 [&::-webkit-details-marker]:hidden">
+							<span className="mr-1.5 inline-block transition-transform group-open:rotate-90">
+								▸
+							</span>
+							{block.collapsed ? "thought" : "thinking · streaming"}
+							{block.collapsed && (block.durationMs || block.tokens) ? (
+								<span className="ml-2 text-muted/60 normal-case tracking-normal">
+									·{" "}
+									{[
+										typeof block.durationMs === "number"
+											? `${block.durationMs}ms`
+											: null,
+										typeof block.tokens === "number"
+											? `${block.tokens} tokens`
+											: null,
+									]
+										.filter(Boolean)
+										.join(" · ")}
+								</span>
+							) : null}
+						</summary>
+						<div
+							className={cn(
+								"mt-2 whitespace-pre-wrap text-sm leading-relaxed",
+								!block.collapsed && "relative max-h-32 overflow-hidden",
+							)}
+						>
+							{block.text}
+							{!block.collapsed ? (
+								<span
+									aria-hidden="true"
+									className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-bg/95 to-transparent"
+								/>
+							) : null}
+						</div>
+					</details>
+				</div>
+			);
 		default:
 			return assertNever(block);
 	}

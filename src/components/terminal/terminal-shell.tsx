@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AgentEngineProvider } from "#/components/agent/agent-engine-provider";
 import { HiddenCorpus } from "#/components/seo/hidden-corpus";
 import { BootSequence } from "#/components/terminal/boot-sequence";
 import { Chrome } from "#/components/terminal/chrome";
@@ -7,6 +8,7 @@ import { MobileQuickChips } from "#/components/terminal/mobile-quick-chips";
 import { Prompt } from "#/components/terminal/prompt";
 import { Scrollback } from "#/components/terminal/scrollback";
 import { StatusFooter } from "#/components/terminal/status-footer";
+import { useTerminalAgentBinding } from "#/components/terminal/use-terminal-agent-binding";
 import { CommandHint } from "#/components/ui/command-hint";
 import { DensityToggle } from "#/components/ui/density-toggle";
 import { LocalTime } from "#/components/ui/local-time";
@@ -17,8 +19,17 @@ import { siteMeta } from "#/content/site";
 import { useDensity } from "#/hooks/use-density";
 
 export function TerminalShell() {
+	return (
+		<AgentEngineProvider>
+			<TerminalShellInner />
+		</AgentEngineProvider>
+	);
+}
+
+function TerminalShellInner() {
 	const [paletteOpen, setPaletteOpen] = useState(false);
 	useDensity();
+	useTerminalAgentBinding();
 
 	useEffect(() => {
 		function onKey(e: KeyboardEvent) {

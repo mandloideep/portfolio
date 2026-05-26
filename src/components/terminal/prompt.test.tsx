@@ -8,6 +8,7 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 // Import after mock so the hook resolves to the mocked navigate.
+import { AgentTestWrapper } from "#/components/agent/test-utils";
 import { abortTour } from "#/lib/terminal/tour";
 import { Prompt } from "./prompt";
 import { abortAgentStream, isAgentStreaming } from "./use-agent-stream";
@@ -48,7 +49,9 @@ afterEach(() => {
 
 function renderPrompt() {
 	const onOpenPalette = vi.fn();
-	const utils = render(<Prompt onOpenPalette={onOpenPalette} />);
+	const utils = render(<Prompt onOpenPalette={onOpenPalette} />, {
+		wrapper: AgentTestWrapper,
+	});
 	const input = utils.getByTestId("prompt-input") as HTMLTextAreaElement;
 	return { ...utils, input, onOpenPalette };
 }

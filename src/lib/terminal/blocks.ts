@@ -14,7 +14,16 @@ export type Block =
 	| { id: string; kind: "markdown"; text: string; ts: number }
 	| { id: string; kind: "error"; text: string; ts: number }
 	| { id: string; kind: "system"; text: string; ts: number }
-	| { id: string; kind: "activity"; text: string; ts: number };
+	| { id: string; kind: "activity"; text: string; ts: number }
+	| {
+			id: string;
+			kind: "thinking";
+			text: string;
+			collapsed: boolean;
+			durationMs?: number;
+			tokens?: number;
+			ts: number;
+	  };
 
 export type BlockKind = Block["kind"];
 

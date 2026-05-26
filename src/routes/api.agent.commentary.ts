@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { getLlmConfig, getServerEnv } from "#/lib/env";
+import { getModelConfig, getServerEnv, resolveDefaultModel } from "#/lib/env";
 import { checkAndRecordLlmCall } from "#/lib/llm-rate-limit";
 import { completeLlm } from "#/lib/openrouter";
 import { COMMENTARY_PROMPT } from "#/lib/terminal/github-quips";
@@ -31,18 +31,26 @@ export async function handleCommentaryRequest(
 	}
 
 	let env: ReturnType<typeof getServerEnv>;
-	let cfg: ReturnType<typeof getLlmConfig>;
 	try {
 		env = getServerEnv();
-		cfg = getLlmConfig(env);
 	} catch {
 		return jsonError(503, "agent_unavailable");
 	}
 
-	const model = env.LLM_FREE_MODEL ?? "gemma-4-31b-it";
+	// Pin commentary to LLM_FREE_MODEL when its provider key is set;
+	// otherwise fall back to the deploy's default free model so commentary
+	// works even on single-key setups.
+	const preferredId = env.LLM_FREE_MODEL ?? "gemma-4-31b-it";
+	const cfg =
+		getModelConfig(env, preferredId) ??
+		getModelConfig(env, resolveDefaultModel(env).id);
+	if (!cfg) {
+		return jsonError(503, "agent_unavailable");
+	}
+	const { provider, apiKey, model } = cfg;
 
 	const quota = await checkAndRecordLlmCall({
-		provider: cfg.provider,
+		provider,
 		model,
 	});
 	if (!quota.allowed) {
@@ -52,8 +60,8 @@ export async function handleCommentaryRequest(
 	try {
 		const stats = JSON.stringify(parsed.data.stats).slice(0, 4000);
 		const reply = await completeLlm({
-			provider: cfg.provider,
-			apiKey: cfg.apiKey,
+			provider,
+			apiKey,
 			model,
 			messages: [
 				{ role: "system", content: COMMENTARY_PROMPT },

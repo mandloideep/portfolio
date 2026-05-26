@@ -30,14 +30,21 @@ afterEach(() => {
 });
 
 describe("OPENROUTER_MODELS", () => {
-	it("has the curated allowlist with stable ids", () => {
-		expect(OPENROUTER_MODELS.length).toBeGreaterThanOrEqual(5);
-		expect(OPENROUTER_MODELS[0].id).toBe("google/gemini-2.5-flash-lite");
+	it("derives the OpenRouter-provider subset from the unified catalog", () => {
+		expect(OPENROUTER_MODELS.length).toBeGreaterThanOrEqual(1);
+		expect(OPENROUTER_MODELS.every((m) => m.provider === "openrouter")).toBe(
+			true,
+		);
 	});
 
-	it("isOpenRouterModel guards against unknown ids", () => {
-		expect(isOpenRouterModel("anthropic/claude-haiku-4.5")).toBe(true);
+	it("isOpenRouterModel guards against models that aren't OpenRouter", () => {
+		const orModel = OPENROUTER_MODELS[0];
+		if (orModel) {
+			expect(isOpenRouterModel(orModel.id)).toBe(true);
+		}
 		expect(isOpenRouterModel("not/a-model")).toBe(false);
+		// `gemma-4-31b-it` is a Gemini-side model — not OpenRouter.
+		expect(isOpenRouterModel("gemma-4-31b-it")).toBe(false);
 	});
 });
 

@@ -258,9 +258,12 @@ describe("runCommand", () => {
 			submit: noopSubmit,
 		});
 		expect(modelStore.state.activeModel).toBe(alt.id);
-		expect(window.localStorage.getItem("portfolio.terminal.model")).toBe(
-			alt.id,
-		);
+		const stored = window.localStorage.getItem("portfolio.agent.v2");
+		expect(stored).toBeTruthy();
+		expect(JSON.parse(stored ?? "{}")).toMatchObject({
+			version: 2,
+			model: alt.id,
+		});
 		expect(lastBlock()?.kind).toBe("output");
 	});
 

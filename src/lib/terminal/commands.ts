@@ -1,7 +1,6 @@
 import type { StreamHandle } from "#/components/terminal/use-agent-stream";
 import { projects, siteMeta } from "#/content/site";
 import { isThemeSlug, type ThemeSlug, themes } from "#/content/themes";
-import { getActiveProviderClient } from "#/lib/openrouter";
 import { makeBlock } from "#/lib/terminal/blocks";
 import {
 	getCorpusEntry,
@@ -255,20 +254,23 @@ const model: Command = {
 	description: "show or switch the agent model: /model [list|<id>]",
 	handler: ({ args }) => {
 		const sub = args[0];
-		const provider = getActiveProviderClient();
 		const models = getProviderModels();
 		if (!sub) {
 			const current = modelStore.state.activeModel;
-			const label = models.find((m) => m.id === current)?.label ?? current;
-			emit("output", `model: ${current} (${label}) · provider: ${provider}`);
+			const entry = models.find((m) => m.id === current);
+			const label = entry?.label ?? current;
+			const meta = entry
+				? ` · ${entry.provider} · ${entry.tier}${entry.thinking ? " · thinking" : ""}`
+				: "";
+			emit("output", `model: ${current} (${label})${meta}`);
 			return;
 		}
 		if (sub === "list") {
-			const rows: Array<[string, string]> = models.map((m) => [m.id, m.label]);
-			emit(
-				"output",
-				`provider: ${provider}\nmodels (use /model <id>):\n${formatTwoCol(rows)}`,
-			);
+			const rows: Array<[string, string]> = models.map((m) => [
+				m.id,
+				`${m.label} · ${m.provider} · ${m.tier}${m.thinking ? " · thinking" : ""}`,
+			]);
+			emit("output", `models (use /model <id>):\n${formatTwoCol(rows)}`);
 			return;
 		}
 		if (!setModel(sub)) {

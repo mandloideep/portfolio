@@ -1,17 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { isModelAllowed, isPremiumModel } from "#/lib/agent/models";
 import { classifyPrompt } from "#/lib/classifier";
 import { pickCheckingQuip } from "#/lib/classifier-quips";
 import { assembleContext } from "#/lib/context";
-import { getClassifierConfig, getLlmConfig, getServerEnv } from "#/lib/env";
+import {
+	getClassifierConfig,
+	getModelConfig,
+	getServerEnv,
+	resolveDefaultModel,
+} from "#/lib/env";
 import { lookupIp } from "#/lib/ipinfo";
 import { checkAndRecordLlmCall } from "#/lib/llm-rate-limit";
-import {
-	type ChatMessage,
-	isModelForProvider,
-	isPremiumModel,
-	streamLlm,
-} from "#/lib/openrouter";
+import { type ChatMessage, streamLlm } from "#/lib/openrouter";
 import {
 	hasDisallowedContent,
 	isBrowserUserAgent,
@@ -97,16 +98,9 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 	}
 
 	let env: ReturnType<typeof getServerEnv>;
-	let provider: ReturnType<typeof getLlmConfig>["provider"];
-	let apiKey: string;
-	let defaultModel: string;
 	let assembled: ReturnType<typeof assembleContext>;
 	try {
 		env = getServerEnv();
-		const cfg = getLlmConfig(env);
-		provider = cfg.provider;
-		apiKey = cfg.apiKey;
-		defaultModel = cfg.defaultModel;
 		assembled = assembleContext(parsed.data.message);
 	} catch (err) {
 		const safe =
@@ -142,15 +136,25 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 		});
 	}
 
-	// Resolve the requested model before rate-limiting so we can apply the
-	// premium sub-budget when paid models are in play.
-	const model =
-		parsed.data.model && isModelForProvider(provider, parsed.data.model)
-			? parsed.data.model
-			: defaultModel;
-	const isPremium = isPremiumModel(model);
+	// Resolve the requested model (or fall back to the default for this
+	// deploy). Each model carries its own provider; reject unknown models
+	// so the rate-limit branch always knows the tier.
+	const requested = parsed.data.model;
+	const chosen = requested && isModelAllowed(requested) ? requested : null;
+	const defaultModelEntry = resolveDefaultModel(env);
+	const model = chosen ?? defaultModelEntry.id;
+	const cfg = getModelConfig(env, model);
+	if (!cfg) {
+		// Either the model isn't in the catalog or its provider has no key.
+		// Surface as an error event so the client can suggest a switch.
+		return sseSingle("error", { message: "model_unavailable", model });
+	}
+	const { provider, apiKey } = cfg;
+	const tier: "free" | "premium" = isPremiumModel(model) ? "premium" : "free";
 
-	// Per-IP rate limit + cooldown + token cap + premium sub-budget.
+	// Per-IP rate limit + cooldown + token cap. Free models are uncapped on
+	// message count by default (FREE_MODEL_PER_IP_LIMIT=0); only the per-IP
+	// token budget and the cooldown apply. Premium uses PREMIUM_LIMIT.
 	const ip = getClientIp(request);
 	const salt = env.RATE_LIMIT_SALT ?? "portfolio-default-salt";
 	const ipHash = hashIp(ip, salt);
@@ -159,12 +163,12 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 	try {
 		rate = await checkRateLimit({
 			ipHash,
-			limit: env.RATE_LIMIT_MAX,
+			tier,
 			windowMs: env.RATE_LIMIT_WINDOW_MS,
 			cooldownMs: env.MIN_REQUEST_INTERVAL_MS,
 			perIpTokenBudget: env.PER_IP_TOKEN_BUDGET,
 			premiumLimit: env.PREMIUM_LIMIT,
-			isPremium,
+			freeIpLimit: env.FREE_MODEL_PER_IP_LIMIT,
 			lookupPrivacy:
 				env.BLOCK_VPN && env.IPINFO_TOKEN
 					? async () => lookupIp(ip, env.IPINFO_TOKEN ?? "")
@@ -176,8 +180,10 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 		console.error("[api.agent] rate-limit check failed", err);
 		rate = {
 			allowed: true,
-			remaining: env.RATE_LIMIT_MAX,
+			remaining: tier === "premium" ? env.PREMIUM_LIMIT : null,
 			resetsAt: new Date(Date.now() + env.RATE_LIMIT_WINDOW_MS),
+			unlimited: tier === "free" && env.FREE_MODEL_PER_IP_LIMIT === 0,
+			tier,
 		};
 	}
 
@@ -186,6 +192,7 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 			remaining: rate.remaining,
 			resetsAt: rate.resetsAt.toISOString(),
 			reason: rate.blockedReason ?? "limit_reached",
+			tier,
 		});
 	}
 
@@ -199,6 +206,7 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 			resetsAt: new Date(Date.now() + mainQuota.retryAfterMs).toISOString(),
 			reason: `model_${mainQuota.reason}`,
 			model,
+			tier,
 		});
 	}
 
@@ -255,6 +263,15 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 			write("quota", {
 				remaining: rate.remaining,
 				resetsAt: rate.resetsAt.toISOString(),
+				unlimited: rate.unlimited,
+				tier: rate.tier,
+				limit:
+					rate.tier === "premium"
+						? env.PREMIUM_LIMIT
+						: env.FREE_MODEL_PER_IP_LIMIT > 0
+							? env.FREE_MODEL_PER_IP_LIMIT
+							: null,
+				model,
 			});
 
 			// On-topic pre-flight inside the stream so the user sees a
@@ -306,6 +323,9 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 				await tick();
 
 				let totalTokens = 0;
+				let thinkingTokens = 0;
+				let thinkingStartedAt: number | null = null;
+				let thinkingEndedAt: number | null = null;
 				let lastUsage:
 					| {
 							total_tokens?: number;
@@ -320,7 +340,16 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 					signal: upstreamSignal,
 					maxTokens: env.MAX_OUTPUT_TOKENS,
 				})) {
-					if (ev.type === "token") {
+					if (ev.type === "thinking") {
+						if (thinkingStartedAt === null) {
+							thinkingStartedAt = Date.now();
+						}
+						thinkingTokens += 1;
+						write("thinking", ev.text);
+					} else if (ev.type === "token") {
+						if (thinkingStartedAt !== null && thinkingEndedAt === null) {
+							thinkingEndedAt = Date.now();
+						}
 						totalTokens += 1;
 						write("token", ev.text);
 					} else {
@@ -328,7 +357,15 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 					}
 				}
 				const used = lastUsage?.total_tokens ?? totalTokens;
-				write("done", { tokens: used });
+				const thinkingMs =
+					thinkingStartedAt !== null && thinkingEndedAt !== null
+						? thinkingEndedAt - thinkingStartedAt
+						: undefined;
+				write("done", {
+					tokens: used,
+					...(thinkingTokens > 0 ? { thinkingTokens } : {}),
+					...(typeof thinkingMs === "number" ? { thinkingMs } : {}),
+				});
 				// Tally usage for the daily budget + per-IP cap. Fire-and-forget so
 				// a DB blip doesn't stall the response close.
 				addUsage({ ipHash, tokens: used }).catch((err) => {
