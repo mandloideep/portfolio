@@ -6,9 +6,9 @@ import { TerminalFrame } from "#/components/ui/terminal-frame";
 import { ThemeSwitcher } from "#/components/ui/theme-switcher";
 import { siteMeta } from "#/content/site";
 import { useDensity } from "#/hooks/use-density";
+import { DesktopChatIcon } from "./desktop-chat-icon";
 import { DesktopTerminalIcon } from "./desktop-terminal-icon";
 import { Footer } from "./footer";
-import { HelloLoader } from "./hello-loader";
 import { PortfolioPalette } from "./portfolio-palette";
 import { type TopTab, TopTabs } from "./top-tabs";
 
@@ -19,6 +19,7 @@ const TABS: readonly TopTab[] = [
 	{ id: "research", label: "/research", to: "/research" },
 	{ id: "github", label: "/github", to: "/github" },
 	{ id: "contact", label: "/contact", to: "/contact" },
+	{ id: "chat", label: "/chat", to: "/chat" },
 ] as const;
 
 /**
@@ -44,9 +45,8 @@ export function PortfolioLayout({ children }: { children: ReactNode }) {
 	return (
 		<div
 			data-page="portfolio"
-			className="surface-grain relative min-h-screen bg-bg px-3 py-5 sm:px-6 sm:py-8"
+			className="surface-grain relative flex min-h-screen items-start justify-center bg-bg p-4 md:p-8"
 		>
-			<HelloLoader />
 			<TerminalFrame
 				className="max-w-[min(82rem,90vw)]"
 				title={`${siteMeta.name.split(" ")[0]?.toLowerCase()} — portfolio`}
@@ -69,6 +69,7 @@ export function PortfolioLayout({ children }: { children: ReactNode }) {
 					<Footer />
 				</main>
 			</TerminalFrame>
+			<DesktopChatIcon />
 			<DesktopTerminalIcon />
 			<PortfolioPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 		</div>

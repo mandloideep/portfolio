@@ -84,6 +84,14 @@ export function PortfolioPalette({ open, onOpenChange }: Props) {
 
 		const mode: PaletteAction[] = [
 			{
+				id: "open-chat",
+				group: "mode",
+				label: "Open chat",
+				hint: "agent · natural language",
+				keywords: ["chat", "agent", "ask", "conversation"],
+				perform: () => navigate({ to: "/chat" }),
+			},
+			{
 				id: "open-terminal",
 				group: "mode",
 				label: "Open terminal",

@@ -33,13 +33,14 @@ type AnchorProps = CommonProps &
 type ChatChipProps = ButtonProps | AnchorProps;
 
 const BASE =
-	"inline-flex h-8 items-center gap-1.5 px-3 font-mono text-meta uppercase tracking-tab transition-colors duration-base focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50";
+	"inline-flex h-7 items-center gap-1.5 px-2 font-mono text-meta uppercase tracking-tab transition-colors duration-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
+// Matches the DensityToggle / ThemeSwitcher primitives so every chip in the
+// chat header reads as part of the same family.
 const FRAMED =
-	"rounded-pill border border-border/70 bg-bg-elev/70 text-fg/90 shadow-sm hover:border-accent/60 hover:text-accent";
+	"rounded-card border border-border/70 bg-bg/40 text-muted hover:bg-accent/10 hover:text-accent";
 
-const ACTIVE =
-	"border-accent/60 bg-accent/10 text-accent shadow-[inset_0_0_0_1px_var(--color-accent)]";
+const ACTIVE = "border-accent/60 bg-accent/15 text-accent";
 
 export function ChatChip(props: ChatChipProps) {
 	const { children, className, active, tone = "default", ...rest } = props;

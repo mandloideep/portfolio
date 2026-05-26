@@ -1,14 +1,17 @@
 /**
  * <ProjectPopup> — terminal-framed modal showing a project's agent-prose
- * markdown. Triggered by <ProjectAwareLink> when an answer's link matches a
- * known project URL.
+ * markdown. Shared across chat, portfolio, and terminal surfaces — opened
+ * via the `<ProjectPopupProvider>` mounted at each surface root.
  *
  * Frame = traffic-light dots + mono path bar; body = Streamdown'd markdown
- * from `src/content/agent/projects/<slug>.md`; footer = small chips for live
- * and repo links (so the original navigation intent is still one click away).
+ * from `src/content/agent/projects/<slug>.md`; footer = live/repo link
+ * chips + expand toggle. There's no "full page" navigation — the popup is
+ * the full reading experience, and the expand button lets it fill the
+ * viewport when a visitor wants to read in depth.
  */
 
-import { ArrowUpRight, ExternalLink, Github } from "lucide-react";
+import { ExternalLink, Github, Maximize2, Minimize2, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Streamdown } from "streamdown";
 import {
 	Dialog,
@@ -40,16 +43,29 @@ const PROSE_CLASS = cn(
 export function ProjectPopup({ slug, open, onOpenChange }: ProjectPopupProps) {
 	const project = slug ? getProjectBySlug(slug) : null;
 	const markdown = slug ? getProjectMarkdownSync(slug) : null;
+	const [expanded, setExpanded] = useState(false);
+
+	// Reset to compact when the popup closes or the slug changes — visitors
+	// don't expect "expanded" to be sticky across project changes.
+	useEffect(() => {
+		if (!open) setExpanded(false);
+	}, [open]);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
-				className="max-w-2xl gap-0 overflow-hidden p-0 sm:max-w-2xl"
+				className={cn(
+					"flex flex-col gap-0 overflow-hidden p-0 transition-[max-width,max-height] duration-base",
+					expanded
+						? "max-w-5xl sm:max-w-5xl h-[90vh] max-h-[90vh]"
+						: "max-w-2xl sm:max-w-2xl max-h-[80vh]",
+				)}
 				showCloseButton={false}
 				data-testid="project-popup"
+				data-expanded={expanded ? "true" : "false"}
 			>
 				{/* Terminal title bar */}
-				<div className="flex items-center gap-2 border-b border-border/70 bg-bg/60 px-3 py-2">
+				<div className="flex shrink-0 items-center gap-2 border-b border-border/70 bg-bg/60 px-3 py-2">
 					<span className="flex items-center gap-1.5" aria-hidden="true">
 						<span className="size-2.5 rounded-full bg-error/70" />
 						<span className="size-2.5 rounded-full bg-accent-alt/70" />
@@ -58,18 +74,35 @@ export function ProjectPopup({ slug, open, onOpenChange }: ProjectPopupProps) {
 					<span className="ml-2 truncate font-mono text-meta uppercase tracking-tab text-muted">
 						deep@portfolio:~/projects/{slug ?? "?"}
 					</span>
-					<button
-						type="button"
-						onClick={() => onOpenChange(false)}
-						className="ml-auto rounded-chip px-2 py-0.5 font-mono text-meta uppercase tracking-tab text-muted/70 transition-colors hover:bg-bg-elev hover:text-fg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
-						aria-label="Close"
-					>
-						esc
-					</button>
+					<div className="ml-auto flex items-center gap-1">
+						<button
+							type="button"
+							onClick={() => setExpanded((v) => !v)}
+							aria-label={expanded ? "Collapse" : "Expand"}
+							aria-pressed={expanded}
+							data-testid="project-popup-expand"
+							className="inline-flex size-7 items-center justify-center rounded-card text-muted transition-colors duration-base hover:bg-bg-elev hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+						>
+							{expanded ? (
+								<Minimize2 className="size-3.5" aria-hidden="true" />
+							) : (
+								<Maximize2 className="size-3.5" aria-hidden="true" />
+							)}
+						</button>
+						<button
+							type="button"
+							onClick={() => onOpenChange(false)}
+							aria-label="Close"
+							data-testid="project-popup-close"
+							className="inline-flex size-7 items-center justify-center rounded-card text-muted transition-colors duration-base hover:bg-bg-elev hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+						>
+							<X className="size-3.5" aria-hidden="true" />
+						</button>
+					</div>
 				</div>
 
 				{/* Title block — visually styled, also wires DialogTitle/Description for a11y */}
-				<div className="border-b border-border/60 px-5 py-4">
+				<div className="shrink-0 border-b border-border/60 px-5 py-4">
 					<div className="flex items-baseline gap-2 font-mono text-meta uppercase tracking-tab text-muted">
 						<span aria-hidden="true" className="text-prompt-user">
 							$
@@ -99,7 +132,7 @@ export function ProjectPopup({ slug, open, onOpenChange }: ProjectPopupProps) {
 				</div>
 
 				{/* Body */}
-				<div className="max-h-[60vh] overflow-y-auto px-5 py-4">
+				<div className="flex-1 overflow-y-auto px-5 py-4">
 					{markdown ? (
 						<div className={cn(PROSE_CLASS)}>
 							<Streamdown mode="streaming" parseIncompleteMarkdown={false}>
@@ -115,13 +148,13 @@ export function ProjectPopup({ slug, open, onOpenChange }: ProjectPopupProps) {
 
 				{/* Footer chips */}
 				{project ? (
-					<div className="flex flex-wrap items-center gap-2 border-t border-border/60 bg-bg/40 px-5 py-3">
+					<div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-border/60 bg-bg/40 px-5 py-3">
 						{project.links.live ? (
 							<a
 								href={project.links.live}
 								target="_blank"
 								rel="noreferrer"
-								className="inline-flex items-center gap-1.5 rounded-pill border border-border/70 bg-bg-elev/60 px-3 py-1 font-mono text-meta uppercase tracking-tab text-fg/90 transition-colors hover:border-accent/60 hover:text-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+								className="inline-flex items-center gap-1.5 rounded-card border border-border/70 bg-bg/40 px-3 py-1 font-mono text-meta uppercase tracking-tab text-muted transition-colors hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 							>
 								<ExternalLink className="size-3.5" aria-hidden="true" />
 								open live
@@ -132,19 +165,12 @@ export function ProjectPopup({ slug, open, onOpenChange }: ProjectPopupProps) {
 								href={project.links.repo}
 								target="_blank"
 								rel="noreferrer"
-								className="inline-flex items-center gap-1.5 rounded-pill border border-border/70 bg-bg-elev/60 px-3 py-1 font-mono text-meta uppercase tracking-tab text-fg/90 transition-colors hover:border-accent/60 hover:text-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+								className="inline-flex items-center gap-1.5 rounded-card border border-border/70 bg-bg/40 px-3 py-1 font-mono text-meta uppercase tracking-tab text-muted transition-colors hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 							>
 								<Github className="size-3.5" aria-hidden="true" />
 								repo
 							</a>
 						) : null}
-						<a
-							href={`/projects#${slug}`}
-							className="ml-auto inline-flex items-center gap-1 font-mono text-meta uppercase tracking-tab text-muted/80 transition-colors hover:text-accent"
-						>
-							full page
-							<ArrowUpRight className="size-3.5" aria-hidden="true" />
-						</a>
 					</div>
 				) : null}
 			</DialogContent>

@@ -34,15 +34,19 @@ export function ChatHero() {
 						</span>
 						<span>cat ~/whoami</span>
 					</p>
-					<p className="font-display text-3xl font-medium text-fg sm:text-4xl">
+					<p className="font-display text-2xl font-medium text-fg">
 						Hey, I'm {firstName} <span aria-hidden="true">👋</span>
 					</p>
-					<h1 className="font-display text-5xl font-medium leading-[1.05] tracking-tight text-fg sm:text-6xl md:text-7xl">
-						<Typewriter words={HERO_ROLES} className="text-accent" />
+					<h1 className="font-display text-display font-medium leading-tight tracking-tight text-fg whitespace-nowrap">
+						<Typewriter
+							words={HERO_ROLES}
+							respectReducedMotion={false}
+							className="text-accent"
+						/>
 					</h1>
 				</div>
 
-				<div className="w-full max-w-xl animate-in fade-in slide-in-from-bottom-3 duration-700 delay-150">
+				<div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-3 duration-700 delay-150">
 					<ChatInputPill placeholder="Ask me anything…" showBeam focusOnMount />
 				</div>
 

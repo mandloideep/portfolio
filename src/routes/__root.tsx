@@ -4,6 +4,7 @@ import {
 	HeadContent,
 	Scripts,
 } from "@tanstack/react-router";
+import { HelloLoader } from "#/components/portfolio/hello-loader";
 import { siteMeta } from "#/content/site";
 import { themes } from "#/content/themes";
 import { buildOpenGraphMeta, buildPersonJsonLd } from "#/lib/seo";
@@ -69,6 +70,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				>
 					Skip to main content
 				</a>
+				<HelloLoader />
 				<div>{children}</div>
 				<Scripts />
 			</body>

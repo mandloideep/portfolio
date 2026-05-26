@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+import { MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AgentEngineProvider } from "#/components/agent/agent-engine-provider";
 import { HiddenCorpus } from "#/components/seo/hidden-corpus";
@@ -46,7 +48,7 @@ function TerminalShellInner() {
 		<main
 			id="main"
 			data-page="terminal"
-			className="surface-grain relative min-h-screen flex items-center justify-center bg-bg p-4 md:p-8"
+			className="surface-grain relative min-h-screen flex items-start justify-center bg-bg p-4 md:p-8"
 		>
 			{/* Ambient hairline above the frame for atmosphere */}
 			<div
@@ -65,6 +67,14 @@ function TerminalShellInner() {
 							<CommandHint onOpen={() => setPaletteOpen(true)} />
 							<DensityToggle />
 							<ThemeSwitcher />
+							<Link
+								to="/chat"
+								data-testid="terminal-chat-link"
+								className="inline-flex items-center gap-1.5 rounded-card border border-border/70 bg-bg/40 px-2 py-1 font-mono text-meta text-muted transition-colors duration-base hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+							>
+								<MessageSquare className="size-3" aria-hidden="true" />
+								<span className="hidden sm:inline">/chat</span>
+							</Link>
 						</>
 					}
 				/>

@@ -1,11 +1,12 @@
 /**
- * <ProjectPopupProvider> — owns a single project-detail Dialog mounted at the
- * chat surface root. Any descendant can call `useProjectPopup().open(slug)`
- * (e.g. <ProjectAwareLink> intercepting a known project URL in the agent
- * answer stream) and the same dialog opens with that project's content.
+ * <ProjectPopupProvider> — owns a single project-detail Dialog mounted at a
+ * surface root (chat, portfolio, terminal). Any descendant can call
+ * `useProjectPopup().open(slug)` and the same dialog opens with that
+ * project's content.
  *
- * Single owner keeps focus management + esc handling consistent and avoids
- * re-instantiating the radix overlay tree on every link.
+ * Lives under `components/project/` (shared) rather than `components/chat/`
+ * because the popup is now used across all three surfaces — chat agent
+ * answers, portfolio project cards, and terminal project mentions.
  */
 
 import { createContext, type ReactNode, use, useMemo, useState } from "react";

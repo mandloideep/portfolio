@@ -28,6 +28,7 @@ import {
 } from "#/components/agent/thinking-peek";
 import { ChatAvatar } from "#/components/chat/chat-avatar";
 import { ProjectMentionsRow } from "#/components/chat/project-mentions-row";
+import { useQuip } from "#/hooks/use-quip";
 import { cn } from "#/lib/utils";
 import { ChatInputPill } from "./chat-input-pill";
 import { QuickPromptPills } from "./quick-prompts";
@@ -35,6 +36,7 @@ import { QuickPromptPills } from "./quick-prompts";
 export function ChatThread() {
 	const { state } = useAgentSession();
 	const [showPrompts, setShowPrompts] = useState(true);
+	const quip = useQuip();
 	return (
 		<section data-testid="chat-thread" className="flex flex-1 flex-col">
 			<div className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 py-6 sm:px-6">
@@ -48,7 +50,7 @@ export function ChatThread() {
 				))}
 			</div>
 			<div className="sticky bottom-0 border-t border-border/60 bg-bg/80 px-4 pt-2 pb-3 backdrop-blur-md sm:px-6">
-				<div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
+				<div className="mx-auto flex w-full max-w-4xl flex-col gap-2">
 					<button
 						type="button"
 						onClick={() => setShowPrompts((v) => !v)}
@@ -64,6 +66,17 @@ export function ChatThread() {
 					</button>
 					{showPrompts ? <QuickPromptPills /> : null}
 					<ChatInputPill placeholder="Reply…" />
+					{quip ? (
+						<p
+							data-testid="chat-quip"
+							className="flex items-baseline justify-center gap-2 font-mono text-meta italic text-muted/80"
+						>
+							<span aria-hidden="true" className="not-italic text-accent">
+								$
+							</span>
+							<span className="truncate">{quip}</span>
+						</p>
+					) : null}
 					<p className="text-center font-mono text-meta uppercase tracking-tab text-muted/60">
 						powered by{" "}
 						<a href="/terminal" className="text-link hover:text-accent">

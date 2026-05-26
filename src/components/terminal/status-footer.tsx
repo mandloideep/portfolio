@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { ModelSwitcher } from "#/components/agent/model-switcher";
 import { QuotaIndicator } from "#/components/agent/quota-indicator";
 import { themes } from "#/content/themes";
+import { useQuip } from "#/hooks/use-quip";
 import { modelStore } from "#/store/model";
 import { setQuota } from "#/store/quota";
 import { terminalStore } from "#/store/terminal";
@@ -22,6 +23,7 @@ export function StatusFooter() {
 	const mode = useStore(terminalStore, (s) => s.mode);
 	const activeModelId = useStore(modelStore, (s) => s.activeModel);
 	const themeName = themes.find((t) => t.slug === themeSlug)?.name ?? themeSlug;
+	const quip = useQuip();
 
 	// Paint the initial quota chip on mount. Subsequent updates flow
 	// through the engine's SSE `quota` events.
@@ -73,6 +75,17 @@ export function StatusFooter() {
 					<span className="text-fg/90">{themeName}</span>
 				</span>
 			</div>
+			{quip ? (
+				<p
+					data-testid="status-quip"
+					className="hidden flex-1 items-baseline justify-center gap-2 min-w-0 italic normal-case tracking-normal md:flex"
+				>
+					<span aria-hidden="true" className="not-italic text-accent">
+						$
+					</span>
+					<span className="truncate">{quip}</span>
+				</p>
+			) : null}
 			<div className="flex items-center gap-2.5 min-w-0">
 				<span className="select-none text-muted/40" aria-hidden="true">
 					|

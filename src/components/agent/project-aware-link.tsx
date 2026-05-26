@@ -11,7 +11,7 @@
 
 import { ArrowUpRight } from "lucide-react";
 import type { AnchorHTMLAttributes } from "react";
-import { useProjectPopup } from "#/components/chat/project-popup-provider";
+import { useProjectPopup } from "#/components/project/project-popup-provider";
 import { resolveProjectFromHref } from "#/lib/project-links";
 import { cn } from "#/lib/utils";
 

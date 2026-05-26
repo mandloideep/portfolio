@@ -70,12 +70,19 @@ export function ModelSwitcher({
 					aria-label={`active model: ${activeModel.label}. click to switch.`}
 					className={cn(
 						variant === "header"
-							? "inline-flex h-8 items-center gap-1.5 truncate rounded-pill border border-border/70 bg-bg-elev/70 px-3 font-mono text-meta uppercase tracking-tab text-fg/90 shadow-sm transition-colors duration-base hover:border-accent/60 hover:text-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+							? "inline-flex h-7 items-center gap-1.5 truncate rounded-card border border-border/70 bg-bg/40 px-2 font-mono text-meta uppercase tracking-tab text-muted transition-colors duration-base hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 							: "inline-flex items-center gap-1 truncate rounded-chip border border-border/70 bg-bg/60 px-1.5 py-0.5 font-mono text-meta uppercase tracking-tab text-fg/90 transition-colors hover:border-accent/60 hover:text-fg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent",
 						className,
 					)}
 				>
-					<span className="text-muted/70">model/</span>
+					<span
+						aria-hidden="true"
+						className={cn(
+							variant === "header" ? "text-prompt-user" : "text-muted/70",
+						)}
+					>
+						model/
+					</span>
 					<span className="truncate">{shortLabel(activeModel.label)}</span>
 					<ChevronDownIcon className="size-3 shrink-0 text-muted/70" />
 				</button>

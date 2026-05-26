@@ -423,16 +423,31 @@ export async function addUsage({
 		});
 }
 
-/** Returns true when today's global token usage has hit the budget. */
+/**
+ * Returns true when today's global token usage has hit the budget.
+ *
+ * Fails open when the database is unreachable (e.g. local dev with no
+ * postgres running) — the alternative is a 500 on every agent call that
+ * floods the dev console with the same DrizzleQueryError. The error is
+ * logged once per call so production failures are still visible.
+ */
 export async function isDailyBudgetExhausted(budget: number): Promise<boolean> {
 	const today = todayUtc();
-	const rows = await db
-		.select()
-		.from(agentUsageDaily)
-		.where(eq(agentUsageDaily.day, today))
-		.limit(1);
-	const used = rows[0]?.tokens ?? 0;
-	return used >= budget;
+	try {
+		const rows = await db
+			.select()
+			.from(agentUsageDaily)
+			.where(eq(agentUsageDaily.day, today))
+			.limit(1);
+		const used = rows[0]?.tokens ?? 0;
+		return used >= budget;
+	} catch (err) {
+		console.warn(
+			"[rate-limit] daily budget lookup failed; treating as not exhausted",
+			err instanceof Error ? err.message : err,
+		);
+		return false;
+	}
 }
 
 function nextWindow(windowStart: Date | string, windowMs: number): Date {

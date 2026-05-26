@@ -48,7 +48,7 @@ export function ChatInputPill({
 		<form
 			data-testid="chat-input-pill"
 			className={cn(
-				"group relative flex w-full items-end gap-2 rounded-card border border-border/70 bg-bg-elev/80 px-3 py-2 shadow-sm transition-colors duration-base focus-within:border-accent/60",
+				"group relative flex w-full items-end gap-2 rounded-card border border-border/70 bg-bg/40 px-3 py-2 transition-colors duration-base focus-within:border-accent/60",
 				className,
 			)}
 			onSubmit={(e) => {

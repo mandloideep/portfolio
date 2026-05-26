@@ -13,10 +13,10 @@
  */
 
 import { useAgentSession } from "#/components/agent/agent-engine-provider";
+import { ProjectPopupProvider } from "#/components/project/project-popup-provider";
 import { ChatHero } from "./chat-hero";
 import { ChatLayout } from "./chat-layout";
 import { ChatThread } from "./chat-thread";
-import { ProjectPopupProvider } from "./project-popup-provider";
 
 export function ChatAgentSurface() {
 	const { state } = useAgentSession();

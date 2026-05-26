@@ -1,5 +1,6 @@
-import { ExternalLink, Github } from "lucide-react";
+import { ExternalLink, FileText, Github } from "lucide-react";
 import { useId } from "react";
+import { useProjectPopup } from "#/components/project/project-popup-provider";
 import { Card } from "#/components/ui/card";
 import { Pill } from "#/components/ui/pill";
 import { TechIcon } from "#/components/ui/tech-icon";
@@ -41,6 +42,7 @@ export function ProjectRow({
 	onToggle,
 }: ProjectRowProps) {
 	const panelId = useId();
+	const popup = useProjectPopup();
 
 	return (
 		<Card
@@ -103,43 +105,55 @@ export function ProjectRow({
 						))}
 					</div>
 
-					{(project.links.repo || project.links.live) && (
-						<div
-							className="mt-5 flex flex-wrap items-center gap-5 font-mono text-sm"
-							data-testid={`project-links-${project.slug}`}
-						>
-							{project.links.live ? (
-								<a
-									href={project.links.live}
-									target="_blank"
-									rel="noopener noreferrer"
-									data-testid={`project-link-live-${project.slug}`}
-									className="inline-flex items-center gap-1.5 text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
-								>
-									<span aria-hidden="true" className="text-accent">
-										→
-									</span>
-									<ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-									live site
-								</a>
-							) : null}
-							{project.links.repo ? (
-								<a
-									href={project.links.repo}
-									target="_blank"
-									rel="noopener noreferrer"
-									data-testid={`project-link-repo-${project.slug}`}
-									className="inline-flex items-center gap-1.5 text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
-								>
-									<span aria-hidden="true" className="text-accent">
-										→
-									</span>
-									<Github className="h-3.5 w-3.5" aria-hidden="true" />
-									repo
-								</a>
-							) : null}
-						</div>
-					)}
+					<div
+						className="mt-5 flex flex-wrap items-center gap-5 font-mono text-sm"
+						data-testid={`project-links-${project.slug}`}
+					>
+						{popup ? (
+							<button
+								type="button"
+								data-testid={`project-link-readme-${project.slug}`}
+								onClick={() => popup.open(project.slug)}
+								className="inline-flex items-center gap-1.5 text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
+							>
+								<span aria-hidden="true" className="text-accent">
+									→
+								</span>
+								<FileText className="h-3.5 w-3.5" aria-hidden="true" />
+								read more
+							</button>
+						) : null}
+						{project.links.live ? (
+							<a
+								href={project.links.live}
+								target="_blank"
+								rel="noopener noreferrer"
+								data-testid={`project-link-live-${project.slug}`}
+								className="inline-flex items-center gap-1.5 text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
+							>
+								<span aria-hidden="true" className="text-accent">
+									→
+								</span>
+								<ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+								live site
+							</a>
+						) : null}
+						{project.links.repo ? (
+							<a
+								href={project.links.repo}
+								target="_blank"
+								rel="noopener noreferrer"
+								data-testid={`project-link-repo-${project.slug}`}
+								className="inline-flex items-center gap-1.5 text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
+							>
+								<span aria-hidden="true" className="text-accent">
+									→
+								</span>
+								<Github className="h-3.5 w-3.5" aria-hidden="true" />
+								repo
+							</a>
+						) : null}
+					</div>
 				</div>
 			) : null}
 		</Card>

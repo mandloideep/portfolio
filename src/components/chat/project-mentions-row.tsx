@@ -10,7 +10,7 @@
 import { ArrowUpRight } from "lucide-react";
 import { useMemo } from "react";
 import type { AgentTurn } from "#/components/agent/agent-engine-provider";
-import { useProjectPopup } from "#/components/chat/project-popup-provider";
+import { useProjectPopup } from "#/components/project/project-popup-provider";
 import { getProjectBySlug } from "#/lib/project-links";
 import { detectProjectMentions } from "#/lib/project-mentions";
 import { cn } from "#/lib/utils";

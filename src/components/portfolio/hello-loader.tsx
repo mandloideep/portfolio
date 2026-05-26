@@ -14,7 +14,6 @@ const GREETINGS = [
 	"ciao",
 ] as const;
 
-const STORAGE_KEY = "portfolio.hello-seen";
 const PER_GREETING_MS = 480; // 10 × 480 ≈ 4.8s reveal, plus a 300ms fade
 const FADE_MS = 320;
 
@@ -45,21 +44,17 @@ export function HelloLoader() {
 
 	useEffect(() => {
 		if (typeof window === "undefined") return;
-		if (reduced) {
-			setStage("done");
-			return;
-		}
+		// `?hello=1` is the explicit demo override — it bypasses the
+		// reduce-motion gate so visitors with macOS Reduce Motion on can
+		// still preview the loader.
 		const forced = shouldForce();
-		let seen = false;
-		try {
-			seen = window.localStorage.getItem(STORAGE_KEY) === "1";
-		} catch {
-			// localStorage might throw in restricted contexts; fall through and play.
-		}
-		if (seen && !forced) {
+		if (reduced && !forced) {
 			setStage("done");
 			return;
 		}
+		// Note: we intentionally do NOT persist a "seen" flag — the loader
+		// plays on every full page load. Internal SPA navigation doesn't
+		// remount the root, so visitors won't see it on every route change.
 		setStage("visible");
 
 		const ticks: ReturnType<typeof setTimeout>[] = [];
@@ -71,14 +66,7 @@ export function HelloLoader() {
 			GREETINGS.length * PER_GREETING_MS,
 		);
 		const doneAt = setTimeout(
-			() => {
-				setStage("done");
-				try {
-					window.localStorage.setItem(STORAGE_KEY, "1");
-				} catch {
-					// best-effort
-				}
-			},
+			() => setStage("done"),
 			GREETINGS.length * PER_GREETING_MS + FADE_MS,
 		);
 		ticks.push(fadeAt, doneAt);
@@ -94,7 +82,7 @@ export function HelloLoader() {
 			aria-label="Welcome"
 			data-testid="hello-loader"
 			data-stage={stage}
-			className="fixed inset-0 z-modal flex items-center justify-center bg-bg transition-opacity duration-slow"
+			className="fixed inset-0 z-[100] flex items-center justify-center bg-bg transition-opacity duration-slow"
 			style={{ opacity: stage === "fading" ? 0 : 1 }}
 		>
 			<div className="font-display text-[clamp(3rem,9vw,6rem)] font-medium leading-none tracking-tight text-fg">

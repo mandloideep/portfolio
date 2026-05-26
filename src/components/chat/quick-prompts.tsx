@@ -118,7 +118,7 @@ export function QuickPromptCards({ className }: { className?: string }) {
 						disabled={disabled}
 						data-testid={`chat-quick-${p.key}`}
 						onClick={() => send(p.prompt)}
-						className="group flex flex-col items-center justify-center gap-2 rounded-card border border-border/70 bg-bg-elev/70 px-3 py-4 text-fg/90 shadow-sm transition-all duration-base hover:-translate-y-0.5 hover:border-accent/50 hover:bg-bg-elev hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+						className="group flex flex-col items-center justify-center gap-2 rounded-card border border-border/70 bg-bg/40 px-3 py-4 text-fg/90 transition-colors duration-base hover:bg-accent/10 hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						<Icon
 							className={cn(
@@ -155,7 +155,7 @@ export function QuickPromptPills({ className }: { className?: string }) {
 						disabled={disabled}
 						data-testid={`chat-quick-${p.key}`}
 						onClick={() => send(p.prompt)}
-						className="inline-flex items-center gap-1 rounded-pill border border-border/70 bg-bg-elev/70 px-2.5 py-1 font-mono text-meta uppercase tracking-tab text-fg/90 transition-colors hover:border-accent/60 hover:text-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border/70 disabled:hover:text-fg/90"
+						className="inline-flex h-7 items-center gap-1 rounded-card border border-border/70 bg-bg/40 px-2.5 font-mono text-meta uppercase tracking-tab text-muted transition-colors duration-base hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						<Icon className={cn("size-3", p.iconClass)} aria-hidden="true" />
 						{p.label}

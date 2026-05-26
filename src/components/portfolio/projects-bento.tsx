@@ -1,5 +1,6 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMemo } from "react";
+import { ProjectPopupProvider } from "#/components/project/project-popup-provider";
 import { type Project, projects } from "#/content/site";
 import { ProjectRow } from "./project-row";
 
@@ -34,20 +35,22 @@ export function ProjectsBento() {
 	}
 
 	return (
-		<div data-testid="projects-bento" className="flex flex-col gap-2.5">
-			<div className="flex items-center gap-3 px-4 pb-1 font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
-				<span className="w-32">name</span>
-				<span className="w-20">status</span>
-				<span className="flex-1">description</span>
+		<ProjectPopupProvider>
+			<div data-testid="projects-bento" className="flex flex-col gap-2.5">
+				<div className="flex items-center gap-3 px-4 pb-1 font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
+					<span className="w-32">name</span>
+					<span className="w-20">status</span>
+					<span className="flex-1">description</span>
+				</div>
+				{ordered.map((project) => (
+					<ProjectRow
+						key={project.slug}
+						project={project}
+						expanded={defaultSlug === project.slug}
+						onToggle={handleToggle}
+					/>
+				))}
 			</div>
-			{ordered.map((project) => (
-				<ProjectRow
-					key={project.slug}
-					project={project}
-					expanded={defaultSlug === project.slug}
-					onToggle={handleToggle}
-				/>
-			))}
-		</div>
+		</ProjectPopupProvider>
 	);
 }

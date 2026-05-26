@@ -10,19 +10,27 @@ type TypewriterProps = {
 	deleteMs?: number;
 	/** ms to hold a fully-typed word before deleting. */
 	holdMs?: number;
+	/**
+	 * Honor the OS `prefers-reduced-motion: reduce` preference by snapping to
+	 * the longest word and stopping. Defaults to `true`. Callers (like the
+	 * chat hero, where the typewriter is the focal element) can opt out and
+	 * keep the cycling animation regardless.
+	 */
+	respectReducedMotion?: boolean;
 	className?: string;
 };
 
 /**
  * Cycles through `words` with a typewriter effect. Pure CSS for the caret
- * (`caret-block` utility). Respects `prefers-reduced-motion` by snapping
- * straight to the longest word.
+ * (`caret-block` utility). Respects `prefers-reduced-motion` by default; pass
+ * `respectReducedMotion={false}` at callsites where motion is the point.
  */
 export function Typewriter({
 	words,
 	typeMs = 65,
 	deleteMs = 35,
 	holdMs = 1400,
+	respectReducedMotion = true,
 	className,
 }: TypewriterProps) {
 	const [wordIdx, setWordIdx] = useState(0);
@@ -34,9 +42,9 @@ export function Typewriter({
 
 	useEffect(() => {
 		if (typeof window === "undefined") return;
-		const prefersReduced = window.matchMedia(
-			"(prefers-reduced-motion: reduce)",
-		).matches;
+		const prefersReduced =
+			respectReducedMotion &&
+			window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 		if (prefersReduced) {
 			// Snap to the longest word and stop animating.
 			const longest = words.reduce(
@@ -78,7 +86,16 @@ export function Typewriter({
 		}
 
 		return clearTimer;
-	}, [text, phase, wordIdx, words, typeMs, deleteMs, holdMs]);
+	}, [
+		text,
+		phase,
+		wordIdx,
+		words,
+		typeMs,
+		deleteMs,
+		holdMs,
+		respectReducedMotion,
+	]);
 
 	return (
 		<span className={cn("inline-flex items-baseline", className)}>

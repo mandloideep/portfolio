@@ -5,7 +5,7 @@ import { Card } from "./ui/card";
 import { Eyebrow } from "./ui/eyebrow";
 import { RuleAccent } from "./ui/rule-accent";
 
-const PREVIEW_MIN_HEIGHT = "min-h-[10rem]";
+const PREVIEW_HEIGHT = "h-44";
 
 type ModeChooserProps = {
 	onPick: (m: Mode) => void;
@@ -168,7 +168,7 @@ function ChoiceCard({
 			<div
 				className={cn(
 					"flex flex-col justify-center overflow-hidden rounded-card border border-border/70 bg-bg p-4 transition-colors duration-base group-hover:border-accent/40",
-					PREVIEW_MIN_HEIGHT,
+					PREVIEW_HEIGHT,
 				)}
 			>
 				{preview}
