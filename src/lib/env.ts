@@ -45,7 +45,11 @@ const ServerEnvSchema = z
 
 		// Rate limiting + abuse defenses.
 		RATE_LIMIT_SALT: optionalString,
-		RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+		// Total messages per IP per day (any model). Bumped to 15 because Gemma's
+		// free-tier headroom is huge; premium use is capped separately.
+		RATE_LIMIT_MAX: z.coerce.number().int().positive().default(15),
+		// Sub-budget for paid models (currently just Gemini 2.5 Flash Lite).
+		PREMIUM_LIMIT: z.coerce.number().int().positive().default(5),
 		RATE_LIMIT_WINDOW_MS: z.coerce
 			.number()
 			.int()
@@ -67,6 +71,9 @@ const ServerEnvSchema = z
 			)
 			.transform((v) => v === "true"),
 		CLASSIFIER_MODEL: optionalString,
+		// Free model pinned for classifier + commentary. Defaults to Gemma 4 31B
+		// so gating logic never touches the premium quota.
+		LLM_FREE_MODEL: optionalString,
 		MAX_OUTPUT_TOKENS: z.coerce.number().int().positive().default(400),
 		MIN_REQUEST_INTERVAL_MS: z.coerce
 			.number()

@@ -12,12 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TerminalRouteImport } from './routes/terminal'
 import { Route as ResearchRouteImport } from './routes/research'
 import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as GithubRouteImport } from './routes/github'
 import { Route as ExperienceRouteImport } from './routes/experience'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiGithubGraphRouteImport } from './routes/api.github-graph'
 import { Route as ApiAgentRouteImport } from './routes/api.agent'
 import { Route as ApiAgentQuotaRouteImport } from './routes/api.agent.quota'
+import { Route as ApiAgentCommentaryRouteImport } from './routes/api.agent.commentary'
 
 const TerminalRoute = TerminalRouteImport.update({
   id: '/terminal',
@@ -32,6 +34,11 @@ const ResearchRoute = ResearchRouteImport.update({
 const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GithubRoute = GithubRouteImport.update({
+  id: '/github',
+  path: '/github',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExperienceRoute = ExperienceRouteImport.update({
@@ -64,27 +71,36 @@ const ApiAgentQuotaRoute = ApiAgentQuotaRouteImport.update({
   path: '/quota',
   getParentRoute: () => ApiAgentRoute,
 } as any)
+const ApiAgentCommentaryRoute = ApiAgentCommentaryRouteImport.update({
+  id: '/commentary',
+  path: '/commentary',
+  getParentRoute: () => ApiAgentRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
   '/experience': typeof ExperienceRoute
+  '/github': typeof GithubRoute
   '/projects': typeof ProjectsRoute
   '/research': typeof ResearchRoute
   '/terminal': typeof TerminalRoute
   '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/github-graph': typeof ApiGithubGraphRoute
+  '/api/agent/commentary': typeof ApiAgentCommentaryRoute
   '/api/agent/quota': typeof ApiAgentQuotaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
   '/experience': typeof ExperienceRoute
+  '/github': typeof GithubRoute
   '/projects': typeof ProjectsRoute
   '/research': typeof ResearchRoute
   '/terminal': typeof TerminalRoute
   '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/github-graph': typeof ApiGithubGraphRoute
+  '/api/agent/commentary': typeof ApiAgentCommentaryRoute
   '/api/agent/quota': typeof ApiAgentQuotaRoute
 }
 export interface FileRoutesById {
@@ -92,11 +108,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
   '/experience': typeof ExperienceRoute
+  '/github': typeof GithubRoute
   '/projects': typeof ProjectsRoute
   '/research': typeof ResearchRoute
   '/terminal': typeof TerminalRoute
   '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/github-graph': typeof ApiGithubGraphRoute
+  '/api/agent/commentary': typeof ApiAgentCommentaryRoute
   '/api/agent/quota': typeof ApiAgentQuotaRoute
 }
 export interface FileRouteTypes {
@@ -105,33 +123,39 @@ export interface FileRouteTypes {
     | '/'
     | '/contact'
     | '/experience'
+    | '/github'
     | '/projects'
     | '/research'
     | '/terminal'
     | '/api/agent'
     | '/api/github-graph'
+    | '/api/agent/commentary'
     | '/api/agent/quota'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/contact'
     | '/experience'
+    | '/github'
     | '/projects'
     | '/research'
     | '/terminal'
     | '/api/agent'
     | '/api/github-graph'
+    | '/api/agent/commentary'
     | '/api/agent/quota'
   id:
     | '__root__'
     | '/'
     | '/contact'
     | '/experience'
+    | '/github'
     | '/projects'
     | '/research'
     | '/terminal'
     | '/api/agent'
     | '/api/github-graph'
+    | '/api/agent/commentary'
     | '/api/agent/quota'
   fileRoutesById: FileRoutesById
 }
@@ -139,6 +163,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ContactRoute: typeof ContactRoute
   ExperienceRoute: typeof ExperienceRoute
+  GithubRoute: typeof GithubRoute
   ProjectsRoute: typeof ProjectsRoute
   ResearchRoute: typeof ResearchRoute
   TerminalRoute: typeof TerminalRoute
@@ -167,6 +192,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof ProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/github': {
+      id: '/github'
+      path: '/github'
+      fullPath: '/github'
+      preLoaderRoute: typeof GithubRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/experience': {
@@ -211,14 +243,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentQuotaRouteImport
       parentRoute: typeof ApiAgentRoute
     }
+    '/api/agent/commentary': {
+      id: '/api/agent/commentary'
+      path: '/commentary'
+      fullPath: '/api/agent/commentary'
+      preLoaderRoute: typeof ApiAgentCommentaryRouteImport
+      parentRoute: typeof ApiAgentRoute
+    }
   }
 }
 
 interface ApiAgentRouteChildren {
+  ApiAgentCommentaryRoute: typeof ApiAgentCommentaryRoute
   ApiAgentQuotaRoute: typeof ApiAgentQuotaRoute
 }
 
 const ApiAgentRouteChildren: ApiAgentRouteChildren = {
+  ApiAgentCommentaryRoute: ApiAgentCommentaryRoute,
   ApiAgentQuotaRoute: ApiAgentQuotaRoute,
 }
 
@@ -230,6 +271,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ContactRoute: ContactRoute,
   ExperienceRoute: ExperienceRoute,
+  GithubRoute: GithubRoute,
   ProjectsRoute: ProjectsRoute,
   ResearchRoute: ResearchRoute,
   TerminalRoute: TerminalRoute,

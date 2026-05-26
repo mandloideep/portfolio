@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { NumberTicker } from "#/components/ui/number-ticker";
 import {
@@ -11,6 +12,7 @@ import type {
 	ContributionWeek,
 	GithubGraphResponse,
 } from "#/routes/api.github-graph";
+import { LanguagePills } from "./language-pills";
 
 type FetchState =
 	| { status: "loading" }
@@ -79,12 +81,18 @@ export function GithubGraph() {
 		>
 			{state.status === "ready" ? (
 				<>
-					<HeatmapStats
-						total={state.data.totalContributions}
-						longest={state.data.longestStreak}
-						current={state.data.currentStreak}
-					/>
+					<HeatmapStats data={state.data} />
+					<LanguagePills languages={state.data.topLanguages} />
 					<HeatmapGrid weeks={state.data.weeks} />
+					<div className="flex justify-end">
+						<Link
+							to="/github"
+							data-testid="github-see-full"
+							className="font-mono text-meta text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
+						>
+							see full breakdown →
+						</Link>
+					</div>
 				</>
 			) : state.status === "error" ? (
 				<p className="text-muted text-sm">GitHub data unavailable.</p>
@@ -95,32 +103,37 @@ export function GithubGraph() {
 	);
 }
 
-function HeatmapStats({
-	total,
-	longest,
-	current,
-}: {
-	total: number;
-	longest: number;
-	current: number;
-}) {
+function HeatmapStats({ data }: { data: GithubGraphResponse }) {
 	return (
-		<dl className="grid grid-cols-3 gap-4">
-			<StatCell value={total} label="total contributions" />
-			<StatCell value={longest} label="longest streak" />
-			<StatCell value={current} label="current streak" />
+		<dl className="grid grid-cols-2 gap-3 sm:grid-cols-5 sm:gap-4">
+			<StatCell value={data.totalContributions} label="total" />
+			<StatCell value={data.last30} label="last 30 days" />
+			<StatCell value={data.activeDayPct} label="active days %" suffix="%" />
+			<StatCell value={data.longestStreak} label="longest streak" />
+			<StatCell value={data.currentStreak} label="current streak" />
 		</dl>
 	);
 }
 
-function StatCell({ value, label }: { value: number; label: string }) {
+function StatCell({
+	value,
+	label,
+	suffix,
+}: {
+	value: number;
+	label: string;
+	suffix?: string;
+}) {
 	return (
 		<div className="rounded-card border border-border/60 bg-bg/40 px-4 py-3">
-			<dd>
+			<dd className="flex items-baseline gap-0.5">
 				<NumberTicker
 					value={value}
-					className="font-mono text-3xl text-accent"
+					className="font-mono text-2xl text-accent sm:text-3xl"
 				/>
+				{suffix ? (
+					<span className="font-mono text-md text-accent/80">{suffix}</span>
+				) : null}
 			</dd>
 			<dt className="mt-1 text-muted text-eyebrow uppercase tracking-wider">
 				{label}
@@ -129,7 +142,7 @@ function StatCell({ value, label }: { value: number; label: string }) {
 	);
 }
 
-function HeatmapGrid({ weeks }: { weeks: ContributionWeek[] }) {
+export function HeatmapGrid({ weeks }: { weeks: ContributionWeek[] }) {
 	const max = useMemo(() => {
 		let m = 0;
 		for (const w of weeks) {

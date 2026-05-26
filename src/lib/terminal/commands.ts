@@ -11,6 +11,7 @@ import {
 import { formatTwoCol } from "#/lib/terminal/format";
 import { shellCommands } from "#/lib/terminal/shell";
 import { isTourRunning, runPresentation } from "#/lib/terminal/tour";
+import type { GithubGraphResponse } from "#/routes/api.github-graph";
 import { getProviderModels, modelStore, setModel } from "#/store/model";
 import {
 	appendBlock,
@@ -155,6 +156,47 @@ const github: Command = {
 	},
 };
 
+const stats: Command = {
+	name: "/stats",
+	description: "live github stats (fetched fresh)",
+	handler: async () => {
+		const { pickQuip } = await import("#/lib/terminal/github-quips");
+		const { renderStatsTable } = await import("#/lib/terminal/stats-renderer");
+		emit("activity", pickQuip());
+		let data: GithubGraphResponse;
+		try {
+			const res = await fetch("/api/github-graph");
+			if (!res.ok) throw new Error(`status ${res.status}`);
+			data = (await res.json()) as GithubGraphResponse;
+		} catch (err) {
+			emit(
+				"error",
+				`github fetch failed: ${err instanceof Error ? err.message : "unknown"}`,
+			);
+			return;
+		}
+
+		// Deterministic table first — numbers are always correct.
+		emit("markdown", renderStatsTable(data));
+
+		// Then ask Gemma for a one-line observation. Fail silently if
+		// rate-limited or unreachable; the table is already on screen.
+		try {
+			const res = await fetch("/api/agent/commentary", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ stats: data }),
+			});
+			if (!res.ok) return;
+			const json = (await res.json()) as { commentary?: string };
+			const line = (json.commentary ?? "").trim();
+			if (line) emit("system", `// ${line}`);
+		} catch {
+			// silent
+		}
+	},
+};
+
 const resume: Command = {
 	name: "/resume",
 	description: "open my resume (pdf)",
@@ -295,6 +337,7 @@ export const commands: Command[] = [
 	theme,
 	model,
 	github,
+	stats,
 	resume,
 	exit,
 ];

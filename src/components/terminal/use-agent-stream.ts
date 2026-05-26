@@ -276,8 +276,14 @@ function formatRateLimited(
 			return "the agent is disabled for VPN/datacenter IPs. switch to the visual portfolio with /ui";
 		case "ip_token_budget":
 			return `you've used your token budget for today${inText}. switch to the visual portfolio with /ui`;
+		case "premium_exhausted":
+			return `out of premium messages (Gemini 2.5 Flash Lite is capped at 5/day per visitor${inText}). switch with \`/model gemma-4-31b-it\` to keep chatting.`;
+		case "model_rpm":
+			return `model is throttled at provider — retrying${inText} (per-minute cap).`;
+		case "model_rpd":
+			return `model hit its daily provider cap${inText}. try a different model with \`/model\` or come back tomorrow.`;
 		default:
-			return `you've used your 5 free messages for the day${inText}. the visual portfolio has the same content with no rate limit — try /ui`;
+			return `you've used your free messages for the day${inText}. the visual portfolio has the same content with no rate limit — try /ui`;
 	}
 }
 

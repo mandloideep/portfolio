@@ -65,6 +65,14 @@ export function PortfolioPalette({ open, onOpenChange }: Props) {
 				perform: () => navigate({ to: "/research" }),
 			},
 			{
+				id: "go-github",
+				group: "navigate",
+				label: "GitHub stats",
+				hint: "/github",
+				keywords: ["github", "stats", "languages", "repos", "contributions"],
+				perform: () => navigate({ to: "/github" }),
+			},
+			{
 				id: "go-contact",
 				group: "navigate",
 				label: "Contact",

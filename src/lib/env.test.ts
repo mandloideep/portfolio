@@ -15,7 +15,7 @@ const completeOpenRouter = {
 const completeGemini = {
 	LLM_PROVIDER: "gemini",
 	GEMINI_API_KEY: "AIza-xxx",
-	GEMINI_DEFAULT_MODEL: "gemini-2.5-flash-lite",
+	GEMINI_DEFAULT_MODEL: "gemma-4-31b-it",
 	GITHUB_TOKEN: "ghp_xxx",
 	GITHUB_USERNAME: "deepmandloi",
 } satisfies NodeJS.ProcessEnv;
@@ -84,7 +84,8 @@ describe("getServerEnv", () => {
 
 	it("exposes rate-limit + abuse-defense defaults", () => {
 		const env = getServerEnv(completeOpenRouter);
-		expect(env.RATE_LIMIT_MAX).toBe(5);
+		expect(env.RATE_LIMIT_MAX).toBe(15);
+		expect(env.PREMIUM_LIMIT).toBe(5);
 		expect(env.RATE_LIMIT_WINDOW_MS).toBe(86_400_000);
 		expect(env.WORD_CAP).toBe(30);
 		expect(env.BLOCK_VPN).toBe(true);
@@ -128,7 +129,7 @@ describe("getLlmConfig", () => {
 		const cfg = getLlmConfig(env);
 		expect(cfg.provider).toBe("gemini");
 		expect(cfg.apiKey).toBe("AIza-xxx");
-		expect(cfg.defaultModel).toBe("gemini-2.5-flash-lite");
+		expect(cfg.defaultModel).toBe("gemma-4-31b-it");
 	});
 
 	it("falls back to the canonical default when GEMINI_DEFAULT_MODEL is unknown", () => {
@@ -140,6 +141,6 @@ describe("getLlmConfig", () => {
 			GITHUB_USERNAME: "u",
 		});
 		const cfg = getLlmConfig(env);
-		expect(cfg.defaultModel).toBe("gemini-2.5-flash-lite");
+		expect(cfg.defaultModel).toBe("gemma-4-31b-it");
 	});
 });

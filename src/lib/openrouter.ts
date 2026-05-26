@@ -33,7 +33,15 @@ const ENDPOINTS: Record<Provider, string> = {
 
 // ─── Model catalogues ───────────────────────────────────────────────────
 
-export type LlmModel = { id: string; label: string };
+export type LlmModel = {
+	id: string;
+	label: string;
+	/**
+	 * `true` for paid-only models (Gemini 2.5 Flash Lite under our setup).
+	 * Premium models are capped at a lower per-visitor count to bound spend.
+	 */
+	premium?: boolean;
+};
 
 export const OPENROUTER_MODELS = [
 	{
@@ -48,13 +56,26 @@ export const OPENROUTER_MODELS = [
 
 export const GEMINI_MODELS = [
 	{
-		id: "gemini-2.5-flash-lite",
-		label: "Gemini 2.5 Flash Lite (default · cheapest)",
+		id: "gemma-4-31b-it",
+		label: "Gemma 4 31B (default · free)",
 	},
-	{ id: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash Lite" },
-	{ id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
-	{ id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+	{
+		id: "gemma-4-26b-a4b-it",
+		label: "Gemma 4 26B (free)",
+	},
+	{
+		id: "gemini-2.5-flash-lite",
+		label: "Gemini 2.5 Flash Lite (premium · 5/day)",
+		premium: true,
+	},
 ] as const satisfies readonly LlmModel[];
+
+/** True when the model is paid (counts toward the premium sub-budget). */
+export function isPremiumModel(id: string): boolean {
+	const all: readonly LlmModel[] = [...OPENROUTER_MODELS, ...GEMINI_MODELS];
+	const hit = all.find((m) => m.id === id);
+	return hit?.premium === true;
+}
 
 const MODELS_BY_PROVIDER: Record<Provider, readonly LlmModel[]> = {
 	openrouter: OPENROUTER_MODELS,
@@ -175,7 +196,58 @@ export async function* streamLlm(
 		);
 	}
 
-	yield* parseSseStream(res.body, args.signal);
+	yield* stripThoughtBlocks(parseSseStream(res.body, args.signal));
+}
+
+/**
+ * Gemma 4 always leads its response with a `<thought>...</thought>` block
+ * of internal reasoning that we don't want to render. Buffer incoming token
+ * deltas until we've consumed the closing tag, then start yielding only the
+ * visible content. Models that don't emit `<thought>` are unaffected.
+ */
+async function* stripThoughtBlocks(
+	source: AsyncGenerator<LlmEvent, void, void>,
+): AsyncGenerator<LlmEvent, void, void> {
+	let buffer = "";
+	let stripped = false;
+	for await (const ev of source) {
+		if (ev.type !== "token") {
+			yield ev;
+			continue;
+		}
+		if (stripped) {
+			yield ev;
+			continue;
+		}
+		buffer += ev.text;
+		// Wait until we know whether this response opens with `<thought>`.
+		if (buffer.length < 10 && !buffer.startsWith("<")) {
+			stripped = true;
+			yield { type: "token", text: buffer };
+			buffer = "";
+			continue;
+		}
+		if (!buffer.startsWith("<thought>") && !"<thought>".startsWith(buffer)) {
+			// Prefix doesn't match the opening tag — release as-is.
+			stripped = true;
+			yield { type: "token", text: buffer };
+			buffer = "";
+			continue;
+		}
+		const closeIdx = buffer.indexOf("</thought>");
+		if (closeIdx === -1) {
+			// Still inside the thought; keep buffering, don't yield.
+			continue;
+		}
+		const tail = buffer.slice(closeIdx + "</thought>".length);
+		stripped = true;
+		buffer = "";
+		if (tail.length > 0) yield { type: "token", text: tail };
+	}
+	if (!stripped && buffer.length > 0) {
+		// Defensive: stream ended mid-buffer. Emit whatever we held back.
+		yield { type: "token", text: buffer };
+	}
 }
 
 /** Legacy alias preserved for tests and the `api.agent.ts` import. */
@@ -224,7 +296,17 @@ export async function completeLlm(args: StreamArgs): Promise<string> {
 	const json = (await res.json()) as {
 		choices?: Array<{ message?: { content?: string } }>;
 	};
-	return json.choices?.[0]?.message?.content?.trim() ?? "";
+	const raw = json.choices?.[0]?.message?.content ?? "";
+	return stripThoughtFromString(raw).trim();
+}
+
+/** Strip a leading `<thought>...</thought>` block from a non-streaming reply. */
+export function stripThoughtFromString(s: string): string {
+	const trimmed = s.trimStart();
+	if (!trimmed.startsWith("<thought>")) return s;
+	const closeIdx = trimmed.indexOf("</thought>");
+	if (closeIdx === -1) return ""; // Whole reply was reasoning, no answer leaked.
+	return trimmed.slice(closeIdx + "</thought>".length);
 }
 
 async function safeText(res: Response): Promise<string> {

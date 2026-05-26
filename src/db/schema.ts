@@ -17,9 +17,12 @@ export const todos = pgTable("todos", {
 // Per-IP rate limiting + abuse metadata. Keyed by hashed IP so we never store
 // raw addresses. `windowStart` rolls forward when the configured window
 // elapses; `count` and `tokenCount` are the running totals inside the window.
+// `premiumCount` is the sub-budget consumed by paid models (e.g. Gemini 2.5
+// Flash Lite) and is gated separately from `count`.
 export const agentRateLimits = pgTable("agent_rate_limits", {
 	ipHash: text("ip_hash").primaryKey(),
 	count: integer("count").notNull().default(0),
+	premiumCount: integer("premium_count").notNull().default(0),
 	tokenCount: integer("token_count").notNull().default(0),
 	windowStart: timestamp("window_start", { withTimezone: true })
 		.notNull()
@@ -31,6 +34,17 @@ export const agentRateLimits = pgTable("agent_rate_limits", {
 	firstSeenAsn: text("first_seen_asn"),
 	privacyChecked: boolean("privacy_checked").notNull().default(false),
 	blockedReason: text("blocked_reason"),
+});
+
+// Per-(provider, model) call log for sliding-window RPM and UTC-day RPD
+// rate-limit checks. Row-per-call lets us compute both with one indexed scan.
+export const llmCallLog = pgTable("llm_call_log", {
+	id: serial().primaryKey(),
+	provider: text("provider").notNull(),
+	model: text("model").notNull(),
+	calledAt: timestamp("called_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
 });
 
 // Global daily token budget. One row per UTC date — keeps the circuit

@@ -4,9 +4,11 @@ import { classifyPrompt } from "#/lib/classifier";
 import { assembleContext } from "#/lib/context";
 import { getLlmConfig, getServerEnv } from "#/lib/env";
 import { lookupIp } from "#/lib/ipinfo";
+import { checkAndRecordLlmCall } from "#/lib/llm-rate-limit";
 import {
 	type ChatMessage,
 	isModelForProvider,
+	isPremiumModel,
 	streamLlm,
 } from "#/lib/openrouter";
 import {
@@ -139,7 +141,15 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 		});
 	}
 
-	// Per-IP rate limit + cooldown + token cap.
+	// Resolve the requested model before rate-limiting so we can apply the
+	// premium sub-budget when paid models are in play.
+	const model =
+		parsed.data.model && isModelForProvider(provider, parsed.data.model)
+			? parsed.data.model
+			: defaultModel;
+	const isPremium = isPremiumModel(model);
+
+	// Per-IP rate limit + cooldown + token cap + premium sub-budget.
 	const ip = getClientIp(request);
 	const salt = env.RATE_LIMIT_SALT ?? "portfolio-default-salt";
 	const ipHash = hashIp(ip, salt);
@@ -152,6 +162,8 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 			windowMs: env.RATE_LIMIT_WINDOW_MS,
 			cooldownMs: env.MIN_REQUEST_INTERVAL_MS,
 			perIpTokenBudget: env.PER_IP_TOKEN_BUDGET,
+			premiumLimit: env.PREMIUM_LIMIT,
+			isPremium,
 			lookupPrivacy:
 				env.BLOCK_VPN && env.IPINFO_TOKEN
 					? async () => lookupIp(ip, env.IPINFO_TOKEN ?? "")
@@ -176,29 +188,49 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 		});
 	}
 
-	// On-topic pre-flight classifier. Fail-open on errors.
-	if (env.CLASSIFIER_ENABLED) {
-		try {
-			const verdict = await classifyPrompt({
-				prompt: parsed.data.message,
-				provider,
-				apiKey,
-				model: env.CLASSIFIER_MODEL ?? defaultModel,
-				signal: request.signal,
-			});
-			if (verdict === "UNSAFE") {
-				return sseSingle("error", { message: "off_topic" });
-			}
-		} catch (err) {
-			// eslint-disable-next-line no-console
-			console.warn("[api.agent] classifier failed (fail-open)", err);
-		}
+	// Model-level rate-limit (Google's per-(provider, model) RPM/RPD).
+	// Checked once for the main reply now; the classifier call below has its
+	// own check immediately before firing.
+	const mainQuota = await checkAndRecordLlmCall({ provider, model });
+	if (!mainQuota.allowed) {
+		return sseSingle("rate_limited", {
+			remaining: 0,
+			resetsAt: new Date(Date.now() + mainQuota.retryAfterMs).toISOString(),
+			reason: `model_${mainQuota.reason}`,
+			model,
+		});
 	}
 
-	const model =
-		parsed.data.model && isModelForProvider(provider, parsed.data.model)
-			? parsed.data.model
-			: defaultModel;
+	// On-topic pre-flight classifier. Pinned to LLM_FREE_MODEL so it never
+	// burns the premium quota — even if the user picked a premium model for
+	// the main reply. Fail-open on errors.
+	const classifierModel =
+		env.LLM_FREE_MODEL ?? env.CLASSIFIER_MODEL ?? "gemma-4-31b-it";
+	if (env.CLASSIFIER_ENABLED) {
+		// Skip classifier when it would exceed model rate limits — better to
+		// let the prompt through than to refuse over gating overhead.
+		const classifierQuota = await checkAndRecordLlmCall({
+			provider,
+			model: classifierModel,
+		});
+		if (classifierQuota.allowed) {
+			try {
+				const verdict = await classifyPrompt({
+					prompt: parsed.data.message,
+					provider,
+					apiKey,
+					model: classifierModel,
+					signal: request.signal,
+				});
+				if (verdict === "UNSAFE") {
+					return sseSingle("error", { message: "off_topic" });
+				}
+			} catch (err) {
+				// eslint-disable-next-line no-console
+				console.warn("[api.agent] classifier failed (fail-open)", err);
+			}
+		}
+	}
 
 	const { system, contextDocs, files } = assembled;
 	const messages: ChatMessage[] = [

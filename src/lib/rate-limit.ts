@@ -24,6 +24,12 @@ export type RateCheckArgs = {
 	cooldownMs: number;
 	perIpTokenBudget: number;
 	/**
+	 * Sub-budget for paid models. When `isPremium` is true the check also
+	 * enforces `premiumCount < premiumLimit`.
+	 */
+	premiumLimit: number;
+	isPremium: boolean;
+	/**
 	 * Called only on the *first* request from a new ipHash. Returns the
 	 * privacy verdict from IPInfo (or wherever). If omitted, no privacy
 	 * check happens — useful for tests and for disabling the feature.
@@ -69,7 +75,15 @@ export function hashIp(ip: string, salt: string): string {
  * out of quota.
  */
 export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
-	const { ipHash, limit, windowMs, cooldownMs, perIpTokenBudget } = args;
+	const {
+		ipHash,
+		limit,
+		windowMs,
+		cooldownMs,
+		perIpTokenBudget,
+		premiumLimit,
+		isPremium,
+	} = args;
 	const now = new Date();
 
 	// Read existing row first so we know whether to run the privacy lookup.
@@ -122,6 +136,7 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 		await db.insert(agentRateLimits).values({
 			ipHash,
 			count: 1,
+			premiumCount: isPremium ? 1 : 0,
 			tokenCount: 0,
 			windowStart: now,
 			lastRequestAt: now,
@@ -142,7 +157,13 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 	if (windowExpired) {
 		await db
 			.update(agentRateLimits)
-			.set({ count: 1, tokenCount: 0, windowStart: now, lastRequestAt: now })
+			.set({
+				count: 1,
+				premiumCount: isPremium ? 1 : 0,
+				tokenCount: 0,
+				windowStart: now,
+				lastRequestAt: now,
+			})
 			.where(eq(agentRateLimits.ipHash, ipHash));
 		return {
 			allowed: true,
@@ -184,9 +205,23 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 		};
 	}
 
+	// Premium sub-budget.
+	if (isPremium && row.premiumCount >= premiumLimit) {
+		return {
+			allowed: false,
+			remaining: Math.max(0, limit - row.count),
+			resetsAt,
+			blockedReason: "premium_exhausted",
+		};
+	}
+
 	await db
 		.update(agentRateLimits)
-		.set({ count: row.count + 1, lastRequestAt: now })
+		.set({
+			count: row.count + 1,
+			premiumCount: isPremium ? row.premiumCount + 1 : row.premiumCount,
+			lastRequestAt: now,
+		})
 		.where(eq(agentRateLimits.ipHash, ipHash));
 
 	return {

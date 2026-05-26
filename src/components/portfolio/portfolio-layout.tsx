@@ -17,6 +17,7 @@ const TABS: readonly TopTab[] = [
 	{ id: "projects", label: "/projects", to: "/projects" },
 	{ id: "experience", label: "/experience", to: "/experience" },
 	{ id: "research", label: "/research", to: "/research" },
+	{ id: "github", label: "/github", to: "/github" },
 	{ id: "contact", label: "/contact", to: "/contact" },
 ] as const;
 
