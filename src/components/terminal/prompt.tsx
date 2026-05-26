@@ -8,6 +8,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { IconButton } from "#/components/ui/icon-button";
 import { useIsMobile } from "#/hooks/use-is-mobile";
 import { wordCount } from "#/lib/prompt-guards";
 import { autocomplete } from "#/lib/terminal/commands";
@@ -250,13 +251,17 @@ export function Prompt({ onOpenPalette }: Props) {
 				e.preventDefault();
 				void handleSubmit();
 			}}
-			className="sticky bottom-0 z-overlay flex items-baseline gap-2.5 border-t border-border bg-bg-elev/95 px-4 py-3 font-mono text-base transition-colors duration-base focus-within:bg-bg-elev sm:static sm:bg-bg-elev/60 sm:px-5 sm:py-3.5"
+			className="sticky bottom-0 z-overlay flex flex-wrap items-baseline gap-x-2 gap-y-2 border-t border-border bg-bg-elev/95 px-4 py-3 font-mono text-base transition-colors duration-base focus-within:bg-bg-elev sm:static sm:flex-nowrap sm:gap-x-2.5 sm:bg-bg-elev/60 sm:px-5 sm:py-3.5"
 			style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
 		>
 			<label htmlFor="terminal-prompt" className="sr-only">
 				Terminal prompt
 			</label>
-			<span className="flex shrink-0 items-center gap-2 font-semibold select-none">
+			{/* On mobile the prefix `deep@portfolio:~ ❯` takes its own row
+			 *  (`w-full`) so the textarea on the next row gets the full
+			 *  viewport width minus the send button. Desktop keeps the
+			 *  inline single-row layout via `sm:w-auto`. */}
+			<span className="flex w-full shrink-0 items-center gap-2 font-semibold select-none sm:w-auto">
 				<span className="status-dot" aria-hidden="true" />
 				<span>
 					<span className="text-prompt-user">deep</span>
@@ -292,15 +297,18 @@ export function Prompt({ onOpenPalette }: Props) {
 				</span>
 			) : null}
 			{/* Mobile send button — soft keyboards send Enter as newline by default. */}
-			<button
+			<IconButton
+				size="lg"
+				shape="pill"
+				tone="accent"
 				type="submit"
 				data-testid="prompt-send"
 				aria-label="send"
 				disabled={value.length === 0}
-				className="inline-flex size-10 shrink-0 items-center justify-center self-end rounded-pill bg-accent text-bg transition-transform duration-base hover:scale-105 focus-visible:scale-105 focus-visible:outline-none disabled:opacity-40 sm:hidden"
+				className="self-end disabled:opacity-40 sm:hidden"
 			>
 				<ArrowUp className="size-5" aria-hidden="true" />
-			</button>
+			</IconButton>
 			{/* Honeypot — invisible, never auto-filled by humans. */}
 			<input
 				type="text"

@@ -13,12 +13,7 @@
  *   ⚙ opens <SettingsSheet> with theme + density + model + actions.
  */
 
-import {
-	Info,
-	MessageSquarePlus,
-	Settings2,
-	Terminal as TerminalIcon,
-} from "lucide-react";
+import { Info, MessageSquarePlus, Settings2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useAgentSession } from "#/components/agent/agent-engine-provider";
@@ -26,6 +21,7 @@ import { ModelSwitcher } from "#/components/agent/model-switcher";
 import { ChatChip } from "#/components/chat/chat-chip";
 import { ChatInfoPopover } from "#/components/chat/chat-info-popover";
 import { DensityToggle } from "#/components/ui/density-toggle";
+import { ModeSwitcher } from "#/components/ui/mode-switcher";
 import { SettingsAction, SettingsSheet } from "#/components/ui/settings-sheet";
 import { ThemeSwitcher } from "#/components/ui/theme-switcher";
 import { siteMeta } from "#/content/site";
@@ -40,10 +36,7 @@ export function ChatLayout({ children }: ChatLayoutProps) {
 	// actually scale the chat UI (matches terminal-shell + portfolio-layout).
 	useDensity();
 	return (
-		<div
-			className="surface-grain relative flex min-h-[100dvh] flex-col bg-bg text-fg"
-			style={{ paddingTop: "env(safe-area-inset-top)" }}
-		>
+		<div className="surface-grain relative flex min-h-[100dvh] flex-col bg-bg pt-[env(safe-area-inset-top)] text-fg md:pt-frame-top">
 			<ChatHeader />
 			<div className="mx-auto flex w-full max-w-4xl flex-1 flex-col">
 				{children}
@@ -73,6 +66,7 @@ function ChatHeader() {
 				<DensityToggle />
 				<ThemeSwitcher />
 				<ModelSwitcher variant="header" />
+				<ModeSwitcher active="chat" variant="pills" />
 				<ChatChip
 					onClick={() => setInfoOpen(true)}
 					aria-label="about this chat"
@@ -102,11 +96,7 @@ function ChatHeader() {
 						onClick={() => actions.clear()}
 					/>
 				) : null}
-				<SettingsAction
-					icon={<TerminalIcon className="size-4" />}
-					label="terminal mode"
-					href="/terminal"
-				/>
+				<ModeSwitcher active="chat" variant="sheet" />
 				<SettingsAction
 					icon={<Info className="size-4" />}
 					label="about"

@@ -1,6 +1,6 @@
 import { Check, Palette } from "lucide-react";
 import { useTheme } from "#/hooks/use-theme";
-import { Button } from "./button";
+import { ChromeButton } from "./chrome-button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -10,8 +10,8 @@ import {
 
 /**
  * Shared theme picker used by both the portfolio and terminal chromes.
- * Trigger uses the `Button` ghost primitive; each row pairs a leading
- * check column with the theme name + vibe description.
+ * Trigger is a <ChromeButton> so it stays visually identical to every
+ * other chip in the chrome bar (density toggle, ⌘K hint, mode pills).
  */
 export function ThemeSwitcher() {
 	const { theme, setTheme, themes } = useTheme();
@@ -20,15 +20,15 @@ export function ThemeSwitcher() {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button
-					data-testid="theme-switcher"
-					variant="ghost"
+				<ChromeButton
 					size="sm"
-					className="h-7 gap-1.5 rounded-card border border-border/70 bg-bg/40 px-2 font-mono text-meta text-muted hover:bg-accent/10 hover:text-accent"
+					tone="muted"
+					data-testid="theme-switcher"
+					aria-label="Switch theme"
 				>
 					<Palette className="size-3" aria-hidden="true" />
 					<span className="hidden sm:inline">{activeName}</span>
-				</Button>
+				</ChromeButton>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
 				align="end"

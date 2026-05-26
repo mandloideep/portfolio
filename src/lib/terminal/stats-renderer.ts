@@ -102,3 +102,60 @@ function fmt(n: number): string {
 	if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
 	return String(n);
 }
+
+// ─── Narrow (mobile) renderer ──────────────────────────────────────────
+// Phones can't show the 60-cell Unicode box without horizontal scroll, so
+// the `/stats` handler picks this variant under sm. Output stays inside a
+// fenced code block so the markdown renderer keeps it monospace (the
+// language bars only render correctly in a mono font).
+
+const NARROW_BAR = 10;
+
+export function renderStatsList(data: GithubGraphResponse): string {
+	const lines: string[] = [];
+	lines.push("GITHUB STATS");
+	lines.push("");
+	lines.push(`- total contributions — ${fmt(data.totalContributions)}`);
+	lines.push(`- last 30 days — ${fmt(data.last30)}`);
+	lines.push(`- last 7 days — ${fmt(data.last7)}`);
+	lines.push(`- active days — ${data.activeDayPct}%`);
+	lines.push(`- longest streak — ${data.longestStreak} days`);
+	lines.push(`- current streak — ${data.currentStreak} days`);
+	lines.push(`- public repos — ${fmt(data.publicRepoCount)}`);
+	lines.push(`- total stars — ${fmt(data.totalStars)}`);
+	lines.push(`- PRs merged — ${fmt(data.prs.merged)}`);
+	lines.push(`- issues opened — ${fmt(data.issuesOpened)}`);
+	lines.push(`- best day — ${data.bestDay.count} on ${data.bestDay.date}`);
+	lines.push(
+		`- top weekday — ${data.topWeekday.name} (avg ${data.topWeekday.mean.toFixed(1)})`,
+	);
+
+	if (data.topLanguages.length > 0) {
+		lines.push("");
+		lines.push("LANGUAGES");
+		lines.push("");
+		// Pad language names so the bars + percentages line up. The bar is a
+		// fixed 10-cell ASCII gauge — narrow enough to fit a 360 px viewport.
+		const nameWidth = Math.min(
+			12,
+			Math.max(...data.topLanguages.map((l) => l.name.length)),
+		);
+		for (const lang of data.topLanguages) {
+			const name = pad(lang.name, nameWidth);
+			const filled = Math.round((Math.min(100, lang.pct) / 100) * NARROW_BAR);
+			const bar = "█".repeat(filled) + "░".repeat(NARROW_BAR - filled);
+			lines.push(`- ${name} ${bar} ${lang.pct.toFixed(1)}%`);
+		}
+	}
+
+	if (data.topRepos.length > 0) {
+		lines.push("");
+		lines.push("TOP REPOS");
+		lines.push("");
+		for (const repo of data.topRepos.slice(0, 3)) {
+			lines.push(`- ${repo.name} — ★ ${repo.stars}`);
+		}
+	}
+
+	return ["```", ...lines, "```"].join("\n");
+}

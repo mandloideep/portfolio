@@ -10,8 +10,10 @@
  */
 
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Menu, MessageSquare, Settings2 } from "lucide-react";
+import { Menu, Settings2 } from "lucide-react";
 import { useState } from "react";
+import { IconButton } from "#/components/ui/icon-button";
+import { ModeSwitcher } from "#/components/ui/mode-switcher";
 import { SettingsSheet } from "#/components/ui/settings-sheet";
 import {
 	Sheet,
@@ -38,15 +40,15 @@ export function MobileNav({ items }: Props) {
 			data-testid="portfolio-mobile-nav"
 			className="flex items-center gap-2 border-b border-border/70 bg-bg-elev/95 px-3 py-2 sm:hidden"
 		>
-			<button
-				type="button"
+			<IconButton
+				size="lg"
+				shape="card"
 				data-testid="portfolio-mobile-nav-trigger"
 				aria-label="open menu"
 				onClick={() => setNavOpen(true)}
-				className="inline-flex size-10 items-center justify-center rounded-card border border-border/70 bg-bg/40 text-fg transition-colors duration-base hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
 				<Menu className="size-4" aria-hidden="true" />
-			</button>
+			</IconButton>
 
 			<Link
 				to="/"
@@ -58,15 +60,15 @@ export function MobileNav({ items }: Props) {
 				<span>{siteMeta.name.toLowerCase()} — portfolio</span>
 			</Link>
 
-			<button
-				type="button"
+			<IconButton
+				size="lg"
+				shape="card"
 				data-testid="portfolio-mobile-settings"
 				aria-label="open settings"
 				onClick={() => setSettingsOpen(true)}
-				className="inline-flex size-10 items-center justify-center rounded-card border border-border/70 bg-bg/40 text-fg transition-colors duration-base hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
 				<Settings2 className="size-4" aria-hidden="true" />
-			</button>
+			</IconButton>
 
 			<Sheet open={navOpen} onOpenChange={setNavOpen}>
 				<SheetContent
@@ -123,15 +125,7 @@ export function MobileNav({ items }: Props) {
 				onOpenChange={setSettingsOpen}
 				showModel={false}
 			>
-				<SheetClose asChild>
-					<a
-						href="/chat"
-						className="flex w-full items-center gap-3 rounded-card border border-border/60 bg-bg-elev/40 px-4 py-3 text-left font-mono text-meta uppercase tracking-tab text-fg transition-colors duration-base hover:border-accent/60 hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-					>
-						<MessageSquare className="size-4" aria-hidden="true" />
-						<span>open chat</span>
-					</a>
-				</SheetClose>
+				<ModeSwitcher active="ui" variant="sheet" />
 			</SettingsSheet>
 		</div>
 	);

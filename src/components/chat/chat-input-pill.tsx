@@ -2,6 +2,7 @@ import { ArrowUp, Square } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { useAgentSession } from "#/components/agent/agent-engine-provider";
 import { BorderBeam } from "#/components/ui/border-beam";
+import { IconButton } from "#/components/ui/icon-button";
 import { useIsMobile } from "#/hooks/use-is-mobile";
 import { cn } from "#/lib/utils";
 
@@ -92,27 +93,32 @@ export function ChatInputPill({
 			/>
 
 			{isStreaming ? (
-				<button
-					type="button"
+				<IconButton
+					size="touch"
+					shape="pill"
+					tone="destructive"
 					data-testid="chat-input-stop"
 					aria-label="stop streaming"
 					onClick={() => actions.abort()}
-					className="relative z-10 inline-flex size-10 shrink-0 items-center justify-center rounded-pill border border-border bg-bg-elev text-muted transition-colors duration-base hover:border-error hover:text-error focus-visible:border-error focus-visible:text-error focus-visible:outline-none sm:size-8"
+					className="z-10"
 				>
 					<Square
 						className="size-4 fill-current sm:size-3.5"
 						aria-hidden="true"
 					/>
-				</button>
+				</IconButton>
 			) : (
-				<button
+				<IconButton
+					size="touch"
+					shape="pill"
+					tone="accent"
 					type="submit"
 					data-testid="chat-input-send"
 					aria-label="send message"
-					className="relative z-10 inline-flex size-10 shrink-0 items-center justify-center rounded-pill bg-accent text-bg transition-transform duration-base hover:scale-105 focus-visible:scale-105 focus-visible:outline-none disabled:opacity-50 sm:size-8"
+					className="z-10"
 				>
 					<ArrowUp className="size-5 sm:size-4" aria-hidden="true" />
-				</button>
+				</IconButton>
 			)}
 		</form>
 	);

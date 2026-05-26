@@ -1,5 +1,6 @@
 import { AnimatedShinyText } from "#/components/ui/animated-shiny-text";
 import { CommandPrompt } from "#/components/ui/command-prompt";
+import { Divider } from "#/components/ui/divider";
 import { StatusPill } from "#/components/ui/status-pill";
 import { siteMeta } from "#/content/site";
 import { useQuip } from "#/hooks/use-quip";
@@ -87,7 +88,7 @@ export function Hero({ className }: { className?: string }) {
 					))}
 				</dl>
 
-				<hr className="my-7 border-border/60" />
+				<Divider className="my-7" />
 
 				<p
 					data-testid="hero-quip"

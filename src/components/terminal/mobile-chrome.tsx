@@ -15,13 +15,14 @@ import { useStore } from "@tanstack/react-store";
 import {
 	ChevronDown,
 	Command as CommandIcon,
-	MessageSquare,
 	RotateCcw,
 	Settings2,
 	Sparkles,
 	Terminal as TerminalIcon,
 } from "lucide-react";
 import { useState } from "react";
+import { ChromeButton } from "#/components/ui/chrome-button";
+import { ModeSwitcher } from "#/components/ui/mode-switcher";
 import { SettingsAction, SettingsSheet } from "#/components/ui/settings-sheet";
 import {
 	Sheet,
@@ -46,22 +47,22 @@ export function MobileChrome({ onOpenPalette }: Props) {
 			data-testid="terminal-mobile-chrome"
 			className="flex items-center gap-2 border-b border-border bg-bg-elev/95 px-3 py-2"
 		>
-			<button
-				type="button"
+			<ChromeButton
+				size="touch"
 				data-testid="mobile-chrome-settings"
 				aria-label="open settings"
 				onClick={() => setSettingsOpen(true)}
-				className="inline-flex size-10 items-center justify-center rounded-card border border-border/70 bg-bg/40 text-fg transition-colors duration-base hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				className="aspect-square px-0"
 			>
 				<Settings2 className="size-4" aria-hidden="true" />
-			</button>
+			</ChromeButton>
 
-			<button
-				type="button"
+			<ChromeButton
+				size="touch"
 				data-testid="mobile-chrome-mode"
 				aria-label={`mode: ${mode}. tap to switch.`}
 				onClick={() => setModeOpen(true)}
-				className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-card border border-border/70 bg-bg/40 px-3 font-mono text-meta uppercase tracking-tab text-muted transition-colors duration-base hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				className="flex-1"
 			>
 				<span className="text-prompt-user">deep</span>
 				<span aria-hidden="true" className="text-muted/60">
@@ -69,17 +70,17 @@ export function MobileChrome({ onOpenPalette }: Props) {
 				</span>
 				<span className="text-fg/90">{mode}</span>
 				<ChevronDown className="size-3 text-muted/70" aria-hidden="true" />
-			</button>
+			</ChromeButton>
 
-			<button
-				type="button"
+			<ChromeButton
+				size="touch"
 				data-testid="mobile-chrome-palette"
 				aria-label="open command palette"
 				onClick={onOpenPalette}
-				className="inline-flex size-10 items-center justify-center rounded-card border border-border/70 bg-bg/40 text-fg transition-colors duration-base hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				className="aspect-square px-0"
 			>
 				<CommandIcon className="size-4" aria-hidden="true" />
-			</button>
+			</ChromeButton>
 
 			<SettingsSheet
 				open={settingsOpen}
@@ -102,11 +103,7 @@ export function MobileChrome({ onOpenPalette }: Props) {
 					label="clear scrollback"
 					onClick={() => clearBlocks()}
 				/>
-				<SettingsAction
-					icon={<MessageSquare className="size-4" />}
-					label="open chat"
-					href="/chat"
-				/>
+				<ModeSwitcher active="terminal" variant="sheet" />
 			</SettingsSheet>
 
 			<ModeSheet open={modeOpen} onOpenChange={setModeOpen} mode={mode} />

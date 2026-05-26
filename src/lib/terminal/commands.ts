@@ -160,7 +160,9 @@ const stats: Command = {
 	description: "live github stats (fetched fresh)",
 	handler: async () => {
 		const { pickQuip } = await import("#/lib/terminal/github-quips");
-		const { renderStatsTable } = await import("#/lib/terminal/stats-renderer");
+		const { renderStatsList, renderStatsTable } = await import(
+			"#/lib/terminal/stats-renderer"
+		);
 		emit("activity", pickQuip());
 		let data: GithubGraphResponse;
 		try {
@@ -175,8 +177,17 @@ const stats: Command = {
 			return;
 		}
 
+		// Pick the renderer once at command time. Tradeoff: a rotate from
+		// portrait → landscape won't reflow the row already in scrollback,
+		// but the row stays scrollable and the user can re-run `/stats`.
+		const narrow =
+			typeof window !== "undefined" &&
+			typeof window.matchMedia === "function" &&
+			window.matchMedia("(max-width: 640px)").matches;
+		const render = narrow ? renderStatsList : renderStatsTable;
+
 		// Deterministic table first — numbers are always correct.
-		emit("markdown", renderStatsTable(data));
+		emit("markdown", render(data));
 
 		// Then ask Gemma for a one-line observation. Fail silently if
 		// rate-limited or unreachable; the table is already on screen.

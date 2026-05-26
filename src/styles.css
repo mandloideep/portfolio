@@ -99,6 +99,14 @@
 	--radius-card: 0.75rem;
 	--radius-pill: 9999px;
 
+	/* ─── Spacing tokens ────────────────────────────────────────────────
+	 * Named spacing values that may need to be retuned across surfaces
+	 * (frame gaps, hero offsets, …). Tailwind v4 exposes a real utility
+	 * for every `--spacing-<name>` key, so callers write e.g.
+	 * `md:pt-frame-top` and one edit here moves all three shells in sync.
+	 */
+	--spacing-frame-top: 3rem; /* desktop-only top breathing room above macOS chrome */
+
 	/* ─── Shadows ───────────────────────────────────────────────────── */
 	--shadow-frame:
 		0 1px 0 var(--color-border),

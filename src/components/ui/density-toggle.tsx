@@ -1,5 +1,6 @@
 import { useStore } from "@tanstack/react-store";
 import { Minus, Plus } from "lucide-react";
+import { ChromeButtonGroup } from "#/components/ui/chrome-button";
 import { cn } from "#/lib/utils";
 import {
 	DENSITIES,
@@ -9,9 +10,10 @@ import {
 } from "#/store/density";
 
 /**
- * Compact +/- button pair that walks through the four density steps:
- * compact → cozy → comfy → roomy. Reflects the active step beneath as
- * a one-letter glyph. Persists via the density store.
+ * Compact +/- segmented control that walks through the four density
+ * steps: compact → cozy → comfy → roomy. The frame comes from the
+ * shared <ChromeButtonGroup> so the resting height matches every other
+ * chip in the chrome bar.
  */
 export function DensityToggle({ className }: { className?: string }) {
 	const current = useStore(densityStore, (s) => s.value);
@@ -31,13 +33,10 @@ export function DensityToggle({ className }: { className?: string }) {
 	};
 
 	return (
-		<div
+		<ChromeButtonGroup
 			data-testid="density-toggle"
 			data-density={current}
-			className={cn(
-				"inline-flex items-center gap-0.5 rounded-card border border-border/70 bg-bg/40 p-0.5 font-mono text-meta text-muted",
-				className,
-			)}
+			className={cn("font-mono text-meta text-muted", className)}
 		>
 			<button
 				type="button"
@@ -45,9 +44,9 @@ export function DensityToggle({ className }: { className?: string }) {
 				data-testid="density-down"
 				onClick={() => step(-1)}
 				disabled={index === 0}
-				className="inline-flex h-6 w-6 items-center justify-center rounded-chip transition-colors duration-base hover:text-accent disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				className="inline-flex size-5 items-center justify-center rounded-chip transition-colors duration-base hover:text-accent disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
-				<Minus className="h-3 w-3" aria-hidden="true" />
+				<Minus className="size-3" aria-hidden="true" />
 			</button>
 			<span aria-live="polite" className="min-w-6 text-center text-fg/90">
 				{label[current]}
@@ -58,10 +57,10 @@ export function DensityToggle({ className }: { className?: string }) {
 				data-testid="density-up"
 				onClick={() => step(1)}
 				disabled={index === DENSITIES.length - 1}
-				className="inline-flex h-6 w-6 items-center justify-center rounded-chip transition-colors duration-base hover:text-accent disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				className="inline-flex size-5 items-center justify-center rounded-chip transition-colors duration-base hover:text-accent disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
-				<Plus className="h-3 w-3" aria-hidden="true" />
+				<Plus className="size-3" aria-hidden="true" />
 			</button>
-		</div>
+		</ChromeButtonGroup>
 	);
 }

@@ -164,13 +164,13 @@ function renderGrouped(
 					onClick={() => pick(a)}
 					onMouseEnter={() => setActive(i)}
 					className={cn(
-						"flex w-full items-center justify-between gap-3 px-4 py-3 text-left sm:py-2",
+						"flex w-full flex-col items-start gap-0.5 px-4 py-3 text-left sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:py-2",
 						i === active ? "bg-border/50 text-fg" : "text-fg hover:bg-border/30",
 					)}
 				>
-					<span className="truncate text-accent">{a.label}</span>
+					<span className="text-accent sm:truncate">{a.label}</span>
 					{a.hint ? (
-						<span className="shrink-0 truncate text-muted text-meta">
+						<span className="whitespace-normal text-muted text-meta sm:shrink-0 sm:truncate sm:whitespace-nowrap">
 							{a.hint}
 						</span>
 					) : null}

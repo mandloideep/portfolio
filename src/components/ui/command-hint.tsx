@@ -1,6 +1,6 @@
 import { Command } from "lucide-react";
 import { useEffect, useState } from "react";
-import { cn } from "#/lib/utils";
+import { ChromeButton } from "#/components/ui/chrome-button";
 
 type Props = {
 	onOpen: () => void;
@@ -11,6 +11,9 @@ type Props = {
  * Visible "⌘K" / "Ctrl K" chip in the chrome bar. Clicking opens the
  * palette via the supplied callback; the chip is also a discovery
  * affordance so users learn the shortcut exists.
+ *
+ * Built on <ChromeButton size="sm" tone="muted"> so every chrome chip
+ * shares the same shape across the portfolio, chat, and terminal.
  */
 export function CommandHint({ onOpen, className }: Props) {
 	const [glyph, setGlyph] = useState<"mac" | "other">("mac");
@@ -26,19 +29,17 @@ export function CommandHint({ onOpen, className }: Props) {
 	}, []);
 
 	return (
-		<button
-			type="button"
+		<ChromeButton
+			size="sm"
+			tone="muted"
 			onClick={onOpen}
 			data-testid="command-hint"
 			aria-label="Open command palette"
 			title="Open command palette"
-			className={cn(
-				"inline-flex items-center gap-1.5 rounded-chip border border-border/60 bg-bg/40 px-2 py-1 font-mono text-eyebrow uppercase tracking-tab text-muted/80 transition-colors duration-base hover:border-border hover:text-fg/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [font-variant-numeric:tabular-nums]",
-				className,
-			)}
+			className={className}
 		>
 			<Command aria-hidden="true" className="size-3" />
 			<span suppressHydrationWarning>{glyph === "mac" ? "⌘K" : "Ctrl K"}</span>
-		</button>
+		</ChromeButton>
 	);
 }

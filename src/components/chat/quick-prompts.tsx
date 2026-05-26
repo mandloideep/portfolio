@@ -103,12 +103,15 @@ export function QuickPromptCards({ className }: { className?: string }) {
 			data-testid="chat-quick-prompts"
 			data-variant="cards"
 			className={cn(
-				"grid w-full max-w-2xl grid-cols-1 gap-2 sm:grid-cols-5 sm:gap-3",
+				"grid w-full max-w-2xl grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3",
 				className,
 			)}
 		>
-			{items.map((p) => {
+			{items.map((p, i) => {
 				const Icon = p.icon;
+				// Five items into a 2-col mobile grid → last tile spans both
+				// columns so the layout reads as 2 / 2 / 1-wide.
+				const isLastOnMobile = i === items.length - 1;
 				return (
 					<Card
 						as="button"
@@ -118,7 +121,10 @@ export function QuickPromptCards({ className }: { className?: string }) {
 						disabled={disabled}
 						data-testid={`chat-quick-${p.key}`}
 						onClick={() => send(p.prompt)}
-						className="group flex flex-row items-center justify-start gap-3 rounded-card border border-border/70 bg-bg/40 px-4 py-3 text-left text-fg/90 transition-colors duration-base hover:bg-accent/10 hover:text-accent disabled:cursor-not-allowed disabled:opacity-50 sm:flex-col sm:items-center sm:justify-center sm:gap-2 sm:px-3 sm:py-4 sm:text-center"
+						className={cn(
+							"group flex flex-col items-center justify-center gap-2 rounded-card border border-border/70 bg-bg/40 px-3 py-4 text-center text-fg/90 transition-colors duration-base hover:bg-accent/10 hover:text-accent disabled:cursor-not-allowed disabled:opacity-50",
+							isLastOnMobile && "col-span-2 sm:col-span-1",
+						)}
 					>
 						<Icon
 							className={cn(
@@ -127,7 +133,7 @@ export function QuickPromptCards({ className }: { className?: string }) {
 							)}
 							aria-hidden="true"
 						/>
-						<span className="text-base font-medium sm:text-sm">{p.label}</span>
+						<span className="text-sm font-medium">{p.label}</span>
 					</Card>
 				);
 			})}
