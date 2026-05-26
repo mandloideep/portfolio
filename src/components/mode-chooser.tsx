@@ -9,19 +9,18 @@ const PREVIEW_MIN_HEIGHT = "min-h-[10rem]";
 
 type ModeChooserProps = {
 	onPick: (m: Mode) => void;
-	/** The mode currently persisted in localStorage, if any. Used to render
-	 * the "switch" toggle at the bottom of the chooser. */
+	/** The mode currently persisted in localStorage, if any. Rendered as a
+	 * three-chip toggle at the bottom; clicking a non-active chip flips it
+	 * and fires `onPick`. */
 	currentMode?: Mode | null;
 };
 
 /**
  * Mode chooser. Pure presentation — wiring (router, localStorage) lives in
- * the route. Two preview cards under a tight identity block. The bottom
- * "remembered" line is a live toggle: if a mode is stored, clicking the
- * `/?choose=1` chip flips it and fires `onPick`.
+ * the route. Three preview cards under a tight identity block, plus a
+ * three-chip "remembered" toggle that swaps the active surface.
  */
 export function ModeChooser({ onPick, currentMode }: ModeChooserProps) {
-	const opposite: Mode = currentMode === "terminal" ? "ui" : "terminal";
 	return (
 		<main
 			data-page="chooser"
@@ -45,7 +44,7 @@ export function ModeChooser({ onPick, currentMode }: ModeChooserProps) {
 				<p className="text-md text-fg/85">{siteMeta.role}</p>
 			</div>
 
-			<div className="grid w-full max-w-4xl gap-4 sm:grid-cols-2">
+			<div className="grid w-full max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				<ChoiceCard
 					testId="pick-ui"
 					onPick={() => onPick("ui")}
@@ -53,6 +52,14 @@ export function ModeChooser({ onPick, currentMode }: ModeChooserProps) {
 					title="Browse the portfolio"
 					description="profile card, projects, experience, research, contact — terminal-themed pages with the full bento spread."
 					preview={<PortfolioPreview />}
+				/>
+				<ChoiceCard
+					testId="pick-chat"
+					onPick={() => onPick("chat")}
+					tag="/chat"
+					title="Chat with the agent"
+					description="ask anything in natural language — six quick prompts, streaming answers, same model + quota as the terminal."
+					preview={<ChatPreview />}
 				/>
 				<ChoiceCard
 					testId="pick-terminal"
@@ -64,41 +71,72 @@ export function ModeChooser({ onPick, currentMode }: ModeChooserProps) {
 				/>
 			</div>
 
-			<p
-				data-testid="chooser-toggle-line"
-				className="flex flex-wrap items-center justify-center gap-x-2 font-mono text-meta uppercase tracking-tab text-muted"
-			>
-				{currentMode ? (
-					<>
-						<span>remembered:</span>
-						<code className="rounded-chip border border-border/70 bg-bg-elev/60 px-1.5 py-0.5 normal-case tracking-normal text-fg/90">
-							{currentMode === "terminal" ? "/terminal" : "/portfolio"}
-						</code>
-						<span aria-hidden="true">·</span>
-						<button
-							type="button"
-							data-testid="chooser-toggle"
-							onClick={() => onPick(opposite)}
-							className="inline-flex items-center gap-1.5 rounded-chip border border-border/70 bg-bg-elev/60 px-2 py-0.5 normal-case tracking-normal text-link transition-colors duration-base hover:border-accent/60 hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:border-accent/70 focus-visible:bg-accent/10 focus-visible:text-accent"
-						>
-							<span>/?choose=1</span>
-							<span aria-hidden="true">
-								→ {opposite === "terminal" ? "/terminal" : "/portfolio"}
-							</span>
-						</button>
-					</>
-				) : (
-					<>
-						<span>your choice is remembered. visit</span>
-						<code className="normal-case tracking-normal text-link">
-							/?choose=1
-						</code>
-						<span>to switch.</span>
-					</>
-				)}
-			</p>
+			<ChooserToggle currentMode={currentMode} onPick={onPick} />
 		</main>
 	);
+}
+
+type ChooserToggleProps = {
+	currentMode?: Mode | null;
+	onPick: (m: Mode) => void;
+};
+
+const TOGGLE_CHIPS: ReadonlyArray<{ mode: Mode; label: string }> = [
+	{ mode: "ui", label: "/portfolio" },
+	{ mode: "chat", label: "/chat" },
+	{ mode: "terminal", label: "/terminal" },
+];
+
+function ChooserToggle({ currentMode, onPick }: ChooserToggleProps) {
+	return (
+		<p
+			data-testid="chooser-toggle-line"
+			className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono text-meta uppercase tracking-tab text-muted"
+		>
+			{currentMode ? (
+				<>
+					<span>remembered:</span>
+					<code className="rounded-chip border border-border/70 bg-bg-elev/60 px-1.5 py-0.5 normal-case tracking-normal text-fg/90">
+						{toggleLabelFor(currentMode)}
+					</code>
+					<span aria-hidden="true">·</span>
+					<span>switch:</span>
+					<span className="flex items-center gap-1">
+						{TOGGLE_CHIPS.filter((c) => c.mode !== currentMode).map((c) => (
+							<button
+								key={c.mode}
+								type="button"
+								data-testid={`chooser-toggle-${c.mode}`}
+								onClick={() => onPick(c.mode)}
+								className="inline-flex items-center rounded-chip border border-border/70 bg-bg-elev/60 px-2 py-0.5 normal-case tracking-normal text-link transition-colors duration-base hover:border-accent/60 hover:bg-accent/10 hover:text-accent focus-visible:border-accent/70 focus-visible:bg-accent/10 focus-visible:text-accent focus-visible:outline-none"
+							>
+								{c.label}
+							</button>
+						))}
+					</span>
+				</>
+			) : (
+				<>
+					<span>your choice is remembered. visit</span>
+					<code className="normal-case tracking-normal text-link">
+						/?choose=1
+					</code>
+					<span>to switch.</span>
+				</>
+			)}
+		</p>
+	);
+}
+
+function toggleLabelFor(mode: Mode): string {
+	switch (mode) {
+		case "ui":
+			return "/portfolio";
+		case "chat":
+			return "/chat";
+		case "terminal":
+			return "/terminal";
+	}
 }
 
 type ChoiceCardProps = {
@@ -211,6 +249,41 @@ function PortfolioPreview() {
 				<div className="h-6 rounded-chip border border-border/70 bg-bg-elev" />
 				<div className="h-6 rounded-chip border border-accent/60 bg-accent/15" />
 				<div className="h-6 rounded-chip border border-border/70 bg-bg-elev" />
+			</div>
+		</div>
+	);
+}
+
+function ChatPreview() {
+	return (
+		<div className="flex flex-col gap-2 font-mono text-meta leading-snug">
+			<div className="self-start max-w-[80%] rounded-card border border-border/70 bg-bg-elev px-2 py-1 text-fg/85 normal-case tracking-normal">
+				hey deep — what have you been building?
+			</div>
+			<div className="self-end max-w-[80%] rounded-card border border-accent/40 bg-accent/10 px-2 py-1 text-accent normal-case tracking-normal">
+				agent · streaming…
+				<span className="caret-block ml-1" aria-hidden="true" />
+			</div>
+			<div className="flex items-center gap-1 rounded-card border border-border/70 bg-bg-elev px-2 py-1">
+				<span className="flex-1 truncate text-muted normal-case tracking-normal">
+					ask me anything…
+				</span>
+				<span
+					aria-hidden="true"
+					className="inline-flex size-4 items-center justify-center rounded-pill bg-accent text-bg"
+				>
+					↑
+				</span>
+			</div>
+			<div className="flex flex-wrap items-center gap-1">
+				{["me", "projects", "skills"].map((label) => (
+					<span
+						key={label}
+						className="rounded-chip border border-border/70 bg-bg-elev px-1.5 py-px text-muted"
+					>
+						{label}
+					</span>
+				))}
 			</div>
 		</div>
 	);

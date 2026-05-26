@@ -43,8 +43,11 @@ function Home() {
 	}, []);
 
 	useEffect(() => {
-		if (mode === "terminal" && !choose) {
+		if (choose) return;
+		if (mode === "terminal") {
 			navigate({ to: "/terminal" });
+		} else if (mode === "chat") {
+			navigate({ to: "/chat" });
 		}
 	}, [mode, choose, navigate]);
 
@@ -53,6 +56,8 @@ function Home() {
 		setMode(next);
 		if (next === "terminal") {
 			navigate({ to: "/terminal" });
+		} else if (next === "chat") {
+			navigate({ to: "/chat" });
 		} else if (choose === 1) {
 			// We're on `/?choose=1` and the user picked UI. Drop the search
 			// param so `showChooser` flips false and the portfolio renders.

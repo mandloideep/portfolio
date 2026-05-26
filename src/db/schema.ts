@@ -8,12 +8,6 @@ import {
 	timestamp,
 } from "drizzle-orm/pg-core";
 
-export const todos = pgTable("todos", {
-	id: serial().primaryKey(),
-	title: text().notNull(),
-	createdAt: timestamp("created_at").defaultNow(),
-});
-
 // Per-IP rate limiting + abuse metadata. Keyed by hashed IP so we never store
 // raw addresses. `windowStart` rolls forward when the configured window
 // elapses; `count` and `tokenCount` are the running totals inside the window.

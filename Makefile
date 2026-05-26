@@ -99,6 +99,28 @@ db-reset: ## Drop the db volume and re-init (DESTRUCTIVE)
 	docker volume rm portfolio_portfolio-db-data 2>/dev/null || true
 	$(COMPOSE) up -d $(DB_SERVICE)
 
+.PHONY: db-bootstrap
+db-bootstrap: ## Bring the stack up and apply pending migrations (idempotent — safe after `make nuke`)
+	$(COMPOSE) up -d
+	@printf "waiting for db"
+	@until $(COMPOSE) exec -T $(DB_SERVICE) pg_isready -U $(DB_USER) -d $(DB_NAME) >/dev/null 2>&1; do printf "."; sleep 0.5; done
+	@echo " · ready"
+	$(COMPOSE) exec -T $(APP_SERVICE) $(PNPM) db:migrate
+	@echo "✓ stack ready · http://localhost:3000"
+
+# ─── Status ──────────────────────────────────────────────────────────────
+
+.PHONY: status
+status: ## One-shot stack health: containers, db tables, app response
+	@echo "── containers ─────────────────────────────────"
+	@$(COMPOSE) ps
+	@echo
+	@echo "── db tables ──────────────────────────────────"
+	@$(COMPOSE) exec -T $(DB_SERVICE) psql -U $(DB_USER) -d $(DB_NAME) -c "\dt" 2>/dev/null || echo "db not reachable"
+	@echo "── app ────────────────────────────────────────"
+	@curl -sf -o /dev/null -w "GET /        → HTTP %{http_code} in %{time_total}s\n" http://localhost:3000/ 2>/dev/null || echo "GET /        → app not reachable"
+	@curl -sf -o /dev/null -w "GET /chat    → HTTP %{http_code} in %{time_total}s\n" http://localhost:3000/chat 2>/dev/null || echo "GET /chat    → app not reachable"
+
 # ─── Code quality ────────────────────────────────────────────────────────
 
 .PHONY: install
