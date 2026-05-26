@@ -17,6 +17,7 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiGithubGraphRouteImport } from './routes/api.github-graph'
 import { Route as ApiAgentRouteImport } from './routes/api.agent'
+import { Route as ApiAgentQuotaRouteImport } from './routes/api.agent.quota'
 
 const TerminalRoute = TerminalRouteImport.update({
   id: '/terminal',
@@ -58,6 +59,11 @@ const ApiAgentRoute = ApiAgentRouteImport.update({
   path: '/api/agent',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentQuotaRoute = ApiAgentQuotaRouteImport.update({
+  id: '/quota',
+  path: '/quota',
+  getParentRoute: () => ApiAgentRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -66,8 +72,9 @@ export interface FileRoutesByFullPath {
   '/projects': typeof ProjectsRoute
   '/research': typeof ResearchRoute
   '/terminal': typeof TerminalRoute
-  '/api/agent': typeof ApiAgentRoute
+  '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/github-graph': typeof ApiGithubGraphRoute
+  '/api/agent/quota': typeof ApiAgentQuotaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -76,8 +83,9 @@ export interface FileRoutesByTo {
   '/projects': typeof ProjectsRoute
   '/research': typeof ResearchRoute
   '/terminal': typeof TerminalRoute
-  '/api/agent': typeof ApiAgentRoute
+  '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/github-graph': typeof ApiGithubGraphRoute
+  '/api/agent/quota': typeof ApiAgentQuotaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -87,8 +95,9 @@ export interface FileRoutesById {
   '/projects': typeof ProjectsRoute
   '/research': typeof ResearchRoute
   '/terminal': typeof TerminalRoute
-  '/api/agent': typeof ApiAgentRoute
+  '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/github-graph': typeof ApiGithubGraphRoute
+  '/api/agent/quota': typeof ApiAgentQuotaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
     | '/terminal'
     | '/api/agent'
     | '/api/github-graph'
+    | '/api/agent/quota'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
     | '/terminal'
     | '/api/agent'
     | '/api/github-graph'
+    | '/api/agent/quota'
   id:
     | '__root__'
     | '/'
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '/terminal'
     | '/api/agent'
     | '/api/github-graph'
+    | '/api/agent/quota'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -130,7 +142,7 @@ export interface RootRouteChildren {
   ProjectsRoute: typeof ProjectsRoute
   ResearchRoute: typeof ResearchRoute
   TerminalRoute: typeof TerminalRoute
-  ApiAgentRoute: typeof ApiAgentRoute
+  ApiAgentRoute: typeof ApiAgentRouteWithChildren
   ApiGithubGraphRoute: typeof ApiGithubGraphRoute
 }
 
@@ -192,8 +204,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/quota': {
+      id: '/api/agent/quota'
+      path: '/quota'
+      fullPath: '/api/agent/quota'
+      preLoaderRoute: typeof ApiAgentQuotaRouteImport
+      parentRoute: typeof ApiAgentRoute
+    }
   }
 }
+
+interface ApiAgentRouteChildren {
+  ApiAgentQuotaRoute: typeof ApiAgentQuotaRoute
+}
+
+const ApiAgentRouteChildren: ApiAgentRouteChildren = {
+  ApiAgentQuotaRoute: ApiAgentQuotaRoute,
+}
+
+const ApiAgentRouteWithChildren = ApiAgentRoute._addFileChildren(
+  ApiAgentRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -202,7 +233,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectsRoute: ProjectsRoute,
   ResearchRoute: ResearchRoute,
   TerminalRoute: TerminalRoute,
-  ApiAgentRoute: ApiAgentRoute,
+  ApiAgentRoute: ApiAgentRouteWithChildren,
   ApiGithubGraphRoute: ApiGithubGraphRoute,
 }
 export const routeTree = rootRouteImport

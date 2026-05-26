@@ -1,6 +1,8 @@
 import { useStore } from "@tanstack/react-store";
+import { useEffect } from "react";
 import { themes } from "#/content/themes";
 import { modelStore } from "#/store/model";
+import { quotaStore, setQuota } from "#/store/quota";
 import { terminalStore } from "#/store/terminal";
 import { themeStore } from "#/store/theme";
 
@@ -17,8 +19,42 @@ export function StatusFooter() {
 	const themeSlug = useStore(themeStore, (s) => s.slug);
 	const mode = useStore(terminalStore, (s) => s.mode);
 	const activeModel = useStore(modelStore, (s) => s.activeModel);
+	const remaining = useStore(quotaStore, (s) => s.remaining);
+	const limit = useStore(quotaStore, (s) => s.limit);
 	const themeName = themes.find((t) => t.slug === themeSlug)?.name ?? themeSlug;
 	const modelLabel = shortModelName(activeModel);
+
+	useEffect(() => {
+		let cancelled = false;
+		fetch("/api/agent/quota", { cache: "no-store" })
+			.then((r) => (r.ok ? r.json() : null))
+			.then(
+				(
+					data: {
+						remaining?: number;
+						limit?: number;
+						resetsAt?: string;
+					} | null,
+				) => {
+					if (cancelled || !data) return;
+					if (typeof data.remaining !== "number") return;
+					const next: Partial<{
+						remaining: number;
+						limit: number;
+						resetsAt: string | null;
+					}> = {
+						remaining: data.remaining,
+						resetsAt: data.resetsAt ?? null,
+					};
+					if (typeof data.limit === "number") next.limit = data.limit;
+					setQuota(next);
+				},
+			)
+			.catch(() => {});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	return (
 		<div
@@ -44,6 +80,29 @@ export function StatusFooter() {
 				<span className="truncate" data-testid="status-model">
 					<span className="text-muted/70">model/</span>
 					<span className="text-fg/90">{modelLabel}</span>
+				</span>
+				<span className="select-none text-muted/40" aria-hidden="true">
+					|
+				</span>
+				<span
+					className="truncate"
+					data-testid="status-quota"
+					title="messages remaining in your daily quota"
+				>
+					<span className="text-muted/70">msgs/</span>
+					<span
+						className={
+							remaining === null
+								? "text-fg/60"
+								: remaining === 0
+									? "text-error"
+									: remaining <= 1
+										? "text-accent-alt"
+										: "text-fg/90"
+						}
+					>
+						{remaining === null ? `?/${limit}` : `${remaining}/${limit}`}
+					</span>
 				</span>
 			</div>
 		</div>

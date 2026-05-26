@@ -126,6 +126,8 @@ export type StreamArgs = {
 	signal?: AbortSignal;
 	referer?: string;
 	title?: string;
+	maxTokens?: number;
+	temperature?: number;
 };
 
 /**
@@ -157,6 +159,12 @@ export async function* streamLlm(
 			model: args.model,
 			stream: true,
 			messages: args.messages,
+			...(typeof args.maxTokens === "number"
+				? { max_tokens: args.maxTokens }
+				: {}),
+			...(typeof args.temperature === "number"
+				? { temperature: args.temperature }
+				: {}),
 		}),
 	});
 
@@ -172,6 +180,52 @@ export async function* streamLlm(
 
 /** Legacy alias preserved for tests and the `api.agent.ts` import. */
 export const streamOpenRouter = streamLlm;
+
+/**
+ * Non-streaming chat completion. Used by the lightweight on-topic classifier
+ * where we only need a single SAFE/UNSAFE token and don't care about
+ * incremental output. Returns the concatenated assistant text.
+ */
+export async function completeLlm(args: StreamArgs): Promise<string> {
+	const provider = args.provider ?? "openrouter";
+	const endpoint = ENDPOINTS[provider];
+	const headers: Record<string, string> = {
+		Authorization: `Bearer ${args.apiKey}`,
+		"Content-Type": "application/json",
+	};
+	if (provider === "openrouter") {
+		if (args.referer) headers["HTTP-Referer"] = args.referer;
+		if (args.title) headers["X-Title"] = args.title;
+	}
+
+	const res = await fetch(endpoint, {
+		method: "POST",
+		signal: args.signal,
+		headers,
+		body: JSON.stringify({
+			model: args.model,
+			stream: false,
+			messages: args.messages,
+			...(typeof args.maxTokens === "number"
+				? { max_tokens: args.maxTokens }
+				: {}),
+			...(typeof args.temperature === "number"
+				? { temperature: args.temperature }
+				: {}),
+		}),
+	});
+
+	if (!res.ok) {
+		const detail = await safeText(res);
+		throw new Error(
+			`${provider} responded ${res.status}${detail ? `: ${detail.slice(0, 200)}` : ""}`,
+		);
+	}
+	const json = (await res.json()) as {
+		choices?: Array<{ message?: { content?: string } }>;
+	};
+	return json.choices?.[0]?.message?.content?.trim() ?? "";
+}
 
 async function safeText(res: Response): Promise<string> {
 	try {

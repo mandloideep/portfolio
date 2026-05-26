@@ -3,9 +3,11 @@ import {
 	type KeyboardEvent,
 	useCallback,
 	useEffect,
+	useMemo,
 	useRef,
 	useState,
 } from "react";
+import { wordCount } from "#/lib/prompt-guards";
 import { autocomplete } from "#/lib/terminal/commands";
 import { abortTour, isTourRunning } from "#/lib/terminal/tour";
 import {
@@ -17,6 +19,10 @@ import {
 } from "#/store/terminal";
 import { abortAgentStream, isAgentStreaming } from "./use-agent-stream";
 import { useSubmit } from "./use-submit";
+
+// Mirror of the server-side `WORD_CAP`. Kept in sync intentionally — this is
+// a UX hint; the server is authoritative.
+const WORD_CAP = 30;
 
 type Props = {
 	onOpenPalette: () => void;
@@ -102,6 +108,15 @@ export function Prompt({ onOpenPalette }: Props) {
 
 	async function handleSubmit() {
 		const raw = value;
+		// Only enforce the word cap in agent mode — shell commands ("/me",
+		// "/projects ...") happily ignore it.
+		if (mode === "agent" && wordCount(raw) > WORD_CAP) {
+			emit(
+				"error",
+				`prompts are capped at ${WORD_CAP} words. shorten the question and try again.`,
+			);
+			return;
+		}
 		setValue("");
 		setHistoryCursor(null);
 		await submit(raw);
@@ -196,6 +211,14 @@ export function Prompt({ onOpenPalette }: Props) {
 			s.blocks.some((b) => b.kind === "activity"),
 		) && value.length === 0;
 	const symbol = mode === "shell" ? "$" : "❯";
+	const words = useMemo(() => wordCount(value), [value]);
+	const showCounter = mode === "agent" && value.length > 0;
+	const overflow = words > WORD_CAP;
+	const counterClass = overflow
+		? "text-error"
+		: words >= WORD_CAP - 5
+			? "text-accent-alt"
+			: "text-muted/70";
 
 	return (
 		<form
@@ -205,12 +228,12 @@ export function Prompt({ onOpenPalette }: Props) {
 				e.preventDefault();
 				void handleSubmit();
 			}}
-			className="flex items-start gap-2.5 border-t border-border bg-bg-elev/60 px-5 py-3.5 font-mono text-base transition-colors duration-base focus-within:bg-bg-elev/80"
+			className="flex items-baseline gap-2.5 border-t border-border bg-bg-elev/60 px-5 py-3.5 font-mono text-base transition-colors duration-base focus-within:bg-bg-elev/80"
 		>
 			<label htmlFor="terminal-prompt" className="sr-only">
 				Terminal prompt
 			</label>
-			<span className="flex shrink-0 items-center gap-2 pt-[3px] font-semibold select-none">
+			<span className="flex shrink-0 items-center gap-2 font-semibold select-none">
 				<span className="status-dot" aria-hidden="true" />
 				<span>
 					<span className="text-prompt-user">deep</span>
@@ -232,8 +255,28 @@ export function Prompt({ onOpenPalette }: Props) {
 				autoCapitalize="off"
 				spellCheck={false}
 				aria-busy={streaming}
+				aria-invalid={overflow || undefined}
 				className="flex-1 resize-none bg-transparent font-mono text-fg caret-accent outline-none placeholder:text-muted/70"
 				placeholder="type /help"
+			/>
+			{showCounter ? (
+				<span
+					data-testid="word-counter"
+					aria-live="polite"
+					className={`shrink-0 self-end pb-1 font-mono text-meta uppercase tracking-tab [font-variant-numeric:tabular-nums] ${counterClass}`}
+				>
+					{words}/{WORD_CAP}
+				</span>
+			) : null}
+			{/* Honeypot — invisible, never auto-filled by humans. */}
+			<input
+				type="text"
+				name="_hp"
+				tabIndex={-1}
+				autoComplete="off"
+				aria-hidden="true"
+				className="sr-only"
+				defaultValue=""
 			/>
 		</form>
 	);

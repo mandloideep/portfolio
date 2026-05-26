@@ -10,6 +10,8 @@ type ChromeProps = {
 	 * window navigates to the agent shell.
 	 */
 	closeTo?: string;
+	/** Optional search params to pass on close (e.g. `{ choose: 1 }`). */
+	closeSearch?: Record<string, unknown>;
 	/** Right-side slot for controls (theme switcher, density, etc.). */
 	controls?: ReactNode;
 };
@@ -21,6 +23,7 @@ type ChromeProps = {
 export function Chrome({
 	title = "~ — agent",
 	closeTo,
+	closeSearch,
 	controls,
 }: ChromeProps) {
 	const { cols, rows } = useViewportCells();
@@ -36,6 +39,7 @@ export function Chrome({
 				{closeTo ? (
 					<Link
 						to={closeTo}
+						search={closeSearch as never}
 						aria-label="Close — go to terminal"
 						data-testid="chrome-close"
 						className={`${dotBase} bg-error/85 ring-error/30 hover:scale-110 focus-visible:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}

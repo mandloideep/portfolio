@@ -56,8 +56,11 @@ function Home() {
 		}
 	}
 
-	const showChooser =
-		!hydrated || choose === 1 || mode === null || mode === "terminal";
+	// Stay on the chooser until: hydration done AND user has a mode AND they
+	// didn't explicitly opt back in via `?choose=1`. The redirect effect above
+	// handles the "mode === terminal" case before render, so the chooser
+	// doesn't need to flash for terminal-preferring users.
+	const showChooser = !hydrated || choose === 1 || mode === null;
 
 	return (
 		<>

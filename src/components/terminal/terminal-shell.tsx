@@ -7,6 +7,7 @@ import { MobileQuickChips } from "#/components/terminal/mobile-quick-chips";
 import { Prompt } from "#/components/terminal/prompt";
 import { Scrollback } from "#/components/terminal/scrollback";
 import { StatusFooter } from "#/components/terminal/status-footer";
+import { ThemeMenu } from "#/components/terminal/theme-menu";
 import { RuleAccent } from "#/components/ui/rule-accent";
 
 export function TerminalShell() {
@@ -36,7 +37,12 @@ export function TerminalShell() {
 			/>
 
 			<div className="relative z-overlay mx-auto w-full max-w-[min(82rem,90vw)] overflow-hidden rounded-card border border-border/80 bg-bg-elev shadow-frame">
-				<Chrome title="~ — agent" closeTo="/" />
+				<Chrome
+					title="~ — agent"
+					closeTo="/"
+					closeSearch={{ choose: 1 }}
+					controls={<ThemeMenu />}
+				/>
 				<RuleAccent />
 				<Scrollback />
 				<MobileQuickChips />

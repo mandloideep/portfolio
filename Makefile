@@ -140,6 +140,18 @@ env: ## Copy .env.example → .env.development if it doesn't exist
 bootstrap: env up ## env + up — first-run convenience
 	@echo "→ stack starting; once healthy, run 'make db-push' to apply the schema."
 
+.PHONY: doctor
+doctor: ## Sanity-check the active LLM provider key inside the container
+	@$(COMPOSE) exec $(APP_SERVICE) node -e '\
+		const p = (process.env.LLM_PROVIDER || "openrouter").trim(); \
+		const vp = (process.env.VITE_LLM_PROVIDER || "openrouter").trim(); \
+		const need = p === "gemini" ? "GEMINI_API_KEY" : "OPENROUTER_API_KEY"; \
+		const v = (process.env[need] || "").trim(); \
+		if (p !== vp) { console.error("✗ LLM_PROVIDER (" + p + ") != VITE_LLM_PROVIDER (" + vp + "). The terminal model list will be wrong."); process.exit(1); } \
+		if (!v) { console.error("✗ LLM_PROVIDER=" + p + " but " + need + " is empty. Set it in .env.development and run \"make restart\"."); process.exit(1); } \
+		console.log("✓ " + p + " provider configured (" + need + " set, " + v.length + " chars)."); \
+		console.log("  Note: editing .env.development requires \"make restart\" — docker only reads env_file at container start.");'
+
 # ─── Help ────────────────────────────────────────────────────────────────
 
 .PHONY: help

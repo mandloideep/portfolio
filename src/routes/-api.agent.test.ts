@@ -9,6 +9,17 @@ vi.mock("#/lib/env", () => ({
 		OPENROUTER_DEFAULT_MODEL: "google/gemini-2.5-flash-lite",
 		GITHUB_TOKEN: "test-token",
 		GITHUB_USERNAME: "deep",
+		RATE_LIMIT_SALT: "test-salt",
+		RATE_LIMIT_MAX: 5,
+		RATE_LIMIT_WINDOW_MS: 86_400_000,
+		DAILY_TOKEN_BUDGET: 200_000,
+		PER_IP_TOKEN_BUDGET: 20_000,
+		BLOCK_VPN: false,
+		WORD_CAP: 30,
+		CLASSIFIER_ENABLED: false,
+		MAX_OUTPUT_TOKENS: 400,
+		MIN_REQUEST_INTERVAL_MS: 0,
+		REQUEST_TIMEOUT_MS: 20_000,
 	}),
 	getLlmConfig: () => ({
 		provider: "openrouter",
@@ -16,6 +27,30 @@ vi.mock("#/lib/env", () => ({
 		defaultModel: "google/gemini-2.5-flash-lite",
 	}),
 	_resetEnvCacheForTests: () => {},
+}));
+
+// Storage-touching modules: stub them with no-op happy-path returns so the
+// route's happy path stays testable without a live Postgres.
+vi.mock("#/lib/rate-limit", () => ({
+	getClientIp: () => "1.2.3.4",
+	hashIp: (ip: string) => `hash:${ip}`,
+	checkRateLimit: vi.fn(async () => ({
+		allowed: true,
+		remaining: 4,
+		resetsAt: new Date(Date.now() + 86_400_000),
+	})),
+	readQuota: vi.fn(async () => ({
+		remaining: 5,
+		resetsAt: new Date(Date.now() + 86_400_000),
+	})),
+	addUsage: vi.fn(async () => {}),
+	isDailyBudgetExhausted: vi.fn(async () => false),
+}));
+vi.mock("#/lib/ipinfo", () => ({
+	lookupIp: vi.fn(async () => ({ blocked: false })),
+}));
+vi.mock("#/lib/classifier", () => ({
+	classifyPrompt: vi.fn(async () => "SAFE"),
 }));
 
 import { handleAgentRequest } from "./api.agent";
@@ -74,10 +109,19 @@ async function readSseEvents(
 	return events;
 }
 
-function postRequest(body: unknown): Request {
+function postRequest(
+	body: unknown,
+	extraHeaders: Record<string, string> = {},
+): Request {
 	return new Request("http://test/api/agent", {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
+		headers: {
+			"Content-Type": "application/json",
+			// Pass a real-browser UA so the guard doesn't reject every request.
+			"User-Agent":
+				"Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+			...extraHeaders,
+		},
 		body: JSON.stringify(body),
 	});
 }
@@ -124,8 +168,10 @@ describe("handleAgentRequest", () => {
 
 		const events = await readSseEvents(res);
 		const types = events.map((e) => e.event);
-		expect(types[0]).toBe("activity"); // reading
-		expect(types[1]).toBe("activity"); // calling
+		expect(types[0]).toBe("quota");
+		const activities = events.filter((e) => e.event === "activity");
+		expect((activities[0]?.data as { step?: string })?.step).toBe("reading");
+		expect((activities[1]?.data as { step?: string })?.step).toBe("calling");
 		expect(types).toContain("token");
 		expect(types[types.length - 1]).toBe("done");
 		const tokens = events.filter((e) => e.event === "token").map((e) => e.data);
@@ -207,6 +253,59 @@ describe("handleAgentRequest", () => {
 		expect(reading).toBeDefined();
 		const files = (reading?.data as { files: string[] }).files;
 		expect(files.some((f) => f.startsWith("projects/"))).toBe(true);
+	});
+
+	it("emits rate_limited when checkRateLimit returns allowed=false", async () => {
+		const { checkRateLimit } = await import("#/lib/rate-limit");
+		(
+			checkRateLimit as unknown as ReturnType<typeof vi.fn>
+		).mockResolvedValueOnce({
+			allowed: false,
+			remaining: 0,
+			resetsAt: new Date(Date.now() + 1_000_000),
+			blockedReason: "limit_reached",
+		});
+		const res = await handleAgentRequest(postRequest({ message: "hi" }));
+		expect(res.status).toBe(200);
+		const events = await readSseEvents(res);
+		expect(events.some((e) => e.event === "rate_limited")).toBe(true);
+	});
+
+	it("rejects requests with a non-browser User-Agent", async () => {
+		const res = await handleAgentRequest(
+			postRequest({ message: "hi" }, { "User-Agent": "curl/8.4.0" }),
+		);
+		const events = await readSseEvents(res);
+		expect(events.some((e) => e.event === "error")).toBe(true);
+	});
+
+	it("rejects prompts longer than the word cap", async () => {
+		const long = Array.from({ length: 40 }, (_, i) => `word${i}`).join(" ");
+		const res = await handleAgentRequest(postRequest({ message: long }));
+		const events = await readSseEvents(res);
+		const err = events.find((e) => e.event === "error");
+		expect(err).toBeDefined();
+		expect((err?.data as { message?: string })?.message).toBe(
+			"prompt_too_long",
+		);
+	});
+
+	it("rejects prompts containing PII patterns", async () => {
+		const res = await handleAgentRequest(
+			postRequest({ message: "is 123-45-6789 valid?" }),
+		);
+		const events = await readSseEvents(res);
+		const err = events.find((e) => e.event === "error");
+		expect(err).toBeDefined();
+		expect((err?.data as { message?: string })?.message).toBe("rejected");
+	});
+
+	it("rejects requests with the honeypot field set", async () => {
+		const res = await handleAgentRequest(
+			postRequest({ message: "hi", _hp: "i am a bot" }),
+		);
+		const events = await readSseEvents(res);
+		expect(events.some((e) => e.event === "error")).toBe(true);
 	});
 
 	it("threads history into the OpenRouter messages array", async () => {

@@ -21,19 +21,59 @@ import {
  *   • `*_DEFAULT_MODEL` overrides the provider's first-in-list default.
  */
 
+// `.env` templates ship every key as `KEY=` (empty string). Treat blanks as
+// absent so an unused provider's key doesn't trip `.min(1)` on the wrong
+// side of the provider switch.
+const optionalString = z.preprocess(
+	(v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+	z.string().min(1).optional(),
+);
+
 const ServerEnvSchema = z
 	.object({
 		LLM_PROVIDER: z.enum(["openrouter", "gemini"]).default("openrouter"),
 
-		OPENROUTER_API_KEY: z.string().min(1).optional(),
-		OPENROUTER_DEFAULT_MODEL: z.string().min(1).optional(),
+		OPENROUTER_API_KEY: optionalString,
+		OPENROUTER_DEFAULT_MODEL: optionalString,
 
-		GEMINI_API_KEY: z.string().min(1).optional(),
-		GEMINI_DEFAULT_MODEL: z.string().min(1).optional(),
+		GEMINI_API_KEY: optionalString,
+		GEMINI_DEFAULT_MODEL: optionalString,
 
 		GITHUB_TOKEN: z.string().min(1, "GITHUB_TOKEN is required"),
 		GITHUB_USERNAME: z.string().min(1, "GITHUB_USERNAME is required"),
-		IPINFO_TOKEN: z.string().optional(),
+		IPINFO_TOKEN: optionalString,
+
+		// Rate limiting + abuse defenses.
+		RATE_LIMIT_SALT: optionalString,
+		RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+		RATE_LIMIT_WINDOW_MS: z.coerce
+			.number()
+			.int()
+			.positive()
+			.default(24 * 60 * 60 * 1000),
+		DAILY_TOKEN_BUDGET: z.coerce.number().int().positive().default(200_000),
+		PER_IP_TOKEN_BUDGET: z.coerce.number().int().positive().default(20_000),
+		BLOCK_VPN: z
+			.preprocess(
+				(v) => (typeof v === "string" ? v.toLowerCase() : v),
+				z.enum(["true", "false"]).default("true"),
+			)
+			.transform((v) => v === "true"),
+		WORD_CAP: z.coerce.number().int().positive().default(30),
+		CLASSIFIER_ENABLED: z
+			.preprocess(
+				(v) => (typeof v === "string" ? v.toLowerCase() : v),
+				z.enum(["true", "false"]).default("true"),
+			)
+			.transform((v) => v === "true"),
+		CLASSIFIER_MODEL: optionalString,
+		MAX_OUTPUT_TOKENS: z.coerce.number().int().positive().default(400),
+		MIN_REQUEST_INTERVAL_MS: z.coerce
+			.number()
+			.int()
+			.nonnegative()
+			.default(2000),
+		REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(20_000),
 	})
 	.superRefine((env, ctx) => {
 		if (env.LLM_PROVIDER === "openrouter" && !env.OPENROUTER_API_KEY) {

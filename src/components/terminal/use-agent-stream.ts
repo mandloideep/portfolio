@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { makeBlock } from "#/lib/terminal/blocks";
 import { modelStore } from "#/store/model";
+import { setQuota } from "#/store/quota";
 import {
 	appendBlock,
 	emit,
@@ -138,11 +139,35 @@ async function consumeStream(
 					if (typeof tokens === "number" && tokens > 0) {
 						emit("system", `(${tokens} tokens)`);
 					}
+				} else if (event === "quota") {
+					const q = data as
+						| { remaining?: number; resetsAt?: string }
+						| undefined;
+					if (q && typeof q.remaining === "number") {
+						setQuota({
+							remaining: q.remaining,
+							resetsAt: q.resetsAt ?? null,
+						});
+					}
+				} else if (event === "rate_limited") {
+					const q = data as
+						| {
+								remaining?: number;
+								resetsAt?: string;
+								reason?: string;
+						  }
+						| undefined;
+					setQuota({
+						remaining: 0,
+						resetsAt: q?.resetsAt ?? null,
+					});
+					emit("error", `agent: ${formatRateLimited(q?.reason, q?.resetsAt)}`);
 				} else if (event === "error") {
-					const message =
-						(data as { message?: string } | undefined)?.message ??
-						"stream_failed";
-					emit("error", `agent: ${message}`);
+					const data2 = data as
+						| { message?: string; cap?: number; reason?: string }
+						| undefined;
+					const message = data2?.message ?? "stream_failed";
+					emit("error", `agent: ${formatError(message, data2)}`);
 				}
 				boundary = buffer.indexOf("\n\n");
 			}
@@ -214,4 +239,53 @@ function isAbortError(err: unknown): boolean {
 
 function errorMessage(err: unknown): string {
 	return err instanceof Error ? err.message : "unknown";
+}
+
+function formatError(
+	code: string,
+	data?: { cap?: number; reason?: string },
+): string {
+	switch (code) {
+		case "prompt_too_long":
+			return `prompts are capped at ${data?.cap ?? 30} words — try a shorter question`;
+		case "off_topic":
+			return "I only chat about Deep's portfolio. try /help or /projects";
+		case "rejected":
+			return data?.reason ? `rejected (${data.reason})` : "rejected";
+		case "agent_unavailable":
+			return "agent is unavailable right now — try the visual portfolio (/ui)";
+		default:
+			return code;
+	}
+}
+
+function formatRateLimited(
+	reason: string | undefined,
+	resetsAt?: string,
+): string {
+	const inText = resetsAt ? ` (resets ${humanizeReset(resetsAt)})` : "";
+	switch (reason) {
+		case "cooldown":
+			return "easy there — wait a moment before sending the next message";
+		case "daily_budget":
+			return `the agent's daily budget is spent for everyone today${inText}. switch to the visual portfolio with /ui`;
+		case "vpn":
+		case "proxy":
+		case "tor":
+		case "hosting":
+			return "the agent is disabled for VPN/datacenter IPs. switch to the visual portfolio with /ui";
+		case "ip_token_budget":
+			return `you've used your token budget for today${inText}. switch to the visual portfolio with /ui`;
+		default:
+			return `you've used your 5 free messages for the day${inText}. the visual portfolio has the same content with no rate limit — try /ui`;
+	}
+}
+
+function humanizeReset(iso: string): string {
+	const ms = new Date(iso).getTime() - Date.now();
+	if (!Number.isFinite(ms) || ms <= 0) return "soon";
+	const hours = Math.floor(ms / 3_600_000);
+	const minutes = Math.floor((ms % 3_600_000) / 60_000);
+	if (hours >= 1) return `in ~${hours}h ${minutes}m`;
+	return `in ~${minutes}m`;
 }
