@@ -7,11 +7,18 @@ import { MobileQuickChips } from "#/components/terminal/mobile-quick-chips";
 import { Prompt } from "#/components/terminal/prompt";
 import { Scrollback } from "#/components/terminal/scrollback";
 import { StatusFooter } from "#/components/terminal/status-footer";
-import { ThemeMenu } from "#/components/terminal/theme-menu";
+import { CommandHint } from "#/components/ui/command-hint";
+import { DensityToggle } from "#/components/ui/density-toggle";
+import { LocalTime } from "#/components/ui/local-time";
 import { RuleAccent } from "#/components/ui/rule-accent";
+import { StatusPill } from "#/components/ui/status-pill";
+import { ThemeSwitcher } from "#/components/ui/theme-switcher";
+import { siteMeta } from "#/content/site";
+import { useDensity } from "#/hooks/use-density";
 
 export function TerminalShell() {
 	const [paletteOpen, setPaletteOpen] = useState(false);
+	useDensity();
 
 	useEffect(() => {
 		function onKey(e: KeyboardEvent) {
@@ -41,9 +48,19 @@ export function TerminalShell() {
 					title="~ — agent"
 					closeTo="/"
 					closeSearch={{ choose: 1 }}
-					controls={<ThemeMenu />}
+					controls={
+						<>
+							<LocalTime className="hidden md:inline-flex" />
+							<CommandHint onOpen={() => setPaletteOpen(true)} />
+							<DensityToggle />
+							<ThemeSwitcher />
+						</>
+					}
 				/>
 				<RuleAccent />
+				<div className="flex items-center gap-2 border-b border-border/60 bg-bg/40 px-5 py-2">
+					<StatusPill status={siteMeta.status} />
+				</div>
 				<Scrollback />
 				<MobileQuickChips />
 				<Prompt onOpenPalette={() => setPaletteOpen(true)} />

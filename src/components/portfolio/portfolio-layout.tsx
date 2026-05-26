@@ -1,12 +1,15 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import { CommandHint } from "#/components/ui/command-hint";
+import { DensityToggle } from "#/components/ui/density-toggle";
+import { LocalTime } from "#/components/ui/local-time";
 import { TerminalFrame } from "#/components/ui/terminal-frame";
+import { ThemeSwitcher } from "#/components/ui/theme-switcher";
 import { siteMeta } from "#/content/site";
 import { useDensity } from "#/hooks/use-density";
-import { DensityToggle } from "./density-toggle";
 import { DesktopTerminalIcon } from "./desktop-terminal-icon";
 import { Footer } from "./footer";
 import { HelloLoader } from "./hello-loader";
-import { ThemeSwitcher } from "./theme-switcher";
+import { PortfolioPalette } from "./portfolio-palette";
 import { type TopTab, TopTabs } from "./top-tabs";
 
 const TABS: readonly TopTab[] = [
@@ -24,6 +27,19 @@ const TABS: readonly TopTab[] = [
  */
 export function PortfolioLayout({ children }: { children: ReactNode }) {
 	useDensity();
+	const [paletteOpen, setPaletteOpen] = useState(false);
+
+	useEffect(() => {
+		function onKey(e: KeyboardEvent) {
+			if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+				e.preventDefault();
+				setPaletteOpen(true);
+			}
+		}
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, []);
+
 	return (
 		<div
 			data-page="portfolio"
@@ -36,6 +52,8 @@ export function PortfolioLayout({ children }: { children: ReactNode }) {
 				closeTo="/terminal"
 				controls={
 					<>
+						<LocalTime className="hidden md:inline-flex" />
+						<CommandHint onOpen={() => setPaletteOpen(true)} />
 						<DensityToggle />
 						<ThemeSwitcher />
 					</>
@@ -51,6 +69,7 @@ export function PortfolioLayout({ children }: { children: ReactNode }) {
 				</main>
 			</TerminalFrame>
 			<DesktopTerminalIcon />
+			<PortfolioPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 		</div>
 	);
 }

@@ -53,6 +53,10 @@ function Home() {
 		setMode(next);
 		if (next === "terminal") {
 			navigate({ to: "/terminal" });
+		} else if (choose === 1) {
+			// We're on `/?choose=1` and the user picked UI. Drop the search
+			// param so `showChooser` flips false and the portfolio renders.
+			navigate({ to: "/", search: {} });
 		}
 	}
 

@@ -1,13 +1,18 @@
 import { Check, Palette } from "lucide-react";
 import { useTheme } from "#/hooks/use-theme";
-import { Button } from "../ui/button";
+import { Button } from "./button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
+} from "./dropdown-menu";
 
+/**
+ * Shared theme picker used by both the portfolio and terminal chromes.
+ * Trigger uses the `Button` ghost primitive; each row pairs a leading
+ * check column with the theme name + vibe description.
+ */
 export function ThemeSwitcher() {
 	const { theme, setTheme, themes } = useTheme();
 	const activeName = themes.find((t) => t.slug === theme)?.name ?? "theme";

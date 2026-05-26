@@ -1,5 +1,6 @@
 import { AnimatedShinyText } from "#/components/ui/animated-shiny-text";
 import { CommandPrompt } from "#/components/ui/command-prompt";
+import { StatusPill } from "#/components/ui/status-pill";
 import { siteMeta } from "#/content/site";
 import { useQuip } from "#/hooks/use-quip";
 import { useReducedMotion } from "#/hooks/use-reduced-motion";
@@ -52,7 +53,10 @@ export function Hero({ className }: { className?: string }) {
 
 	return (
 		<div data-testid="hero" className={cn("flex flex-col gap-5", className)}>
-			<CommandPrompt command="cat whoami" />
+			<div className="flex flex-wrap items-center gap-3">
+				<CommandPrompt command="cat whoami" />
+				<StatusPill status={siteMeta.status} />
+			</div>
 
 			<article className="rounded-card border border-border/80 bg-bg-elev/60 px-7 py-8 sm:px-9 sm:py-9">
 				<header className="flex flex-col gap-2">
