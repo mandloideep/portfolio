@@ -31,7 +31,7 @@ export function ThemeMenu() {
 				align="end"
 				sideOffset={8}
 				data-testid="chrome-theme-menu"
-				className="min-w-[14rem] max-h-[60vh] overflow-y-auto"
+				className="min-w-[16rem] max-h-[60vh] overflow-y-auto rounded-card border border-border bg-bg-elev p-1 text-fg shadow-frame backdrop-blur-none"
 			>
 				{themes.map((t) => {
 					const isActive = t.slug === theme;
@@ -41,28 +41,22 @@ export function ThemeMenu() {
 							data-testid={`chrome-theme-item-${t.slug}`}
 							data-active={isActive || undefined}
 							onSelect={() => setTheme(t.slug)}
-							className="flex items-center justify-between gap-3"
+							className="flex items-center justify-between gap-3 rounded-chip px-2 py-2 text-fg/90 focus:bg-bg/70 focus:text-fg data-[active]:bg-bg/40 data-[active]:text-fg"
 						>
-							<span className="flex items-center gap-2">
+							<span className="flex min-w-0 items-center gap-2">
 								<span
 									aria-hidden="true"
-									className="inline-block size-2.5 rounded-pill border border-border/40"
+									className="inline-block size-2.5 shrink-0 rounded-pill border border-border/40"
 									style={{ background: t.tokens.accent }}
 								/>
-								<span className="font-mono text-sm">{t.name}</span>
+								<span className="truncate font-mono text-sm">{t.name}</span>
 							</span>
-							{isActive ? (
-								<span
-									aria-hidden="true"
-									className="font-mono text-meta uppercase tracking-tab text-muted/70"
-								>
-									active
-								</span>
-							) : (
-								<span className="font-mono text-meta uppercase tracking-tab text-muted/40">
-									{t.vibe}
-								</span>
-							)}
+							<span
+								aria-hidden="true"
+								className="shrink-0 font-mono text-meta uppercase tracking-tab text-muted/60"
+							>
+								{isActive ? "active" : t.slug}
+							</span>
 						</DropdownMenuItem>
 					);
 				})}
