@@ -26,6 +26,15 @@ export type LlmModel = {
 	blurb: string;
 	tier: "free" | "premium";
 	thinking: boolean;
+	/**
+	 * OpenRouter-only: comma-list of additional model ids to fall back to
+	 * when the primary returns an error (notably 429 from the free pool).
+	 * OpenRouter walks the list in order on the same request — billed only
+	 * for whichever model actually served the response. We use this to
+	 * upgrade the free Gemma slug to the paid Cloudflare-backed one when
+	 * the free pool is throttled.
+	 */
+	fallbacks?: readonly string[];
 };
 
 /**
@@ -47,6 +56,11 @@ export const MODELS: readonly LlmModel[] = [
 		blurb: "no reasoning · fastest first token",
 		tier: "free",
 		thinking: false,
+		// Free slug runs only through Google AI Studio upstream; when it
+		// 429s (shared pool), OpenRouter auto-retries the paid slug —
+		// constrained to Cloudflare via the deploy's allowed-providers
+		// guardrails. ~$0.0007 per ~500-token reply.
+		fallbacks: ["google/gemma-4-26b-a4b-it"],
 	},
 	{
 		id: "gemma-4-31b-it",

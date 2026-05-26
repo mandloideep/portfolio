@@ -108,6 +108,15 @@ export type StreamArgs = {
 	title?: string;
 	maxTokens?: number;
 	temperature?: number;
+	/**
+	 * OpenRouter only: additional model ids to fall back to on error. The
+	 * upstream walks `[model, ...fallbackModels]` in order and serves the
+	 * first one that succeeds — billed only for whichever model actually
+	 * responded. Ignored for the gemini provider.
+	 *
+	 * See: https://openrouter.ai/docs (model routing / `models` array).
+	 */
+	fallbackModels?: readonly string[];
 };
 
 /**
@@ -131,6 +140,11 @@ export async function* streamLlm(
 		if (args.title) headers["X-Title"] = args.title;
 	}
 
+	const hasOrFallbacks =
+		provider === "openrouter" &&
+		Array.isArray(args.fallbackModels) &&
+		args.fallbackModels.length > 0;
+
 	const res = await fetch(endpoint, {
 		method: "POST",
 		signal: args.signal,
@@ -139,6 +153,9 @@ export async function* streamLlm(
 			model: args.model,
 			stream: true,
 			messages: args.messages,
+			...(hasOrFallbacks
+				? { models: [args.model, ...(args.fallbackModels ?? [])] }
+				: {}),
 			...(typeof args.maxTokens === "number"
 				? { max_tokens: args.maxTokens }
 				: {}),

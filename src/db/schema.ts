@@ -17,8 +17,13 @@ export const todos = pgTable("todos", {
 // Per-IP rate limiting + abuse metadata. Keyed by hashed IP so we never store
 // raw addresses. `windowStart` rolls forward when the configured window
 // elapses; `count` and `tokenCount` are the running totals inside the window.
-// `premiumCount` is the sub-budget consumed by paid models (e.g. Gemini 2.5
-// Flash Lite) and is gated separately from `count`.
+//
+// Premium models (e.g. Gemini 2.5 Flash Lite) get a *decoupled* rolling
+// window via `premiumWindowStart` — so a visitor's premium quota refreshes
+// 24h after their last premium message, not 24h after their first free
+// message of the day. Without this, a visitor who tests premium then keeps
+// chatting on free models would see their premium quota pinned at 0 until
+// they go silent for a full window.
 export const agentRateLimits = pgTable("agent_rate_limits", {
 	ipHash: text("ip_hash").primaryKey(),
 	count: integer("count").notNull().default(0),
@@ -27,6 +32,9 @@ export const agentRateLimits = pgTable("agent_rate_limits", {
 	windowStart: timestamp("window_start", { withTimezone: true })
 		.notNull()
 		.defaultNow(),
+	premiumWindowStart: timestamp("premium_window_start", {
+		withTimezone: true,
+	}),
 	lastRequestAt: timestamp("last_request_at", { withTimezone: true })
 		.notNull()
 		.defaultNow(),

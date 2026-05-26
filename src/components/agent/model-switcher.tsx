@@ -36,9 +36,10 @@ export function ModelSwitcher({
 	variant?: Variant;
 	className?: string;
 }) {
-	const { meta, actions } = useAgentSession();
+	const { meta, actions, state } = useAgentSession();
 	const quota = useStore(quotaStore);
 	const { availableModels, activeModel } = meta;
+	const modelCounts = state.modelCounts;
 
 	const free = useMemo(
 		() => availableModels.filter((m) => m.tier === "free"),
@@ -90,6 +91,7 @@ export function ModelSwitcher({
 				<DropdownMenuGroup>
 					{free.map((m) => {
 						const active = m.id === activeModel.id;
+						const sent = modelCounts[m.id] ?? 0;
 						return (
 							<DropdownMenuItem
 								key={m.id}
@@ -105,11 +107,18 @@ export function ModelSwitcher({
 										<span className="size-3" aria-hidden="true" />
 									)}
 									<span className="text-fg/90">{m.label}</span>
-									{m.thinking ? (
-										<span className="ml-auto text-accent-alt/80 text-meta">
-											thinking
-										</span>
-									) : null}
+									<span className="ml-auto flex items-center gap-2">
+										{sent > 0 ? (
+											<span className="text-muted/70 normal-case tracking-normal">
+												{sent} sent
+											</span>
+										) : null}
+										{m.thinking ? (
+											<span className="text-accent-alt/80 text-meta">
+												thinking
+											</span>
+										) : null}
+									</span>
 								</span>
 								<span className="pl-5 text-muted/70 normal-case tracking-normal">
 									{m.blurb}
@@ -135,6 +144,7 @@ export function ModelSwitcher({
 							{premium.map((m) => {
 								const active = m.id === activeModel.id;
 								const disabled = premiumExhausted && !active;
+								const sent = modelCounts[m.id] ?? 0;
 								return (
 									<DropdownMenuItem
 										key={m.id}
@@ -152,6 +162,11 @@ export function ModelSwitcher({
 												<span className="size-3" aria-hidden="true" />
 											)}
 											<span className="text-fg/90">{m.label}</span>
+											{sent > 0 ? (
+												<span className="ml-auto text-muted/70 normal-case tracking-normal">
+													{sent} sent
+												</span>
+											) : null}
 										</span>
 										<span className="pl-5 text-muted/70 normal-case tracking-normal">
 											{disabled

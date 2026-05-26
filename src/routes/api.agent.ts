@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { isModelAllowed, isPremiumModel } from "#/lib/agent/models";
+import { getModel, isModelAllowed, isPremiumModel } from "#/lib/agent/models";
 import { classifyPrompt } from "#/lib/classifier";
 import { pickCheckingQuip } from "#/lib/classifier-quips";
 import { assembleContext } from "#/lib/context";
@@ -143,6 +143,7 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 	const chosen = requested && isModelAllowed(requested) ? requested : null;
 	const defaultModelEntry = resolveDefaultModel(env);
 	const model = chosen ?? defaultModelEntry.id;
+	const modelEntry = chosen ? getModel(model) : defaultModelEntry;
 	const cfg = getModelConfig(env, model);
 	if (!cfg) {
 		// Either the model isn't in the catalog or its provider has no key.
@@ -339,6 +340,12 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 					messages,
 					signal: upstreamSignal,
 					maxTokens: env.MAX_OUTPUT_TOKENS,
+					// OpenRouter only — silently upgrade the free Gemma slug
+					// to the paid Cloudflare-backed one when the free pool
+					// 429s. Billed only for whichever model actually served.
+					...(modelEntry?.fallbacks && modelEntry.fallbacks.length > 0
+						? { fallbackModels: modelEntry.fallbacks }
+						: {}),
 				})) {
 					if (ev.type === "thinking") {
 						if (thinkingStartedAt === null) {

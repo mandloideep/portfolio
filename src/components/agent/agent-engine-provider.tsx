@@ -97,6 +97,13 @@ export type AgentSession = {
 			model?: string;
 			files?: string[];
 		} | null;
+		/**
+		 * Per-model message counter for the current page session. Resets on
+		 * reload — this is a UX signal, not a quota source of truth. Useful
+		 * for "you've sent 3 to Gemma fast, 1 to premium" badges in the
+		 * switcher.
+		 */
+		modelCounts: Record<string, number>;
 	};
 	actions: {
 		send: (
@@ -227,12 +234,19 @@ function newTurnId(): string {
 }
 
 function historyFromTurns(turns: AgentTurn[]): AgentHistoryEntry[] {
+	// Walk turn pairs. Skip any user turn that doesn't have a non-empty
+	// assistant turn immediately after it (aborted/failed before
+	// streaming) — back-to-back user turns confuse chat templates and
+	// can make models concatenate inputs in their reasoning.
 	const out: AgentHistoryEntry[] = [];
-	for (const t of turns) {
-		if (t.role === "user" && t.content.length > 0) {
-			out.push({ role: "user", content: t.content });
-		} else if (t.role === "assistant" && t.content.length > 0) {
-			out.push({ role: "assistant", content: t.content });
+	for (let i = 0; i < turns.length; i += 1) {
+		const u = turns[i];
+		if (!u || u.role !== "user" || u.content.length === 0) continue;
+		const a = turns[i + 1];
+		if (a && a.role === "assistant" && a.content.length > 0) {
+			out.push({ role: "user", content: u.content });
+			out.push({ role: "assistant", content: a.content });
+			i += 1;
 		}
 	}
 	return out.slice(-10);
@@ -252,6 +266,7 @@ export function AgentEngineProvider({ children }: { children: ReactNode }) {
 	const [activeTurnId, setActiveTurnId] = useState<string | null>(null);
 	const [abortNonce, setAbortNonce] = useState(0);
 	const [history, setHistory] = useState<AgentTurn[]>([]);
+	const [modelCounts, setModelCounts] = useState<Record<string, number>>({});
 	const [quota, setQuotaState] = useState<AgentSession["state"]["quota"]>(null);
 	const [activity, setActivity] =
 		useState<AgentSession["state"]["activity"]>(null);
@@ -279,6 +294,7 @@ export function AgentEngineProvider({ children }: { children: ReactNode }) {
 		setError(null);
 		setActiveTurnId(null);
 		setActivity(null);
+		setModelCounts({});
 	}, [abort]);
 
 	const setModel = useCallback((id: string): boolean => {
@@ -314,6 +330,10 @@ export function AgentEngineProvider({ children }: { children: ReactNode }) {
 			setStatus("checking");
 			setError(null);
 			setActivity(null);
+			setModelCounts((c) => ({
+				...c,
+				[activeModel.id]: (c[activeModel.id] ?? 0) + 1,
+			}));
 
 			// Reset buffers + currentTurnId synchronously so subscribers
 			// observing the next token notice the turn boundary, even if
@@ -529,6 +549,7 @@ export function AgentEngineProvider({ children }: { children: ReactNode }) {
 				history,
 				quota,
 				activity,
+				modelCounts,
 			},
 			actions: { send, abort, setModel, clear },
 			meta: {
@@ -547,6 +568,7 @@ export function AgentEngineProvider({ children }: { children: ReactNode }) {
 			history,
 			quota,
 			activity,
+			modelCounts,
 			send,
 			abort,
 			setModel,

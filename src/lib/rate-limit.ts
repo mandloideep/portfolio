@@ -105,11 +105,22 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 			? freeIpLimit
 			: Number.POSITIVE_INFINITY;
 	const unlimited = !enforceCount;
-	const computeRemaining = (count: number): number | null => {
+	const computeRemaining = (used: number): number | null => {
 		if (unlimited) return null;
-		return Math.max(0, limit - count);
+		return Math.max(0, limit - used);
 	};
 	const now = new Date();
+	/**
+	 * Premium has an independent rolling window anchored on the visitor's
+	 * *first premium message in the current window*. Without this, premium
+	 * stays exhausted long after the visitor stops using it — because the
+	 * row's general `windowStart` keeps getting anchored by free-model
+	 * traffic that never touches `premiumCount`.
+	 */
+	const premiumWindowExpired = (start: Date | null | undefined): boolean => {
+		if (!start) return true;
+		return now.getTime() - new Date(start).getTime() >= windowMs;
+	};
 
 	// Read existing row first so we know whether to run the privacy lookup.
 	const existing = await db
@@ -168,6 +179,7 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 			premiumCount: isPremium ? 1 : 0,
 			tokenCount: 0,
 			windowStart: now,
+			premiumWindowStart: isPremium ? now : null,
 			lastRequestAt: now,
 			firstSeenCountry: privacy?.country,
 			firstSeenAsn: privacy?.asn,
@@ -182,7 +194,7 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 		};
 	}
 
-	// Window roll.
+	// Window roll for the general (free + premium aggregate) window.
 	const windowExpired =
 		now.getTime() - new Date(row.windowStart).getTime() >= windowMs;
 	if (windowExpired) {
@@ -193,6 +205,7 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 				premiumCount: isPremium ? 1 : 0,
 				tokenCount: 0,
 				windowStart: now,
+				premiumWindowStart: isPremium ? now : null,
 				lastRequestAt: now,
 			})
 			.where(eq(agentRateLimits.ipHash, ipHash));
@@ -210,9 +223,14 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 	// Cooldown: minimum interval between two consecutive requests.
 	const sinceLast = now.getTime() - new Date(row.lastRequestAt).getTime();
 	if (sinceLast < cooldownMs) {
+		const used = isPremium
+			? premiumWindowExpired(row.premiumWindowStart)
+				? 0
+				: row.premiumCount
+			: row.count;
 		return {
 			allowed: false,
-			remaining: computeRemaining(row.count),
+			remaining: computeRemaining(used),
 			resetsAt,
 			unlimited,
 			tier,
@@ -245,8 +263,12 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 		};
 	}
 
-	// Premium sub-budget.
-	if (isPremium && row.premiumCount >= premiumLimit) {
+	// Premium sub-budget with its own rolling window. If the visitor's
+	// premium window has expired (no premium use in the last `windowMs`),
+	// treat the counter as fresh — they get a full premium quota again.
+	const premiumStale = premiumWindowExpired(row.premiumWindowStart);
+	const effectivePremiumUsed = premiumStale ? 0 : row.premiumCount;
+	if (isPremium && effectivePremiumUsed >= premiumLimit) {
 		return {
 			allowed: false,
 			remaining: 0,
@@ -257,19 +279,38 @@ export async function checkRateLimit(args: RateCheckArgs): Promise<RateCheck> {
 		};
 	}
 
+	// Decide the new premium counters. If this request is premium and the
+	// prior premium window expired (or never started), anchor a fresh one.
+	const nextPremiumCount = isPremium
+		? premiumStale
+			? 1
+			: row.premiumCount + 1
+		: row.premiumCount;
+	const nextPremiumWindowStart: Date | null = isPremium
+		? premiumStale
+			? now
+			: (row.premiumWindowStart ?? now)
+		: row.premiumWindowStart;
+
 	await db
 		.update(agentRateLimits)
 		.set({
 			count: row.count + 1,
-			premiumCount: isPremium ? row.premiumCount + 1 : row.premiumCount,
+			premiumCount: nextPremiumCount,
+			premiumWindowStart: nextPremiumWindowStart,
 			lastRequestAt: now,
 		})
 		.where(eq(agentRateLimits.ipHash, ipHash));
 
+	const remaining = isPremium
+		? computeRemaining(nextPremiumCount)
+		: computeRemaining(row.count + 1);
 	return {
 		allowed: true,
-		remaining: computeRemaining(row.count + 1),
-		resetsAt,
+		remaining,
+		resetsAt: isPremium
+			? new Date((nextPremiumWindowStart ?? now).getTime() + windowMs)
+			: resetsAt,
 		unlimited,
 		tier,
 	};
@@ -325,13 +366,30 @@ export async function readQuota(args: {
 			resetsAt: new Date(now.getTime() + windowMs),
 		};
 	}
-	const usedCount = isPremium ? row.premiumCount : row.count;
+	// Premium uses its own rolling window so a visitor who tested premium
+	// hours ago doesn't see a stale 0/cap reading after their last
+	// premium request was more than `windowMs` ago.
+	const premiumStale =
+		!row.premiumWindowStart ||
+		now.getTime() - new Date(row.premiumWindowStart).getTime() >= windowMs;
+	const usedCount = isPremium
+		? premiumStale
+			? 0
+			: row.premiumCount
+		: row.count;
+	const effectiveWindowStart = isPremium
+		? premiumStale
+			? null
+			: new Date(row.premiumWindowStart!)
+		: new Date(row.windowStart);
 	return {
 		remaining: enforce ? Math.max(0, (limit ?? 0) - usedCount) : null,
 		limit,
 		unlimited: !enforce,
 		tier,
-		resetsAt: new Date(new Date(row.windowStart).getTime() + windowMs),
+		resetsAt: effectiveWindowStart
+			? new Date(effectiveWindowStart.getTime() + windowMs)
+			: new Date(now.getTime() + windowMs),
 	};
 }
 

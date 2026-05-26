@@ -68,9 +68,19 @@ function historyFromTerminalBlocks(): AgentHistoryEntry[] {
 	const out: AgentHistoryEntry[] = [];
 	for (const b of blocks) {
 		if (b.kind === "prompt" && b.mode === "agent") {
+			// Two prompts in a row means the prior turn was aborted/failed
+			// before any tokens streamed. Drop the orphan so the API sees
+			// strict user/assistant alternation — chat templates that don't
+			// alternate (Gemma especially) end up concatenating consecutive
+			// user turns into a single mashed-together input.
+			if (out[out.length - 1]?.role === "user") out.pop();
 			out.push({ role: "user", content: b.text });
 		} else if (b.kind === "markdown" && b.text.length > 0) {
-			out.push({ role: "assistant", content: b.text });
+			// Only count assistant text that follows a user turn —
+			// otherwise it's content from a /me /projects style command.
+			if (out[out.length - 1]?.role === "user") {
+				out.push({ role: "assistant", content: b.text });
+			}
 		}
 	}
 	// Drop the just-appended prompt for the current submission (added by
