@@ -83,17 +83,14 @@ describe("PortfolioPage (whoami)", () => {
 		expect(getByTestId("top-tabs")).toBeInTheDocument();
 	});
 
-	it("renders a top-tab for each portfolio section", () => {
-		const { getByTestId } = render(<PortfolioPage />);
-		for (const id of [
-			"hero",
-			"projects",
-			"experience",
-			"research",
-			"contact",
-		]) {
+	it("renders a top-tab for each enabled portfolio section", () => {
+		const { getByTestId, queryByTestId } = render(<PortfolioPage />);
+		// hero / projects / experience / github / contact are enabled by default;
+		// research is hidden via the section registry in site.ts. Assert both.
+		for (const id of ["hero", "projects", "experience", "contact"]) {
 			expect(getByTestId(`top-tab-${id}`)).toBeInTheDocument();
 		}
+		expect(queryByTestId("top-tab-research")).toBeNull();
 	});
 
 	it("renders a stat block for every featured project that ships stats", () => {

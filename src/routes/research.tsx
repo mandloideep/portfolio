@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PortfolioLayout } from "#/components/portfolio/portfolio-layout";
 import { ResearchList } from "#/components/portfolio/research-list";
 import { CommandPrompt } from "#/components/ui/command-prompt";
-import { siteMeta } from "#/content/site";
+import { isSectionEnabled, siteMeta } from "#/content/site";
 import { buildOpenGraphMeta } from "#/lib/seo";
 
 const TITLE = `${siteMeta.name} — research`;
@@ -10,6 +10,14 @@ const DESCRIPTION = "Research notes, papers, and write-ups.";
 
 export const Route = createFileRoute("/research")({
 	component: ResearchRoute,
+	// Gate the route at navigation time. When the section is disabled,
+	// typing `/research` directly redirects to home instead of 404'ing or
+	// rendering a half-shell.
+	beforeLoad: () => {
+		if (!isSectionEnabled("research")) {
+			throw redirect({ to: "/", replace: true });
+		}
+	},
 	head: () => ({
 		meta: [
 			{ title: TITLE },

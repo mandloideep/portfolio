@@ -3,31 +3,31 @@ import { resolveProjectFromHref } from "./project-links";
 
 describe("resolveProjectFromHref", () => {
 	it("resolves the canonical project URL", () => {
-		expect(resolveProjectFromHref("https://mydininghall.com")).toBe(
-			"mydininghall",
+		expect(resolveProjectFromHref("https://commentdraw.deepmandloi.com")).toBe(
+			"commentdraw",
 		);
 	});
 
 	it("strips trailing slash before lookup", () => {
-		expect(resolveProjectFromHref("https://mydininghall.com/")).toBe(
-			"mydininghall",
+		expect(resolveProjectFromHref("https://commentdraw.deepmandloi.com/")).toBe(
+			"commentdraw",
 		);
 	});
 
 	it("strips the www. prefix before lookup", () => {
-		expect(resolveProjectFromHref("https://www.mydininghall.com")).toBe(
-			"mydininghall",
-		);
+		expect(
+			resolveProjectFromHref("https://www.commentdraw.deepmandloi.com"),
+		).toBe("commentdraw");
 	});
 
 	it("returns null for invalid URLs (bare host with no scheme)", () => {
 		// new URL() rejects scheme-less strings; the helper handles that quietly.
-		expect(resolveProjectFromHref("mydininghall.com")).toBeNull();
+		expect(resolveProjectFromHref("commentdraw.deepmandloi.com")).toBeNull();
 	});
 
 	it("resolves repo URLs to their owning project", () => {
 		expect(
-			resolveProjectFromHref("https://github.com/deepmandloi/portfolio"),
+			resolveProjectFromHref("https://github.com/mandloideep/portfolio"),
 		).toBe("agent-portfolio");
 	});
 

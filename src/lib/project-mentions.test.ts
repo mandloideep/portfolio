@@ -4,8 +4,10 @@ import { detectProjectMentions } from "./project-mentions";
 describe("detectProjectMentions", () => {
 	it("detects a project from its live host", () => {
 		expect(
-			detectProjectMentions("Deep ships mydininghall.com from one stack."),
-		).toEqual(["mydininghall"]);
+			detectProjectMentions(
+				"Deep ships commentdraw.deepmandloi.com from one stack.",
+			),
+		).toEqual(["commentdraw"]);
 	});
 
 	it("detects a project from its slug", () => {
@@ -16,13 +18,13 @@ describe("detectProjectMentions", () => {
 
 	it("dedupes when the same project is mentioned by host and slug", () => {
 		const hits = detectProjectMentions(
-			"see mydininghall.com — slug mydininghall.",
+			"see commentdraw.deepmandloi.com slug commentdraw.",
 		);
-		expect(hits).toEqual(["mydininghall"]);
+		expect(hits).toEqual(["commentdraw"]);
 	});
 
 	it("does not match substrings inside other words", () => {
-		expect(detectProjectMentions("the mydininghallcomplicated thing")).toEqual(
+		expect(detectProjectMentions("the commentdrawcomplicated thing")).toEqual(
 			[],
 		);
 	});

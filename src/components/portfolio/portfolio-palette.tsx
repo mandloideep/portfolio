@@ -4,7 +4,7 @@ import {
 	CommandPaletteDialog,
 	type PaletteAction,
 } from "#/components/ui/command-palette";
-import { siteMeta } from "#/content/site";
+import { isSectionEnabled, siteMeta } from "#/content/site";
 import { themes } from "#/content/themes";
 import { useTheme } from "#/hooks/use-theme";
 import { DENSITIES, setDensity } from "#/store/density";
@@ -31,8 +31,11 @@ export function PortfolioPalette({ open, onOpenChange }: Props) {
 	const { theme, setTheme } = useTheme();
 
 	const actions = useMemo<PaletteAction[]>(() => {
-		const nav: PaletteAction[] = [
+		// Each nav entry's `id` maps to a SectionId so the section registry
+		// in site.ts removes the action when the section is disabled.
+		const navEntries: Array<PaletteAction & { sectionId: string }> = [
 			{
+				sectionId: "hero",
 				id: "go-home",
 				group: "navigate",
 				label: "Home",
@@ -41,6 +44,7 @@ export function PortfolioPalette({ open, onOpenChange }: Props) {
 				perform: () => navigate({ to: "/" }),
 			},
 			{
+				sectionId: "projects",
 				id: "go-projects",
 				group: "navigate",
 				label: "Projects",
@@ -49,6 +53,7 @@ export function PortfolioPalette({ open, onOpenChange }: Props) {
 				perform: () => navigate({ to: "/projects" }),
 			},
 			{
+				sectionId: "experience",
 				id: "go-experience",
 				group: "navigate",
 				label: "Experience",
@@ -57,6 +62,7 @@ export function PortfolioPalette({ open, onOpenChange }: Props) {
 				perform: () => navigate({ to: "/experience" }),
 			},
 			{
+				sectionId: "research",
 				id: "go-research",
 				group: "navigate",
 				label: "Research",
@@ -65,6 +71,7 @@ export function PortfolioPalette({ open, onOpenChange }: Props) {
 				perform: () => navigate({ to: "/research" }),
 			},
 			{
+				sectionId: "github",
 				id: "go-github",
 				group: "navigate",
 				label: "GitHub stats",
@@ -73,6 +80,7 @@ export function PortfolioPalette({ open, onOpenChange }: Props) {
 				perform: () => navigate({ to: "/github" }),
 			},
 			{
+				sectionId: "contact",
 				id: "go-contact",
 				group: "navigate",
 				label: "Contact",
@@ -81,6 +89,11 @@ export function PortfolioPalette({ open, onOpenChange }: Props) {
 				perform: () => navigate({ to: "/contact" }),
 			},
 		];
+		const nav: PaletteAction[] = navEntries
+			.filter((e) =>
+				isSectionEnabled(e.sectionId as Parameters<typeof isSectionEnabled>[0]),
+			)
+			.map(({ sectionId: _sectionId, ...action }) => action);
 
 		const mode: PaletteAction[] = [
 			{

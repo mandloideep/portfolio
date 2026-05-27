@@ -29,7 +29,7 @@ describe("agent corpus loader", () => {
 	});
 
 	it("getProjectMarkdown returns text for known slug", () => {
-		const text = getProjectMarkdown("mydininghall");
+		const text = getProjectMarkdown("commentdraw");
 		expect(typeof text).toBe("string");
 		expect(text?.startsWith("# ")).toBe(true);
 	});

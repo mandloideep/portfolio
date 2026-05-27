@@ -1,18 +1,20 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { CommandHint } from "#/components/ui/command-hint";
 import { DensityToggle } from "#/components/ui/density-toggle";
 import { LocalTime } from "#/components/ui/local-time";
 import { ModeSwitcher } from "#/components/ui/mode-switcher";
 import { TerminalFrame } from "#/components/ui/terminal-frame";
 import { ThemeSwitcher } from "#/components/ui/theme-switcher";
-import { siteMeta } from "#/content/site";
+import { isSectionEnabled, type SectionIdT, siteMeta } from "#/content/site";
 import { useDensity } from "#/hooks/use-density";
 import { Footer } from "./footer";
 import { MobileNav } from "./mobile-nav-drawer";
 import { PortfolioPalette } from "./portfolio-palette";
 import { type TopTab, TopTabs } from "./top-tabs";
 
-const TABS: readonly TopTab[] = [
+/** Each id is also a `SectionId` so the section toggle in `site.ts`
+ *  controls visibility from a single registry. */
+const ALL_TABS: readonly TopTab[] = [
 	{ id: "hero", label: "whoami", to: "/" },
 	{ id: "projects", label: "/projects", to: "/projects" },
 	{ id: "experience", label: "/experience", to: "/experience" },
@@ -29,6 +31,14 @@ const TABS: readonly TopTab[] = [
 export function PortfolioLayout({ children }: { children: ReactNode }) {
 	useDensity();
 	const [paletteOpen, setPaletteOpen] = useState(false);
+
+	// Filter tabs through the section registry so a `research.enabled =
+	// false` in `site.ts` removes the link from desktop nav + mobile drawer
+	// without component edits.
+	const tabs = useMemo(
+		() => ALL_TABS.filter((t) => isSectionEnabled(t.id as SectionIdT)),
+		[],
+	);
 
 	useEffect(() => {
 		function onKey(e: KeyboardEvent) {
@@ -58,10 +68,10 @@ export function PortfolioLayout({ children }: { children: ReactNode }) {
 						<ThemeSwitcher />
 					</>
 				}
-				mobileChrome={<MobileNav items={TABS} />}
+				mobileChrome={<MobileNav items={tabs} />}
 				chrome={
 					<TopTabs
-						items={TABS}
+						items={tabs}
 						rightSlot={<ModeSwitcher active="ui" variant="pills" />}
 					/>
 				}

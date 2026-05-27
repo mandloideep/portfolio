@@ -184,7 +184,7 @@ describe("runCommand", () => {
 	});
 
 	it("/projects <known-slug> emits a markdown block", async () => {
-		await runCommand("/projects mydininghall", {
+		await runCommand("/projects commentdraw", {
 			navigate: noopNavigate,
 			submit: noopSubmit,
 		});

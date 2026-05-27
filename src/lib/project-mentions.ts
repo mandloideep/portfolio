@@ -48,6 +48,13 @@ function tokenMatches(haystack: string, needle: string): boolean {
 	return re.test(haystack);
 }
 
+/** Hostname-shaped titles (e.g. "deepmandloi.com") are substrings of every
+ *  other project's live URL, so matching them as titles produces false
+ *  positives. Treat such titles as already covered by the host index. */
+function isHostnameShaped(s: string): boolean {
+	return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(s.trim());
+}
+
 export function detectProjectMentions(text: string): ReadonlyArray<string> {
 	if (!text) return [];
 	const hits = new Set<string>();
@@ -56,7 +63,9 @@ export function detectProjectMentions(text: string): ReadonlyArray<string> {
 	}
 	for (const p of projects) {
 		if (tokenMatches(text, p.slug)) hits.add(p.slug);
-		if (tokenMatches(text, p.title)) hits.add(p.slug);
+		if (!isHostnameShaped(p.title) && tokenMatches(text, p.title)) {
+			hits.add(p.slug);
+		}
 	}
 	return Array.from(hits);
 }
