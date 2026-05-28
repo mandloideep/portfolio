@@ -48,15 +48,15 @@ webhook redeploy. Hetzner 4GB VPS for the side projects. Cloudflare
 in front; Traefik terminating TLS via Let's Encrypt. Multi-stage
 Dockerfiles to keep the runtime image small.
 
-## Sports
+## Games
 
-<!-- TODO: confirm with Deep, these are carried over from the seed content. -->
-Cricket (a batsman, a mediocre bowler), tennis, long-distance
-running. Ask him about the half-marathon he ran in jeans.
+Call of Duty Mobile — qualified for the Indian regionals in 2020.
+Mobile-first by conviction; he'll argue mobile beats PC and console.
+Plays chess well enough to mean it.
 
 ## Fun
 
-<!-- TODO: confirm with Deep, these are carried over from the seed content. -->
-Mechanical keyboards (currently a 60% on Holy Pandas). Trail
-photography when the weather cooperates. Lo-fi production in
-Ableton, mostly drum loops that never become songs.
+Anime, plus a manga and manhwa backlog he swears he'll finish. Cooks
+most Indian dishes from memory, no recipe open. Types on a Kinesis
+split keyboard. Chai over coffee, Taco Bell over every other fast
+food — neither up for debate.

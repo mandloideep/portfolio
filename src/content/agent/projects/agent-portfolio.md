@@ -2,27 +2,26 @@
 
 ## Overview
 
-This site. A dual-mode portfolio: visitors land on a chooser, then go
-to either a polished browser bento at `/` or a Claude-code-style
-terminal at `/terminal`. The terminal mode wraps a small agent that
-answers questions about Deep using the markdown corpus you're reading
-right now.
+This site. A three-mode portfolio: visitors land on a chooser, then
+go to a polished browser bento at `/`, a chat surface at `/chat`, or
+a Claude-code-style terminal at `/terminal`. All three wrap the same
+small agent that answers questions about Deep using the markdown
+corpus you're reading right now.
 
-The chat surface at `/chat` does the same thing in a softer pill +
-quick-prompt layout. All three surfaces share the same theme tokens,
-the same density steps, and the same OpenRouter pipe, so picking
-Solarized Light in the terminal carries to the portfolio and the
-chat.
+The three surfaces share theme tokens, density steps, and the same
+OpenRouter pipe, so picking Solarized Light in the terminal carries
+to the portfolio and the chat. Same content, three different reading
+postures.
 
 ## Challenges
 
-Two front doors out of one repo. The mode chooser at `/` writes
+Three front doors out of one repo. The mode chooser at `/` writes
 `localStorage["portfolio.mode"]` and skips itself on return visits.
 That sounds trivial until you try to ship SSR + a localStorage
 read-on-mount + a redirect without flashing the wrong UI. The fix
 was a tiny client-only redirect island that runs after hydration.
-SSR serves the chooser, hydration decides whether to bounce to
-`/terminal` or `/chat`.
+SSR serves the chooser; hydration decides whether to bounce to `/`,
+`/chat`, or `/terminal`.
 
 Theme tokens as a typed registry. Each theme is a `{ slug, name,
 vibe, tokens }` object in `src/content/themes.ts`; CSS variables get

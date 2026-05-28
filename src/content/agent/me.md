@@ -18,9 +18,10 @@ acosus.neiu.edu and the work underpins an in-progress DSI paper.
 
 Outside of that he ships side projects on a single VPS — CommentDraw
 (a YouTube giveaway picker with Stripe billing), Atelier (a RAG
-chatbot for academic papers), and a self-hosted n8n-style workflow
-builder. He also contributes to Dokploy, an open-source deployment
-platform.
+chatbot for academic papers), and a small-scale n8n-style workflow
+builder he wrote to learn how visual automation tools work under the
+hood. He also contributes full-stack to Dokploy, an open-source
+deployment platform.
 
 He picks boring tools: Postgres, Redis, FastAPI, React, Docker on a
 VPS. He cares more about ship-frequency and observable systems than

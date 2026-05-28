@@ -18,6 +18,7 @@
  * means one edit here, not three sweeps across the codebase.
  */
 
+import type { LinkProps } from "@tanstack/react-router";
 import { LayoutGrid, MessageSquare, Terminal } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 import { ChromeButton } from "#/components/ui/chrome-button";
@@ -28,7 +29,7 @@ export type Mode = "ui" | "chat" | "terminal";
 
 type ModeEntry = {
 	id: Mode;
-	href: string;
+	href: LinkProps["to"];
 	label: string;
 	icon: ComponentType<SVGProps<SVGSVGElement>>;
 };

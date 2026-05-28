@@ -53,7 +53,7 @@ export const siteMeta = {
 	location: "Chicago, IL",
 	url: "https://deepmandloi.com",
 	description:
-		"Portfolio of Deep Mandloi: full-stack engineer, agent-tinkerer, and lifelong learner. I build projects that blend solid engineering with a touch of fun — check out my work and get in touch!",
+		"Deep Mandloi, full-stack engineer with an MS CS from NEIU. Ships production web apps, ML pipelines, and small agent things from Chicago. Currently teaching CS300 at NEIU.",
 	// Default OG card. Generated at build time by `scripts/generate-og.tsx`.
 	// Per-route cards (/chat, /terminal, /github, projects/:slug) override
 	// this via `buildOpenGraphMeta({ ogImage })`.
@@ -68,8 +68,7 @@ export const siteMeta = {
 		linkedin: "https://linkedin.com/in/thedeepmandloi",
 		resume: "/resume.pdf",
 	},
-	// TODO: confirm with Deep — current quip is the carry-over default.
-	quip: "No bugs were harmed as of making this website.",
+	quip: "once qualified for CODM regionals. now i qualify pull requests.",
 } as const;
 
 export type SiteMeta = typeof siteMeta;
@@ -244,11 +243,12 @@ export const projects: Project[] = z.array(ProjectSchema).parse([
 		title: "deepmandloi.com",
 		status: "wip",
 		summary:
-			"This site. Dual-mode portfolio: claude-code-style terminal agent or polished browser bento.",
+			"This site. Three-mode portfolio: a polished browser bento, a chat surface, and a Claude-code-style terminal — one repo, one deploy.",
 		bullets: [
-			"tanstack start, react 19, magic ui",
-			"openrouter for the agent, plain http",
-			"one repo, one deploy, two front doors",
+			"three front doors out of one tanstack start repo",
+			"openrouter agent over plain http, no adapter library",
+			"7 themes from a typed registry with ssr-emitted css vars",
+			"590-test ci, biome lint, drizzle + neon postgres for rate limits",
 		],
 		tags: ["TanStack Start", "React 19", "OpenRouter", "Magic UI"],
 		links: {
@@ -257,13 +257,17 @@ export const projects: Project[] = z.array(ProjectSchema).parse([
 		featured: true,
 		endpoint: "git log --oneline origin/main | head -5",
 		cta: "view repo",
-		meta: "tanstack start · react 19 · openrouter",
+		meta: "tanstack start · react 19 · openrouter · 3 surfaces",
 		pitch:
-			"Dual-mode portfolio: a Claude-code-style terminal agent or a polished browser experience. One repo, one deploy, two front doors — built on TanStack Start with OpenRouter via plain HTTP.",
+			"A three-mode portfolio: a browser bento at /, a chat surface at /chat, and a Claude-code-style terminal at /terminal. One repo, one deploy, three front doors. Built on TanStack Start with OpenRouter over plain HTTP and SSE — no adapter library.",
 		stats: [
 			{ value: "590", label: "tests", sublabel: "passing in ci" },
 			{ value: "7", label: "themes", sublabel: "registered" },
-			{ value: "2", label: "front doors", sublabel: "terminal + portfolio" },
+			{
+				value: "3",
+				label: "front doors",
+				sublabel: "portfolio + chat + terminal",
+			},
 		],
 	},
 ]);
@@ -335,7 +339,7 @@ export const experience: Experience[] = z.array(ExperienceSchema).parse([
 			"Docker",
 		],
 		narrative:
-			"acosus is a student-success research platform at neiu that surveys students, predicts who's likely to disengage, and gives advisors a dashboard to act on it. deep is the only engineer — every route, every model, every deploy. the api serves three audiences out of one express app (students, advisors, admins), talks to a separate flask service for the knn model, and has been in continuous development since may 2024. the live site is at acosus.neiu.edu and the work underpins an in-progress dsi paper on a progressive learning framework: knn first, then gan-augmented data, then a neural net trained on the augmented set.",
+			"acosus is a student-success research platform at neiu that surveys students, predicts who's likely to disengage, and gives advisors a dashboard to act on it. deep is the only engineer; every route, every model, every deploy. the api serves three audiences out of one express app (students, advisors, admins), talks to a separate flask service for the knn model, and has been in continuous development since april 2024. the live site is at acosus.neiu.edu and the work underpins an in-progress dsi paper on a progressive learning framework: knn first, then gan-augmented data, then a neural net trained on the augmented set.",
 		links: [
 			{ label: "live · acosus.neiu.edu", url: "https://acosus.neiu.edu/login" },
 		],
@@ -346,9 +350,9 @@ export const experience: Experience[] = z.array(ExperienceSchema).parse([
 		start: "2025-08",
 		end: "present",
 		bullets: [
-			"shipped a profile-picture upload system for the deployment-platform ui",
-			"added api + cli metadata customization for user profiles",
-			"fixed an ssh connection bug in the ip-address parsing logic",
+			"developed full-stack enhancements for an open-source deployment platform, including a profile-picture upload system and api/cli metadata customization",
+			"resolved an ssh connection bug in ip-address parsing logic",
+			"shipped user-profile improvements that strengthened deployment reliability and platform usability",
 		],
 		tags: ["TypeScript", "Node.js", "Open Source", "Docker"],
 		links: [{ label: "dokploy", url: "https://github.com/Dokploy/dokploy" }],
@@ -516,14 +520,18 @@ export const skills: SkillGroup[] = z.array(SkillGroupSchema).parse([
 			"GHCR",
 		],
 	},
-	// TODO: confirm with Deep — Sports + Fun lists are carried over from the
-	// seed content. Send the real list of hobbies / interests.
 	{
-		group: "Sports",
-		items: ["Cricket", "Tennis", "Long-distance running"],
+		group: "Games",
+		items: ["Call of Duty Mobile", "Chess", "Mobile esports"],
 	},
 	{
 		group: "Fun",
-		items: ["Mechanical keyboards", "Trail photography", "Lo-fi production"],
+		items: [
+			"Anime",
+			"Manga & manhwa",
+			"Cooking Indian food",
+			"Split keyboards (Kinesis)",
+			"Chai over coffee",
+		],
 	},
 ]);

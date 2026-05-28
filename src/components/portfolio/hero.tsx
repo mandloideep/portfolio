@@ -75,6 +75,12 @@ export function Hero({ className }: { className?: string }) {
 					>
 						{siteMeta.role}
 					</a>
+					<p
+						data-testid="hero-tagline"
+						className="font-mono text-sm italic text-muted"
+					>
+						{siteMeta.quip}
+					</p>
 				</header>
 
 				<dl className="mt-7 grid grid-cols-1 gap-x-12 gap-y-2 sm:grid-cols-2">

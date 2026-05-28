@@ -47,11 +47,12 @@ Live at `acosus.neiu.edu`. Still shipping.
 
 ## Open Source Contributor, Dokploy (Aug 2025 to present)
 
-Dokploy is an open-source deployment platform, an alternative to
-Vercel / Heroku that runs on your own box. Deep contributes
-full-stack: a profile-picture upload system, API + CLI metadata
-customization for user profiles, and a fix for an SSH connection bug
-in the IP-address parsing logic.
+Dokploy is an open-source alternative to commercial deployment
+solutions. Deep developed full-stack enhancements for it, including a
+profile-picture upload system and API/CLI metadata customization. He
+also resolved an SSH connection bug in IP-address parsing logic and
+shipped user-profile improvements that strengthened deployment
+reliability and platform usability.
 
 ## Peer Mentor, CodePath (May 2025 to Dec 2025)
 

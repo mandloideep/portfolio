@@ -5,6 +5,7 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import { HelloLoader } from "#/components/portfolio/hello-loader";
+import { QuipProvider } from "#/components/quip-provider";
 import { siteMeta } from "#/content/site";
 import { themes } from "#/content/themes";
 import { buildOpenGraphMeta, buildPersonJsonLd } from "#/lib/seo";
@@ -13,6 +14,12 @@ import appCss from "../styles.css?url";
 
 interface MyRouterContext {
 	queryClient: QueryClient;
+}
+
+declare global {
+	interface Window {
+		__QUIP_SEED__?: number;
+	}
 }
 
 export const ROOT_TITLE = `${siteMeta.name} — ${siteMeta.role}`;
@@ -51,6 +58,16 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+	// Fresh quip per full page load: the server picks a random seed per request
+	// and writes it to `window.__QUIP_SEED__` via the inline script below, so
+	// the client hydrates with the same seed (no mismatch) but rotates on every
+	// refresh. The inline script in <head> runs before the bundle, so the seed
+	// is set by the time the store/provider reads it.
+	const quipSeed =
+		typeof window === "undefined"
+			? Math.floor(Math.random() * 1e9)
+			: (window.__QUIP_SEED__ ?? Math.floor(Math.random() * 1e9));
+
 	return (
 		<html lang="en" data-theme="nord-green">
 			<head>
@@ -65,6 +82,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					// biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD is built from typed siteMeta
 					dangerouslySetInnerHTML={{ __html: personJsonLd }}
 				/>
+				<script
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: numeric seed only, no user input
+					dangerouslySetInnerHTML={{
+						__html: `window.__QUIP_SEED__=${quipSeed}`,
+					}}
+				/>
 			</head>
 			<body>
 				<a
@@ -74,7 +97,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					Skip to main content
 				</a>
 				<HelloLoader />
-				<div>{children}</div>
+				<QuipProvider seed={quipSeed}>
+					<div>{children}</div>
+				</QuipProvider>
 				<Scripts />
 			</body>
 		</html>

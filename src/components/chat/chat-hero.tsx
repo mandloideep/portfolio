@@ -44,6 +44,12 @@ export function ChatHero() {
 							className="text-accent"
 						/>
 					</h1>
+					<p
+						data-testid="chat-tagline"
+						className="font-mono text-sm italic text-muted"
+					>
+						{siteMeta.quip}
+					</p>
 				</div>
 
 				<div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-3 duration-700 delay-150">

@@ -1,6 +1,5 @@
-import { useStore } from "@tanstack/react-store";
-import { quipStore } from "#/store/quip";
+import { useQuipContext } from "#/components/quip-provider";
 
 export function useQuip(): string {
-	return useStore(quipStore, (s) => s.current);
+	return useQuipContext().quip;
 }

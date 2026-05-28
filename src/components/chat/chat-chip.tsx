@@ -44,6 +44,7 @@ export function ChatChip(props: ChatChipProps) {
 				as="a"
 				{...(anchorRest as AnchorHTMLAttributes<HTMLAnchorElement> & {
 					href: string;
+					children: ReactNode;
 				})}
 			/>
 		);
@@ -53,7 +54,9 @@ export function ChatChip(props: ChatChipProps) {
 		<ChromeButton
 			size="md"
 			tone={chromeTone}
-			{...(buttonRest as ButtonHTMLAttributes<HTMLButtonElement>)}
+			{...(buttonRest as ButtonHTMLAttributes<HTMLButtonElement> & {
+				children: ReactNode;
+			})}
 		/>
 	);
 }
