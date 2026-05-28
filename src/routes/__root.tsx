@@ -19,6 +19,7 @@ interface MyRouterContext {
 declare global {
 	interface Window {
 		__QUIP_SEED__?: number;
+		__QUIP_AT__?: number;
 	}
 }
 
@@ -58,15 +59,22 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-	// Fresh quip per full page load: the server picks a random seed per request
-	// and writes it to `window.__QUIP_SEED__` via the inline script below, so
-	// the client hydrates with the same seed (no mismatch) but rotates on every
-	// refresh. The inline script in <head> runs before the bundle, so the seed
-	// is set by the time the store/provider reads it.
-	const quipSeed =
-		typeof window === "undefined"
-			? Math.floor(Math.random() * 1e9)
-			: (window.__QUIP_SEED__ ?? Math.floor(Math.random() * 1e9));
+	// Shared quip seed + the time this HTML was rendered, handed to the client
+	// via the inline script below (it runs before the bundle, so the provider
+	// reads them on first render → hydration matches, no mismatch).
+	//
+	// `renderedAt` is the freshness signal: for a per-request SSR route (/chat)
+	// it's ~now, so the client keeps the server's quip (no reroll, no flash).
+	// For a prerendered route (/, /terminal) it's frozen at build time, so the
+	// client sees a stale timestamp and rerolls to a fresh pick — the only way
+	// to rotate on a static page, which has no per-request server.
+	const onServer = typeof window === "undefined";
+	const quipSeed = onServer
+		? Math.floor(Math.random() * 1e9)
+		: (window.__QUIP_SEED__ ?? Math.floor(Math.random() * 1e9));
+	const quipRenderedAt = onServer
+		? Date.now()
+		: (window.__QUIP_AT__ ?? Date.now());
 
 	return (
 		<html lang="en" data-theme="nord-green">
@@ -83,9 +91,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					dangerouslySetInnerHTML={{ __html: personJsonLd }}
 				/>
 				<script
-					// biome-ignore lint/security/noDangerouslySetInnerHtml: numeric seed only, no user input
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: numeric values only, no user input
 					dangerouslySetInnerHTML={{
-						__html: `window.__QUIP_SEED__=${quipSeed}`,
+						__html: `window.__QUIP_SEED__=${quipSeed};window.__QUIP_AT__=${quipRenderedAt}`,
 					}}
 				/>
 			</head>
@@ -97,7 +105,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					Skip to main content
 				</a>
 				<HelloLoader />
-				<QuipProvider seed={quipSeed}>
+				<QuipProvider seed={quipSeed} renderedAt={quipRenderedAt}>
 					<div>{children}</div>
 				</QuipProvider>
 				<Scripts />
