@@ -18,7 +18,7 @@ FROM node:24-alpine AS runner
 RUN corepack enable && corepack prepare pnpm@10.30.0 --activate
 WORKDIR /app
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=8080
 
 # TanStack Start builds to ./dist (server.js + client/).
 COPY --from=build /app/dist ./dist
@@ -33,5 +33,5 @@ COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=build /app/src ./src
 
-EXPOSE 3000
+EXPOSE 8080
 CMD ["node", "scripts/start-server.mjs"]

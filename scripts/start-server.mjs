@@ -13,7 +13,7 @@ import handler from "../dist/server/server.js";
 const here = dirname(fileURLToPath(import.meta.url));
 const clientDir = resolve(here, "..", "dist", "client");
 
-const port = Number(process.env.PORT ?? 3000);
+const port = Number(process.env.PORT ?? 8080);
 const hostname = process.env.HOST ?? "0.0.0.0";
 
 const server = serve({
