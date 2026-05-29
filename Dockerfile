@@ -24,6 +24,14 @@ ENV PORT=3000
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
+# Runtime tooling that runs from source, not the bundle:
+#   - scripts/start-server.mjs  → the CMD entrypoint (srvx wrapper)
+#   - scripts/budget-alert.ts   → the budget-alert cron
+#   - drizzle.config.ts + src/  → `pnpm release:migrate` (drizzle-kit push reads
+#     src/db/schema.ts) and the cron's `#/*` → ./src/* imports
+COPY --from=build /app/scripts ./scripts
+COPY --from=build /app/drizzle.config.ts ./drizzle.config.ts
+COPY --from=build /app/src ./src
 
 EXPOSE 3000
 CMD ["node", "scripts/start-server.mjs"]
