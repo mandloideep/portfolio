@@ -18,10 +18,11 @@ function getMeta(): MetaEntry[] {
 describe("/ route head()", () => {
 	const meta = getMeta();
 
-	it("uses the portfolio-specific title", () => {
+	it("titles the homepage with the site identity (name + role)", () => {
 		const titleEntry = meta.find((m) => typeof m.title === "string");
 		expect(titleEntry?.title).toBe(INDEX_TITLE);
-		expect(INDEX_TITLE).toContain("portfolio");
+		expect(INDEX_TITLE).toContain(siteMeta.name);
+		expect(INDEX_TITLE).toContain(siteMeta.role);
 	});
 
 	it("og:url ends with /", () => {

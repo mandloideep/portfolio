@@ -13,7 +13,12 @@ const SearchSchema = z.object({
 	project: z.string().optional(),
 });
 
-export const INDEX_TITLE = `${siteMeta.name} — portfolio`;
+// Used as both the <title> and the OG/Twitter title for `/`. Leads with the
+// name + role (not a bare "portfolio") so shared-link previews — iMessage,
+// Slack, Twitter — show a meaningful headline. iMessage derives the site name
+// from the domain and strips a matching leading prefix; even if it trims
+// "Deep Mandloi —", the role still shows.
+export const INDEX_TITLE = `${siteMeta.name} — ${siteMeta.role}`;
 
 export const Route = createFileRoute("/")({
 	component: Home,
