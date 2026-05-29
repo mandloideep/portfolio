@@ -4,10 +4,17 @@
 #
 # One-time setup:
 #   1. Repo secret DOKPLOY_DEPLOY_WEBHOOK — the Dokploy application's deploy
-#      webhook URL (Dokploy → service → Deployments → Webhook / Auto Deploy).
-#   2. Dokploy service uses the "Docker" provider with image
+#      webhook URL. Enable "Auto Deploy" in the service's General tab, then copy
+#      the webhook URL from the deployment logs. The Dokploy image tag must be
+#      "latest" (matching the tag pushed below) or the webhook returns a
+#      "Branch Not Match" error.
+#   2. Repo secret DATABASE_URL — prod (unpooled) Postgres connection string.
+#      Used by the migration step below. The DB must be reachable from the
+#      GitHub runner (Neon is; a VPS-local Postgres is not — see DEPLOYMENT.md
+#      for the in-container alternative).
+#   3. Dokploy service uses the "Docker" provider with image
 #      ghcr.io/mandloideep/portfolio:latest.
-#   3. If the GHCR package is private, add registry credentials in Dokploy
+#   4. If the GHCR package is private, add registry credentials in Dokploy
 #      (username = GitHub username, password = PAT with read:packages) — or make
 #      the package public. The first push creates a private package by default.
 name: Deploy
@@ -51,6 +58,17 @@ jobs:
             ${{ env.IMAGE }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Run migrations from the just-built image against the prod DB *before*
+      # telling Dokploy to switch to it. Dokploy has no pre-deploy hook, and the
+      # DB (Neon) is reachable from the runner. Requires repo secret DATABASE_URL
+      # (prod, unpooled connection string).
+      - name: Run database migrations
+        run: |
+          docker run --rm \
+            -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            "${{ env.IMAGE }}:${{ github.sha }}" \
+            pnpm release:migrate
 
       - name: Trigger Dokploy redeploy
         run: curl -fsS -X POST "${{ secrets.DOKPLOY_DEPLOY_WEBHOOK }}"
