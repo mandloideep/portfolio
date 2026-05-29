@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "vite dev --port 3000",
-    "prebuild": "tsx scripts/generate-og.tsx",
+    "prebuild": "tsx scripts/generate-og.tsx && tsx scripts/generate-icons.ts",
     "build": "vite build",
     "og:generate": "tsx scripts/generate-og.tsx",
     "start": "node scripts/start-server.mjs",
