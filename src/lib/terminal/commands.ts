@@ -1,7 +1,6 @@
 import type { StreamHandle } from "#/components/terminal/use-agent-stream";
 import { projects, siteMeta } from "#/content/site";
 import { isThemeSlug, type ThemeSlug, themes } from "#/content/themes";
-import { OPENROUTER_MODELS } from "#/lib/openrouter";
 import { makeBlock } from "#/lib/terminal/blocks";
 import {
 	getCorpusEntry,
@@ -9,8 +8,10 @@ import {
 	listProjectSlugs,
 } from "#/lib/terminal/corpus";
 import { formatTwoCol } from "#/lib/terminal/format";
+import { shellCommands } from "#/lib/terminal/shell";
 import { isTourRunning, runPresentation } from "#/lib/terminal/tour";
-import { modelStore, setModel } from "#/store/model";
+import type { GithubGraphResponse } from "#/routes/api.github-graph";
+import { getProviderModels, modelStore, setModel } from "#/store/model";
 import {
 	appendBlock,
 	clearBlocks,
@@ -154,6 +155,58 @@ const github: Command = {
 	},
 };
 
+const stats: Command = {
+	name: "/stats",
+	description: "live github stats (fetched fresh)",
+	handler: async () => {
+		const { pickQuip } = await import("#/lib/terminal/github-quips");
+		const { renderStatsList, renderStatsTable } = await import(
+			"#/lib/terminal/stats-renderer"
+		);
+		emit("activity", pickQuip());
+		let data: GithubGraphResponse;
+		try {
+			const res = await fetch("/api/github-graph");
+			if (!res.ok) throw new Error(`status ${res.status}`);
+			data = (await res.json()) as GithubGraphResponse;
+		} catch (err) {
+			emit(
+				"error",
+				`github fetch failed: ${err instanceof Error ? err.message : "unknown"}`,
+			);
+			return;
+		}
+
+		// Pick the renderer once at command time. Tradeoff: a rotate from
+		// portrait → landscape won't reflow the row already in scrollback,
+		// but the row stays scrollable and the user can re-run `/stats`.
+		const narrow =
+			typeof window !== "undefined" &&
+			typeof window.matchMedia === "function" &&
+			window.matchMedia("(max-width: 640px)").matches;
+		const render = narrow ? renderStatsList : renderStatsTable;
+
+		// Deterministic table first — numbers are always correct.
+		emit("markdown", render(data));
+
+		// Then ask Gemma for a one-line observation. Fail silently if
+		// rate-limited or unreachable; the table is already on screen.
+		try {
+			const res = await fetch("/api/agent/commentary", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ stats: data }),
+			});
+			if (!res.ok) return;
+			const json = (await res.json()) as { commentary?: string };
+			const line = (json.commentary ?? "").trim();
+			if (line) emit("system", `// ${line}`);
+		} catch {
+			// silent
+		}
+	},
+};
+
 const resume: Command = {
 	name: "/resume",
 	description: "open my resume (pdf)",
@@ -212,23 +265,27 @@ const model: Command = {
 	description: "show or switch the agent model: /model [list|<id>]",
 	handler: ({ args }) => {
 		const sub = args[0];
+		const models = getProviderModels();
 		if (!sub) {
 			const current = modelStore.state.activeModel;
-			const label =
-				OPENROUTER_MODELS.find((m) => m.id === current)?.label ?? current;
-			emit("output", `model: ${current} (${label})`);
+			const entry = models.find((m) => m.id === current);
+			const label = entry?.label ?? current;
+			const meta = entry
+				? ` · ${entry.provider} · ${entry.tier}${entry.thinking ? " · thinking" : ""}`
+				: "";
+			emit("output", `model: ${current} (${label})${meta}`);
 			return;
 		}
 		if (sub === "list") {
-			const rows: Array<[string, string]> = OPENROUTER_MODELS.map((m) => [
+			const rows: Array<[string, string]> = models.map((m) => [
 				m.id,
-				m.label,
+				`${m.label} · ${m.provider} · ${m.tier}${m.thinking ? " · thinking" : ""}`,
 			]);
 			emit("output", `models (use /model <id>):\n${formatTwoCol(rows)}`);
 			return;
 		}
 		if (!setModel(sub)) {
-			const known = OPENROUTER_MODELS.map((m) => m.id).join(", ");
+			const known = models.map((m) => m.id).join(", ");
 			emit("error", `unknown model: ${sub}. known: ${known}.`);
 			return;
 		}
@@ -293,6 +350,7 @@ export const commands: Command[] = [
 	theme,
 	model,
 	github,
+	stats,
 	resume,
 	exit,
 ];
@@ -313,10 +371,33 @@ export function findCommand(name: string): Command | undefined {
 	return commands.find((c) => c.name === name);
 }
 
-export function autocomplete(prefix: string): string[] {
-	if (!prefix.startsWith("/")) return [];
+/**
+ * Mode-aware tab autocomplete. Agent mode completes slash commands;
+ * shell mode completes the shell registry (no slash). Either mode
+ * tolerates a blank prefix → return all visible names so the user can
+ * press Tab in an empty input to discover commands.
+ */
+export function autocomplete(
+	prefix: string,
+	mode: "agent" | "shell" = "agent",
+): string[] {
+	const trimmed = prefix.trimStart();
+	if (mode === "shell") {
+		// Only complete the first token. Don't suggest mid-arg.
+		if (trimmed.includes(" ")) return [];
+		return shellCommands
+			.filter((c) => !c.hidden && c.name.startsWith(trimmed))
+			.map((c) => c.name);
+	}
+	if (!trimmed.startsWith("/")) {
+		// Empty input → list all slash commands as a hint.
+		if (trimmed.length === 0) {
+			return commands.filter((c) => !c.hidden).map((c) => c.name);
+		}
+		return [];
+	}
 	return commands
-		.filter((c) => !c.hidden && c.name.startsWith(prefix))
+		.filter((c) => !c.hidden && c.name.startsWith(trimmed))
 		.map((c) => c.name);
 }
 

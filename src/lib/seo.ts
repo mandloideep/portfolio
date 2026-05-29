@@ -68,6 +68,12 @@ export interface RouteHeadInput {
 		ogImage: string;
 	};
 	ogType?: "website" | "article";
+	/**
+	 * Optional per-route OG image path (e.g. "/og/chat.png"). Falls back to
+	 * `siteMeta.ogImage` when omitted. Generated at build time by
+	 * `scripts/generate-og.tsx`; see that file to add new cards.
+	 */
+	ogImage?: string;
 }
 
 function joinUrl(origin: string, path: string): string {
@@ -90,9 +96,10 @@ export function buildOpenGraphMeta(
 		path,
 		siteMeta: meta,
 		ogType = "website",
+		ogImage: ogImageOverride,
 	} = input;
 	const ogUrl = joinUrl(meta.url, path);
-	const ogImage = joinUrl(meta.url, meta.ogImage);
+	const ogImage = joinUrl(meta.url, ogImageOverride ?? meta.ogImage);
 	return [
 		{ property: "og:title", content: title },
 		{ property: "og:description", content: description },

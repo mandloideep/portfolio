@@ -4,6 +4,8 @@ import {
 	HeadContent,
 	Scripts,
 } from "@tanstack/react-router";
+import { HelloLoader } from "#/components/portfolio/hello-loader";
+import { QuipProvider } from "#/components/quip-provider";
 import { siteMeta } from "#/content/site";
 import { themes } from "#/content/themes";
 import { buildOpenGraphMeta, buildPersonJsonLd } from "#/lib/seo";
@@ -12,6 +14,13 @@ import appCss from "../styles.css?url";
 
 interface MyRouterContext {
 	queryClient: QueryClient;
+}
+
+declare global {
+	interface Window {
+		__QUIP_SEED__?: number;
+		__QUIP_AT__?: number;
+	}
 }
 
 export const ROOT_TITLE = `${siteMeta.name} — ${siteMeta.role}`;
@@ -23,7 +32,10 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 	head: () => ({
 		meta: [
 			{ charSet: "utf-8" },
-			{ name: "viewport", content: "width=device-width, initial-scale=1" },
+			{
+				name: "viewport",
+				content: "width=device-width, initial-scale=1, viewport-fit=cover",
+			},
 			{ title: ROOT_TITLE },
 			{ name: "description", content: siteMeta.description },
 			...buildOpenGraphMeta({
@@ -47,6 +59,23 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+	// Shared quip seed + the time this HTML was rendered, handed to the client
+	// via the inline script below (it runs before the bundle, so the provider
+	// reads them on first render → hydration matches, no mismatch).
+	//
+	// `renderedAt` is the freshness signal: for a per-request SSR route (/chat)
+	// it's ~now, so the client keeps the server's quip (no reroll, no flash).
+	// For a prerendered route (/, /terminal) it's frozen at build time, so the
+	// client sees a stale timestamp and rerolls to a fresh pick — the only way
+	// to rotate on a static page, which has no per-request server.
+	const onServer = typeof window === "undefined";
+	const quipSeed = onServer
+		? Math.floor(Math.random() * 1e9)
+		: (window.__QUIP_SEED__ ?? Math.floor(Math.random() * 1e9));
+	const quipRenderedAt = onServer
+		? Date.now()
+		: (window.__QUIP_AT__ ?? Date.now());
+
 	return (
 		<html lang="en" data-theme="nord-green">
 			<head>
@@ -61,6 +90,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					// biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD is built from typed siteMeta
 					dangerouslySetInnerHTML={{ __html: personJsonLd }}
 				/>
+				<script
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: numeric values only, no user input
+					dangerouslySetInnerHTML={{
+						__html: `window.__QUIP_SEED__=${quipSeed};window.__QUIP_AT__=${quipRenderedAt}`,
+					}}
+				/>
 			</head>
 			<body>
 				<a
@@ -69,7 +104,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				>
 					Skip to main content
 				</a>
-				<div>{children}</div>
+				<HelloLoader />
+				<QuipProvider seed={quipSeed} renderedAt={quipRenderedAt}>
+					<div>{children}</div>
+				</QuipProvider>
 				<Scripts />
 			</body>
 		</html>

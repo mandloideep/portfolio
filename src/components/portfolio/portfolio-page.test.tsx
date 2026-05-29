@@ -1,11 +1,28 @@
 import { render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { projects, siteMeta } from "#/content/site";
 
 const navigateMock = vi.fn();
-vi.mock("@tanstack/react-router", () => ({
-	useNavigate: () => navigateMock,
-	useSearch: () => ({}),
-}));
+vi.mock("@tanstack/react-router", async () => {
+	const actual = await vi.importActual<typeof import("@tanstack/react-router")>(
+		"@tanstack/react-router",
+	);
+	return {
+		...actual,
+		useNavigate: () => navigateMock,
+		useSearch: () => ({}),
+		useRouterState: () => "/",
+		Link: ({
+			children,
+			to,
+			...rest
+		}: React.PropsWithChildren<{ to?: string } & Record<string, unknown>>) => (
+			<a href={to as string} {...(rest as Record<string, string>)}>
+				{children}
+			</a>
+		),
+	};
+});
 
 import { PortfolioPage } from "./portfolio-page";
 
@@ -21,12 +38,12 @@ class MockIO {
 	thresholds = [];
 }
 
-function mockMatchMedia(reduced: boolean) {
+beforeEach(() => {
 	Object.defineProperty(window, "matchMedia", {
 		writable: true,
 		configurable: true,
 		value: vi.fn().mockImplementation((query: string) => ({
-			matches: reduced && query.includes("reduced"),
+			matches: false,
 			media: query,
 			onchange: null,
 			addEventListener: vi.fn(),
@@ -36,15 +53,9 @@ function mockMatchMedia(reduced: boolean) {
 			dispatchEvent: vi.fn(),
 		})),
 	});
-}
-
-beforeEach(() => {
-	mockMatchMedia(false);
 	(
 		globalThis as unknown as { IntersectionObserver: typeof MockIO }
 	).IntersectionObserver = MockIO;
-	// GithubGraph fires fetch on mount; keep it in the loading state so we
-	// don't depend on the real /api/github-graph endpoint in page-level tests.
 	vi.stubGlobal(
 		"fetch",
 		vi.fn<typeof fetch>().mockReturnValue(new Promise(() => {})),
@@ -55,39 +66,49 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-const EXPECTED_IDS = [
-	"hero",
-	"projects",
-	"experience",
-	"skills",
-	"github",
-	"contact",
-];
-
-describe("PortfolioPage", () => {
-	it("renders all section scaffolds with the expected ids", () => {
-		const { container } = render(<PortfolioPage />);
-		for (const id of EXPECTED_IDS) {
-			expect(container.querySelector(`#${id}`)).not.toBeNull();
-		}
-	});
-
-	it("renders the animated background and dock nav", () => {
+describe("PortfolioPage (whoami)", () => {
+	it("renders the hero profile card", () => {
 		const { getByTestId } = render(<PortfolioPage />);
-		expect(getByTestId("animated-background")).toBeInTheDocument();
-		expect(getByTestId("dock-nav")).toBeInTheDocument();
-	});
-
-	it("renders one dock item per section", () => {
-		const { getByTestId } = render(<PortfolioPage />);
-		for (const id of EXPECTED_IDS) {
-			expect(getByTestId(`dock-item-${id}`)).toBeInTheDocument();
-		}
+		expect(getByTestId("hero")).toBeInTheDocument();
+		expect(getByTestId("hero-name").textContent).toContain(siteMeta.name);
 	});
 
 	it("marks the root with data-page=portfolio for page-scoped styling", () => {
 		const { container } = render(<PortfolioPage />);
 		expect(container.querySelector('[data-page="portfolio"]')).not.toBeNull();
+	});
+
+	it("renders the top-tab nav", () => {
+		const { getByTestId } = render(<PortfolioPage />);
+		expect(getByTestId("top-tabs")).toBeInTheDocument();
+	});
+
+	it("renders a top-tab for each enabled portfolio section", () => {
+		const { getByTestId, queryByTestId } = render(<PortfolioPage />);
+		// hero / projects / experience / github / contact are enabled by default;
+		// research is hidden via the section registry in site.ts. Assert both.
+		for (const id of ["hero", "projects", "experience", "contact"]) {
+			expect(getByTestId(`top-tab-${id}`)).toBeInTheDocument();
+		}
+		expect(queryByTestId("top-tab-research")).toBeNull();
+	});
+
+	it("renders a stat block for every featured project that ships stats", () => {
+		const { getByTestId } = render(<PortfolioPage />);
+		const featured = projects.filter((p) => p.featured && p.stats);
+		for (const p of featured) {
+			expect(getByTestId(`whoami-stat-${p.slug}`)).toBeInTheDocument();
+		}
+	});
+
+	it("renders the GitHub graph block at the bottom", () => {
+		const { getByTestId } = render(<PortfolioPage />);
+		expect(getByTestId("github-graph")).toBeInTheDocument();
+	});
+
+	it("renders the footer", () => {
+		const { getByTestId } = render(<PortfolioPage />);
+		expect(getByTestId("portfolio-footer")).toBeInTheDocument();
 	});
 
 	it("renders exactly one <main id='main'> landmark", () => {
@@ -103,32 +124,5 @@ describe("PortfolioPage", () => {
 		expect(h1).not.toBeNull();
 		expect(h1?.className).toMatch(/sr-only/);
 		expect(h1?.textContent).toMatch(/deep/i);
-	});
-
-	it("renders SkillsGrid and ResearchList in the skills section", () => {
-		const { getByTestId } = render(<PortfolioPage />);
-		expect(getByTestId("skills-grid")).toBeInTheDocument();
-		expect(getByTestId("research-list")).toBeInTheDocument();
-	});
-
-	it("renders GithubGraph in the github section", () => {
-		const { getByTestId } = render(<PortfolioPage />);
-		expect(getByTestId("github-graph")).toBeInTheDocument();
-	});
-
-	it("renders the contact card and footer", () => {
-		const { getByTestId } = render(<PortfolioPage />);
-		expect(getByTestId("contact-card")).toBeInTheDocument();
-		expect(getByTestId("portfolio-footer")).toBeInTheDocument();
-	});
-
-	it("places the footer after main in document order", () => {
-		const { container, getByTestId } = render(<PortfolioPage />);
-		const main = container.querySelector("main");
-		const footer = getByTestId("portfolio-footer");
-		if (!main) throw new Error("expected <main> in the document");
-		expect(
-			main.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING,
-		).toBeTruthy();
 	});
 });

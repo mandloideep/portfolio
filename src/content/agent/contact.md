@@ -1,16 +1,23 @@
 # Contact
 
-- email: `dmandloi@neiu.edu` (fastest path)
-- github: [@deepmandloi](https://github.com/deepmandloi)
-- linkedin: [deepmandloi](https://linkedin.com/in/deepmandloi)
+- email: `mandloideep22@gmail.com` (fastest path)
+- github: [@mandloideep](https://github.com/mandloideep)
+- linkedin: [thedeepmandloi](https://linkedin.com/in/thedeepmandloi)
 - resume: [/resume.pdf](/resume.pdf)
 
 ## What roles
 
-SWE internships (summer or fall), new-grad SWE, AI-engineering roles
-where the agent isn't theatre. Open to remote or chicago-based.
+New-grad SWE, AI engineering, and full-stack roles where the agent
+isn't theatre. Currently teaching CS300 at NEIU part-time, so a
+start date in the next few months works cleanly. Open to remote,
+Chicago-based, or hybrid.
 
-## What he's not looking for
+## What he can ship
 
-Sales-engineering pure-presales gigs. Crypto. Anything that requires
-lying about what an LLM can do.
+- full-stack web apps (Spring Boot / FastAPI / Express on the back,
+  React on the front)
+- RAG pipelines that go past the demo (eval harness, vendor portability,
+  per-IP caps)
+- self-hosted infra on a single VPS (Docker, GitHub Actions, Dokploy,
+  Traefik)
+- ML services that are honest about their dataset size

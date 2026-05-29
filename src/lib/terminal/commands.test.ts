@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { projects } from "#/content/site";
-import { DEFAULT_MODEL_ID, modelStore } from "#/store/model";
+import { DEFAULT_MODEL_ID, getProviderModels, modelStore } from "#/store/model";
 import { emit as _emit, pushHistory, terminalStore } from "#/store/terminal";
 import { themeStore } from "#/store/theme";
 import { autocomplete, parseInput, runCommand } from "./commands";
@@ -184,7 +184,7 @@ describe("runCommand", () => {
 	});
 
 	it("/projects <known-slug> emits a markdown block", async () => {
-		await runCommand("/projects mydininghall", {
+		await runCommand("/projects commentdraw", {
 			navigate: noopNavigate,
 			submit: noopSubmit,
 		});
@@ -243,19 +243,27 @@ describe("runCommand", () => {
 			submit: noopSubmit,
 		});
 		const text = (lastBlock() as { text: string }).text;
-		expect(text).toContain("google/gemini-2.5-flash-lite");
-		expect(text).toContain("anthropic/claude-haiku-4.5");
+		// Provider-agnostic: every active-provider model id must appear.
+		for (const m of getProviderModels()) {
+			expect(text).toContain(m.id);
+		}
 	});
 
 	it("/model <id> switches and persists for an allowlisted id", async () => {
-		await runCommand("/model anthropic/claude-haiku-4.5", {
+		const alt = getProviderModels().find((m) => m.id !== DEFAULT_MODEL_ID);
+		if (!alt)
+			throw new Error("provider needs at least two models for this test");
+		await runCommand(`/model ${alt.id}`, {
 			navigate: noopNavigate,
 			submit: noopSubmit,
 		});
-		expect(modelStore.state.activeModel).toBe("anthropic/claude-haiku-4.5");
-		expect(window.localStorage.getItem("portfolio.terminal.model")).toBe(
-			"anthropic/claude-haiku-4.5",
-		);
+		expect(modelStore.state.activeModel).toBe(alt.id);
+		const stored = window.localStorage.getItem("portfolio.agent.v2");
+		expect(stored).toBeTruthy();
+		expect(JSON.parse(stored ?? "{}")).toMatchObject({
+			version: 2,
+			model: alt.id,
+		});
 		expect(lastBlock()?.kind).toBe("output");
 	});
 

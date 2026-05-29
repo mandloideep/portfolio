@@ -1,50 +1,75 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Github, Linkedin, Mail, Terminal } from "lucide-react";
 import { useEffect } from "react";
+import { Card } from "#/components/ui/card";
+import { Pill } from "#/components/ui/pill";
 import { siteMeta } from "#/content/site";
-import { Badge } from "../ui/badge";
 
-interface ContactRowProps {
-	icon: React.ReactNode;
+type RowProps = {
 	label: string;
-	value: string;
-	href: string;
+	href?: string;
 	external?: boolean;
-	trailing?: React.ReactNode;
+	onClick?: () => void;
+	value: React.ReactNode;
 	testId: string;
-}
+};
 
 function ContactRow({
-	icon,
 	label,
-	value,
 	href,
 	external,
-	trailing,
+	onClick,
+	value,
 	testId,
-}: ContactRowProps) {
+}: RowProps) {
 	const externalAttrs = external
-		? { target: "_blank", rel: "noreferrer" }
+		? { target: "_blank" as const, rel: "noreferrer" }
 		: undefined;
-	return (
-		<li className="flex items-center gap-3">
-			<span aria-hidden="true" className="shrink-0 text-accent">
-				▸
-			</span>
-			<span className="shrink-0 text-muted">{icon}</span>
-			<span className="w-24 shrink-0 font-mono text-xs uppercase tracking-wider text-muted">
+	const inner = (
+		<>
+			<span className="w-24 shrink-0 font-mono text-base text-muted">
 				{label}
 			</span>
-			<a
+			<span aria-hidden="true" className="font-mono text-base text-muted">
+				→
+			</span>
+			<span className="flex-1 font-mono text-base text-link">{value}</span>
+		</>
+	);
+
+	const className = "flex items-center gap-6 px-5 py-4";
+
+	if (href) {
+		return (
+			<Card
+				as="a"
+				interactive
 				data-testid={testId}
 				href={href}
 				{...externalAttrs}
-				className="truncate text-sm text-fg/90 transition hover:text-accent focus-visible:outline-none focus-visible:underline"
+				className={className}
 			>
-				{value}
-			</a>
-			{trailing ? <span className="ml-auto">{trailing}</span> : null}
-		</li>
+				{inner}
+			</Card>
+		);
+	}
+	if (onClick) {
+		return (
+			<Card
+				as="button"
+				interactive
+				type="button"
+				data-testid={testId}
+				onClick={onClick}
+				className={`${className} text-left`}
+			>
+				{inner}
+			</Card>
+		);
+	}
+	return (
+		<Card data-testid={testId} className={className}>
+			{inner}
+		</Card>
 	);
 }
 
@@ -77,63 +102,54 @@ export function ContactCard() {
 		return () => window.removeEventListener("keydown", onKey);
 	}, [navigate]);
 
+	const github = siteMeta.links.github.replace(/^https?:\/\//, "");
+	const linkedin = siteMeta.links.linkedin.replace(/^https?:\/\//, "");
+
 	return (
 		<div
 			data-testid="contact-card"
-			className="mx-auto flex w-full max-w-2xl flex-col gap-6"
+			className="flex flex-col gap-3 rounded-card border border-border/70 bg-bg-elev/40 p-3 sm:p-5"
 		>
-			<ul className="flex flex-col gap-3">
-				<ContactRow
-					icon={<Mail className="size-4" aria-hidden="true" />}
-					label="email"
-					value={siteMeta.email}
-					href={`mailto:${siteMeta.email}`}
-					testId="contact-email"
-				/>
-				<ContactRow
-					icon={<Github className="size-4" aria-hidden="true" />}
-					label="github"
-					value={siteMeta.links.github.replace(/^https?:\/\//, "")}
-					href={siteMeta.links.github}
-					external
-					testId="contact-github"
-				/>
-				<ContactRow
-					icon={<Linkedin className="size-4" aria-hidden="true" />}
-					label="linkedin"
-					value={siteMeta.links.linkedin.replace(/^https?:\/\//, "")}
-					href={siteMeta.links.linkedin}
-					external
-					testId="contact-linkedin"
-				/>
-				<li className="flex items-center gap-3">
-					<span aria-hidden="true" className="shrink-0 text-accent">
-						▸
-					</span>
-					<span className="shrink-0 text-muted">
-						<Terminal className="size-4" aria-hidden="true" />
-					</span>
-					<span className="w-24 shrink-0 font-mono text-xs uppercase tracking-wider text-muted">
-						terminal
-					</span>
-					<button
-						type="button"
-						data-testid="contact-terminal"
-						onClick={() => navigate({ to: "/terminal" })}
-						className="truncate text-sm text-fg/90 transition hover:text-accent focus-visible:outline-none focus-visible:underline"
-					>
+			<ContactRow
+				testId="contact-github"
+				label="github"
+				href={siteMeta.links.github}
+				external
+				value={github.replace(/^github\.com\//, "")}
+			/>
+			<ContactRow
+				testId="contact-linkedin"
+				label="linkedin"
+				href={siteMeta.links.linkedin}
+				external
+				value={linkedin.replace(/^(?:www\.)?linkedin\.com\/in\//, "")}
+			/>
+			<ContactRow
+				testId="contact-email"
+				label="email"
+				href={`mailto:${siteMeta.email}`}
+				value={siteMeta.email}
+			/>
+			<ContactRow
+				testId="contact-resume"
+				label="resume"
+				href={siteMeta.links.resume}
+				external
+				value="view resume"
+			/>
+			<ContactRow
+				testId="contact-terminal"
+				label="terminal"
+				onClick={() => navigate({ to: "/terminal" })}
+				value={
+					<span className="inline-flex items-center gap-2.5">
 						open the agentic terminal
-					</button>
-					<span className="ml-auto">
-						<Badge
-							variant="outline"
-							className="border-border/70 font-mono text-[10px] text-muted"
-						>
+						<Pill size="xs" tone="muted">
 							press t
-						</Badge>
+						</Pill>
 					</span>
-				</li>
-			</ul>
+				}
+			/>
 		</div>
 	);
 }

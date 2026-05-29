@@ -1,92 +1,114 @@
-import { useEffect, useRef, useState } from "react";
+import { AnimatedShinyText } from "#/components/ui/animated-shiny-text";
+import { CommandPrompt } from "#/components/ui/command-prompt";
+import { Divider } from "#/components/ui/divider";
+import { StatusPill } from "#/components/ui/status-pill";
 import { siteMeta } from "#/content/site";
-import { useMagnetic } from "#/hooks/use-magnetic";
+import { useQuip } from "#/hooks/use-quip";
 import { useReducedMotion } from "#/hooks/use-reduced-motion";
 import { cn } from "#/lib/utils";
-import { AnimatedShinyText } from "../ui/animated-shiny-text";
-import { LocalTime } from "./local-time";
-import { StatusPill } from "./status-pill";
 
-function ShimmerName({ name }: { name: string }) {
-	const reduced = useReducedMotion();
-	const ref = useRef<HTMLSpanElement | null>(null);
-	const [inView, setInView] = useState(false);
+type MetaRow = { label: string; value: React.ReactNode };
 
-	useEffect(() => {
-		const el = ref.current;
-		if (!el || typeof IntersectionObserver === "undefined") return;
-		const io = new IntersectionObserver((entries) => {
-			const entry = entries[0];
-			setInView(entry?.isIntersecting ?? false);
-		});
-		io.observe(el);
-		return () => io.disconnect();
-	}, []);
-
-	if (reduced || !inView) {
-		return (
-			<span
-				ref={ref}
-				data-testid="hero-name"
-				data-shimmer="false"
-				className="text-fg"
-			>
-				{name}
-			</span>
-		);
-	}
-
-	return (
-		<span ref={ref} data-testid="hero-name" data-shimmer="true">
-			<AnimatedShinyText className="mx-0 max-w-none text-fg/90">
-				{name}
-			</AnimatedShinyText>
-		</span>
-	);
-}
-
+/**
+ * Profile card hero. Renders the `$ cat whoami` prompt above, then a
+ * bordered card with name (white) + green nickname-in-parens, cyan role
+ * subtitle, a 2-column key/value grid, and an italic accent quip with a
+ * hairline separator above it. Sizes track the reference: ~36-42px name,
+ * ~14-15px key/value rows.
+ */
 export function Hero({ className }: { className?: string }) {
-	const projectsRef = useMagnetic<HTMLAnchorElement>();
-	const terminalRef = useMagnetic<HTMLAnchorElement>();
+	const nickname = "Deep";
+	const reduced = useReducedMotion();
+	const quip = useQuip();
+	const meta: MetaRow[] = [
+		{
+			label: "focus",
+			value: (
+				<span className="text-accent">
+					AI agents, full-stack systems, developer tooling
+				</span>
+			),
+		},
+		{
+			label: "status",
+			value: <span className="text-accent">{siteMeta.status}</span>,
+		},
+		{
+			label: "location",
+			value: <span className="text-link">{siteMeta.location}</span>,
+		},
+		{
+			label: "open source",
+			value: (
+				<a
+					href={siteMeta.links.github}
+					target="_blank"
+					rel="noreferrer"
+					className="text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
+				>
+					github.com/deepmandloi
+				</a>
+			),
+		},
+	];
+
 	return (
-		<div data-testid="hero" className={cn("flex flex-col gap-6", className)}>
-			<div className="flex flex-col gap-3">
-				<p className="text-muted text-sm">hey, I&apos;m</p>
-				<h3 className="text-4xl md:text-5xl font-medium tracking-tight">
-					<ShimmerName name={siteMeta.name} />
-				</h3>
-				<p className="text-fg/80 text-base md:text-lg">{siteMeta.role}</p>
-			</div>
-
+		<div data-testid="hero" className={cn("flex flex-col gap-5", className)}>
 			<div className="flex flex-wrap items-center gap-3">
+				<CommandPrompt command="cat whoami" />
 				<StatusPill status={siteMeta.status} />
-				<LocalTime />
 			</div>
 
-			<div className="flex flex-wrap items-center gap-3 pt-2">
-				<a
-					ref={projectsRef}
-					href="#projects"
-					data-testid="hero-cta-projects"
-					className="inline-flex items-center gap-2 rounded-md border border-accent bg-accent/10 px-4 py-2 text-sm text-accent hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+			<article className="rounded-card border border-border/80 bg-bg-elev/60 px-7 py-8 sm:px-9 sm:py-9">
+				<header className="flex flex-col gap-2">
+					<h2
+						data-testid="hero-name"
+						className="font-mono text-display font-semibold leading-tight tracking-tight text-fg"
+					>
+						{siteMeta.name} <span className="text-accent">({nickname})</span>
+					</h2>
+					<a
+						href={siteMeta.links.resume}
+						target="_blank"
+						rel="noreferrer"
+						className="w-fit font-mono text-md text-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline sm:text-lg"
+					>
+						{siteMeta.role}
+					</a>
+					<p
+						data-testid="hero-tagline"
+						className="font-mono text-sm italic text-muted"
+					>
+						{siteMeta.quip}
+					</p>
+				</header>
+
+				<dl className="mt-7 grid grid-cols-1 gap-x-12 gap-y-2 sm:grid-cols-2">
+					{meta.map((row) => (
+						<div key={row.label} className="flex items-baseline gap-5 py-1.5">
+							<dt className="w-28 shrink-0 font-mono text-sm text-muted">
+								{row.label}:
+							</dt>
+							<dd className="flex-1 font-mono text-sm">{row.value}</dd>
+						</div>
+					))}
+				</dl>
+
+				<Divider className="my-7" />
+
+				<p
+					data-testid="hero-quip"
+					className="font-mono text-base italic text-accent"
 				>
-					<span aria-hidden="true" className="text-accent">
-						▸
-					</span>
-					View projects
-				</a>
-				<a
-					ref={terminalRef}
-					href="/terminal"
-					data-testid="hero-cta-terminal"
-					className="inline-flex items-center gap-2 rounded-md border border-border bg-bg/40 px-4 py-2 text-sm text-fg hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-				>
-					<span aria-hidden="true" className="text-muted">
-						$
-					</span>
-					Open terminal
-				</a>
-			</div>
+					{reduced ? (
+						`“${quip}”`
+					) : (
+						<AnimatedShinyText className="mx-0 max-w-none text-accent">
+							{`“${quip}”`}
+						</AnimatedShinyText>
+					)}
+				</p>
+			</article>
 		</div>
 	);
 }

@@ -1,20 +1,32 @@
 import type { ReactNode } from "react";
+import { CommandPrompt } from "#/components/ui/command-prompt";
 import { cn } from "#/lib/utils";
 
 export interface PortfolioSectionProps {
 	id: string;
 	title: string;
-	eyebrow?: string;
+	command: string;
+	trailing?: ReactNode;
 	children?: ReactNode;
 	className?: string;
+	/** When set, the section title is rendered visually hidden (the
+	 * CommandPrompt acts as the visible header). */
+	hideTitle?: boolean;
 }
 
+/**
+ * A portfolio section. Each one reads as a terminal command + its output:
+ * the CommandPrompt line is the visible heading, then the section body.
+ * The semantic `<h2>` is kept for accessibility but hidden visually.
+ */
 export function PortfolioSection({
 	id,
 	title,
-	eyebrow,
+	command,
+	trailing,
 	children,
 	className,
+	hideTitle = true,
 }: PortfolioSectionProps) {
 	const labelId = `${id}-label`;
 	return (
@@ -22,21 +34,20 @@ export function PortfolioSection({
 			id={id}
 			aria-labelledby={labelId}
 			data-section={id}
-			className={cn("scroll-mt-20 py-24 md:py-32", className)}
+			className={cn("scroll-mt-20 px-6 py-12 sm:px-10 sm:py-16", className)}
 		>
-			<div className="mx-auto max-w-3xl px-6">
-				{eyebrow ? (
-					<p className="text-muted text-xs uppercase tracking-[0.18em] mb-2">
-						<span className="text-accent">$</span> {eyebrow}
-					</p>
-				) : null}
+			<div className="mx-auto max-w-3xl">
 				<h2
 					id={labelId}
-					className="text-2xl md:text-3xl font-medium tracking-tight"
+					className={cn(
+						"font-mono text-base font-semibold text-fg",
+						hideTitle && "sr-only",
+					)}
 				>
 					{title}
 				</h2>
-				{children ? <div className="mt-8">{children}</div> : null}
+				<CommandPrompt command={command} trailing={trailing} className="mb-5" />
+				{children}
 			</div>
 		</section>
 	);

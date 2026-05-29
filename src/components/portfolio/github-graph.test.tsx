@@ -5,6 +5,26 @@ import type {
 	GithubGraphResponse,
 } from "#/routes/api.github-graph";
 
+// `Link` in this component needs a router context. We don't want to spin
+// one up for these tests — the link is presentational. Stub it as <a>.
+vi.mock("@tanstack/react-router", async () => {
+	const actual = await vi.importActual<typeof import("@tanstack/react-router")>(
+		"@tanstack/react-router",
+	);
+	return {
+		...actual,
+		Link: ({
+			to,
+			children,
+			...props
+		}: { to: string; children: React.ReactNode } & Record<string, unknown>) => (
+			<a href={typeof to === "string" ? to : "#"} {...props}>
+				{children}
+			</a>
+		),
+	};
+});
+
 class MockIO {
 	observe() {}
 	unobserve() {}
@@ -67,6 +87,18 @@ function buildResponse(): GithubGraphResponse {
 		weeks,
 		longestStreak: 7,
 		currentStreak: 3,
+		last30: 30,
+		last7: 10,
+		activeDayPct: 60.5,
+		bestDay: { count: 12, date: "2025-05-15" },
+		bestWeek: { count: 42, weekStart: "2025-05-04" },
+		topWeekday: { name: "Tue", index: 2, mean: 2.4 },
+		topLanguages: [],
+		topRepos: [],
+		publicRepoCount: 8,
+		totalStars: 21,
+		prs: { opened: 7, merged: 5 },
+		issuesOpened: 2,
 	};
 }
 
@@ -115,13 +147,15 @@ describe("GithubGraph", () => {
 		);
 	});
 
-	it("renders the stat trio labels", async () => {
+	it("renders the headline stat labels", async () => {
 		stubFetch(jsonResponse(buildResponse()));
 		const { getByText, getByTestId } = render(<GithubGraph />);
 		await waitFor(() =>
 			expect(getByTestId("github-graph").dataset.state).toBe("ready"),
 		);
-		expect(getByText(/total contributions/i)).toBeInTheDocument();
+		expect(getByText(/^total$/i)).toBeInTheDocument();
+		expect(getByText(/last 30 days/i)).toBeInTheDocument();
+		expect(getByText(/active days/i)).toBeInTheDocument();
 		expect(getByText(/longest streak/i)).toBeInTheDocument();
 		expect(getByText(/current streak/i)).toBeInTheDocument();
 	});

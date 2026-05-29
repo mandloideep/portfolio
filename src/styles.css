@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Geist+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 /*
  ---break---
@@ -6,16 +6,32 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Theme tokens are registry-driven. The `[data-theme="<slug>"] { … }` rules
- * are generated at SSR from src/content/themes.ts via #/lib/theme-css and
- * inlined into the document head. Do not hand-edit data-theme blocks.
+ * Design tokens — single source of truth.
  *
- * Tailwind v4 @theme inline bridges those CSS variables into utility
- * classes: `bg-bg`, `text-fg`, `border-border`, `text-accent`, etc.
+ * Theme colors (`--bg`, `--fg`, ...) are registry-driven and emitted at SSR
+ * from src/content/themes.ts. The `@theme inline` block below bridges
+ * everything else into Tailwind v4 utilities (text-*, shadow-*, duration-*,
+ * etc.) and is the place to bump the system — DO NOT hard-code values in
+ * components.
+ *
+ * UI scale: `--ui-scale` on :root multiplies html font-size. Every rem-based
+ * token (the entire type scale + most spacing) rescales automatically.
  */
 
+:root {
+	color-scheme: dark light;
+	--ui-scale: 1;
+}
+
+[data-density="compact"] { --ui-scale: 0.92; }
+[data-density="cozy"]    { --ui-scale: 1; }
+[data-density="comfy"]   { --ui-scale: 1.08; }
+[data-density="roomy"]   { --ui-scale: 1.16; }
+
 @theme inline {
+	/* ─── Colors (theme-driven, see src/content/themes.ts) ──────────── */
 	--color-bg: var(--bg);
+	--color-bg-elev: var(--bg-elev);
 	--color-fg: var(--fg);
 	--color-muted: var(--muted);
 	--color-border: var(--border);
@@ -24,53 +40,158 @@
 	--color-link: var(--link);
 	--color-success: var(--success);
 	--color-error: var(--error);
+	--color-ring: var(--ring);
 
+	/* Aliases for shadcn-style primitives (button, dropdown-menu, dialog,
+	 * tooltip, card, …). They expect a parallel set of token names; we
+	 * bridge each one to a portfolio token so the primitives stay vendor-
+	 * pristine but still take part in theme switching. Prefer the portfolio
+	 * names (`bg-bg`, `text-fg`, …) in new code. */
+	--color-background: var(--bg);
+	--color-foreground: var(--fg);
+	--color-popover: var(--bg-elev);
+	--color-popover-foreground: var(--fg);
+	--color-card: var(--bg-elev);
+	--color-card-foreground: var(--fg);
+	--color-muted-foreground: var(--muted);
+	--color-primary: var(--accent);
+	--color-primary-foreground: var(--bg);
+	--color-secondary: var(--bg-elev);
+	--color-secondary-foreground: var(--fg);
+	--color-accent-foreground: var(--bg);
+	--color-destructive: var(--error);
+	--color-destructive-foreground: var(--bg);
+	--color-input: var(--border);
+
+	/* ─── Font families ─────────────────────────────────────────────── */
+	--font-display: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+	--font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+		Helvetica, Arial, sans-serif;
 	--font-mono: "JetBrains Mono", "Geist Mono", ui-monospace, SFMono-Regular,
 		Menlo, monospace;
 
+	/* ─── Type scale (rem; scales with html font-size + --ui-scale)
+	 * Shifted one notch up: today's `xl` feels like the new `md`.        */
+	--text-eyebrow: 0.8125rem;     /* 13px — UPPERCASE labels, eyebrows  */
+	--text-meta: 0.875rem;         /* 14px — tiny meta, timestamps       */
+	--text-sm: 0.9375rem;          /* 15px — small body                  */
+	--text-base: 1rem;             /* 16px — default body                */
+	--text-md: 1.125rem;           /* 18px — card subheads               */
+	--text-lg: 1.25rem;            /* 20px — card titles                 */
+	--text-xl: 1.5rem;             /* 24px — section titles              */
+	--text-2xl: 1.875rem;          /* 30px — feature titles              */
+	--text-stat: 2.15rem;          /* 34px — stat-card big number        */
+	--text-display: clamp(2.25rem, 5.8vw, 3.5rem);
+
+	/* ─── Leading ───────────────────────────────────────────────────── */
+	--leading-tight: 1.05;
+	--leading-snug: 1.35;
+	--leading-body: 1.6;
+	--leading-relaxed: 1.7;
+
+	/* ─── Tracking ──────────────────────────────────────────────────── */
+	--tracking-eyebrow: 0.18em;
+	--tracking-tab: 0.14em;
+	--tracking-wide: 0.08em;
+
+	/* ─── Radii ─────────────────────────────────────────────────────── */
+	--radius-chip: 0.25rem;
+	--radius-card: 0.75rem;
+	--radius-pill: 9999px;
+
+	/* ─── Spacing tokens ────────────────────────────────────────────────
+	 * Named spacing values that may need to be retuned across surfaces
+	 * (frame gaps, hero offsets, …). Tailwind v4 exposes a real utility
+	 * for every `--spacing-<name>` key, so callers write e.g.
+	 * `md:pt-frame-top` and one edit here moves all three shells in sync.
+	 */
+	--spacing-frame-top: 3rem; /* desktop-only top breathing room above macOS chrome */
+
+	/* ─── Shadows ───────────────────────────────────────────────────── */
+	--shadow-frame:
+		0 1px 0 var(--color-border),
+		0 30px 60px -20px rgba(0, 0, 0, 0.45);
+	--shadow-card:
+		0 1px 0 var(--color-border),
+		0 18px 40px -24px rgba(0, 0, 0, 0.4);
+	--shadow-glow:
+		0 0 0 1px color-mix(in oklch, var(--color-accent) 25%, transparent);
+	--shadow-glow-strong:
+		0 0 0 1px color-mix(in oklch, var(--color-accent) 30%, transparent);
+	--shadow-tab-active:
+		0 0 0 1px color-mix(in oklch, var(--color-accent) 30%, transparent),
+		0 0 18px -2px color-mix(in oklch, var(--color-accent) 45%, transparent);
+
+	/* ─── Motion ────────────────────────────────────────────────────── */
+	--duration-fast: 150ms;
+	--duration-base: 250ms;
+	--duration-slow: 450ms;
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-out-back: cubic-bezier(0.18, 0.89, 0.32, 1.28);
+
+	/* ─── Z-index ──────────────────────────────────────────────────── */
+	--z-base: 0;
+	--z-overlay: 10;
+	--z-nav: 30;
+	--z-modal: 50;
+	--z-toast: 70;
+
+	/* ─── Keyframe animations ──────────────────────────────────────── */
 	--animate-meteor: meteor 5s linear infinite;
-  @keyframes meteor {
-  0% {
-    transform: rotate(var(--angle)) translateX(0);
-    opacity: 1;
+	@keyframes meteor {
+		0% {
+			transform: rotate(var(--angle)) translateX(0);
+			opacity: 1;
 		}
-  70% {
-    opacity: 1;
-		}
-  100% {
-    transform: rotate(var(--angle)) translateX(-500px);
-    opacity: 0;
+		70% { opacity: 1; }
+		100% {
+			transform: rotate(var(--angle)) translateX(-500px);
+			opacity: 0;
 		}
 	}
-  --animate-marquee: marquee var(--duration) infinite linear;
-  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite
-;
-  @keyframes marquee {
-  from {
-    transform: translateX(0);}
-  to {
-    transform: translateX(calc(-100% - var(--gap)));}}
-  @keyframes marquee-vertical {
-  from {
-    transform: translateY(0);}
-  to {
-    transform: translateY(calc(-100% - var(--gap)));}}
-  --animate-shiny-text: shiny-text 8s infinite;
-  @keyframes shiny-text {
-  0%, 90%, 100% {
-    background-position: calc(-100% - var(--shiny-width)) 0;}
-  30%, 60% {
-    background-position: calc(100% + var(--shiny-width)) 0;}}}
-
-/* Base typography + colors driven by the active theme. */
-:root {
-	color-scheme: dark light;
+	--animate-marquee: marquee var(--duration) infinite linear;
+	--animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+	@keyframes marquee {
+		from { transform: translateX(0); }
+		to { transform: translateX(calc(-100% - var(--gap))); }
+	}
+	@keyframes marquee-vertical {
+		from { transform: translateY(0); }
+		to { transform: translateY(calc(-100% - var(--gap))); }
+	}
+	--animate-shiny-text: shiny-text 8s infinite;
+	@keyframes shiny-text {
+		0%, 90%, 100% { background-position: calc(-100% - var(--shiny-width)) 0; }
+		30%, 60% { background-position: calc(100% + var(--shiny-width)) 0; }
+	}
+	--animate-caret-blink: caret-blink 1.06s steps(1) infinite;
+	@keyframes caret-blink {
+		0%, 50% { opacity: 1; }
+		50.01%, 100% { opacity: 0; }
+	}
+	--animate-status-pulse: status-pulse 1.4s ease-in-out infinite;
+	@keyframes status-pulse {
+		0%, 100% { opacity: 0.55; transform: scale(1); }
+		50% { opacity: 1; transform: scale(1.15); }
+	}
+	--animate-accent-sweep: accent-sweep 1.2s ease-out;
+	@keyframes accent-sweep {
+		from { transform: scaleX(0); }
+		to { transform: scaleX(1); }
+	}
+	@keyframes fade-in {
+		from { opacity: 0; transform: translateY(4px); }
+		to   { opacity: 1; transform: translateY(0); }
+	}
 }
 
+/* ─── Base typography ─────────────────────────────────────────────── */
+
 html {
-	font-family: var(--font-mono);
-	letter-spacing: -0.01em;
-	line-height: 1.6;
+	font-size: calc(1rem * var(--ui-scale));
+	font-family: var(--font-sans);
+	letter-spacing: -0.005em;
+	line-height: var(--leading-body);
 	background: var(--bg);
 	color: var(--fg);
 	-webkit-font-smoothing: antialiased;
@@ -79,10 +200,18 @@ html {
 }
 
 body {
-	font-family: var(--font-mono);
+	font-family: var(--font-sans);
 	background: var(--bg);
 	color: var(--fg);
 	min-height: 100vh;
+	font-feature-settings: "ss01", "cv11";
+}
+
+/* Pages that opt into the terminal aesthetic stay mono throughout. */
+[data-page="terminal"],
+[data-page="terminal"] body {
+	font-family: var(--font-mono);
+	letter-spacing: -0.01em;
 }
 
 ::selection {
@@ -90,29 +219,118 @@ body {
 	color: var(--bg);
 }
 
-/*
- * Heatmap intensity steps for the GitHub contributions grid. Derived from
- * var(--color-accent) per active theme via color-mix so a single declaration
- * works across all five themes. Requires color-mix support (Safari ≥ 16.4,
- * Chrome ≥ 111, Firefox ≥ 113).
- */
-.hm-0 {
-	background: color-mix(in oklch, var(--color-border) 40%, transparent);
-}
-.hm-1 {
-	background: color-mix(in oklch, var(--color-accent) 22%, transparent);
-}
-.hm-2 {
-	background: color-mix(in oklch, var(--color-accent) 44%, transparent);
-}
-.hm-3 {
-	background: color-mix(in oklch, var(--color-accent) 70%, transparent);
-}
-.hm-4 {
-	background: var(--color-accent);
+/* ─── Terminal prompt syntax utilities ───────────────────────────── */
+
+.text-prompt-user   { color: var(--accent); }
+.text-prompt-host   { color: var(--link); }
+.text-prompt-cwd    { color: var(--muted); }
+.text-prompt-symbol { color: var(--muted); }
+.text-prompt-cmd    { color: var(--fg); }
+
+/* ─── Atmospheres ────────────────────────────────────────────────── */
+
+.surface-grain::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	z-index: var(--z-overlay);
+	mix-blend-mode: overlay;
+	opacity: 0.06;
+	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>");
 }
 
-/* Respect prefers-reduced-motion: kill transitions and animations. */
+@media (prefers-reduced-transparency: reduce) {
+	.surface-grain::before { display: none; }
+}
+
+.terminal-surface {
+	background-image: repeating-linear-gradient(
+		0deg,
+		transparent 0 2px,
+		color-mix(in oklch, var(--fg) 3%, transparent) 2px 3px
+	);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.terminal-surface { background-image: none; }
+}
+
+.caret-block::after {
+	content: "";
+	display: inline-block;
+	width: 0.55em;
+	height: 1.05em;
+	margin-left: 2px;
+	vertical-align: -0.18em;
+	background: var(--accent);
+	animation: var(--animate-caret-blink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.caret-block::after { animation: none; opacity: 0.85; }
+}
+
+.status-dot {
+	display: inline-block;
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: var(--radius-pill);
+	background: var(--success);
+	box-shadow: 0 0 0 2px color-mix(in oklch, var(--success) 25%, transparent);
+}
+[data-state="streaming"] .status-dot {
+	background: var(--accent);
+	box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 30%, transparent);
+	animation: var(--animate-status-pulse);
+}
+
+/* ─── Markdown prose overrides for the terminal ──────────────────── */
+
+.terminal-prose {
+	--tw-prose-body: var(--fg);
+	--tw-prose-headings: var(--fg);
+	--tw-prose-lead: var(--fg);
+	--tw-prose-links: var(--link);
+	--tw-prose-bold: var(--fg);
+	--tw-prose-counters: var(--muted);
+	--tw-prose-bullets: var(--muted);
+	--tw-prose-hr: var(--border);
+	--tw-prose-quotes: var(--fg);
+	--tw-prose-quote-borders: var(--accent);
+	--tw-prose-captions: var(--muted);
+	--tw-prose-code: var(--accent);
+	--tw-prose-pre-code: var(--fg);
+	--tw-prose-pre-bg: var(--bg-elev);
+	--tw-prose-th-borders: var(--border);
+	--tw-prose-td-borders: var(--border);
+	--tw-prose-invert-body: var(--fg);
+	--tw-prose-invert-headings: var(--fg);
+	--tw-prose-invert-links: var(--link);
+	--tw-prose-invert-bold: var(--fg);
+	--tw-prose-invert-counters: var(--muted);
+	--tw-prose-invert-bullets: var(--muted);
+	--tw-prose-invert-hr: var(--border);
+	--tw-prose-invert-quotes: var(--fg);
+	--tw-prose-invert-quote-borders: var(--accent);
+	--tw-prose-invert-captions: var(--muted);
+	--tw-prose-invert-code: var(--accent);
+	--tw-prose-invert-pre-code: var(--fg);
+	--tw-prose-invert-pre-bg: var(--bg-elev);
+	--tw-prose-invert-th-borders: var(--border);
+	--tw-prose-invert-td-borders: var(--border);
+}
+
+/* ─── GitHub heatmap intensity ───────────────────────────────────── */
+
+.hm-0 { background: color-mix(in oklch, var(--color-border) 40%, transparent); }
+.hm-1 { background: color-mix(in oklch, var(--color-accent) 22%, transparent); }
+.hm-2 { background: color-mix(in oklch, var(--color-accent) 44%, transparent); }
+.hm-3 { background: color-mix(in oklch, var(--color-accent) 70%, transparent); }
+.hm-4 { background: var(--color-accent); }
+
+/* ─── Reduced motion ─────────────────────────────────────────────── */
+
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,

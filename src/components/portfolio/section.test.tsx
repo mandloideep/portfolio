@@ -5,7 +5,7 @@ import { PortfolioSection } from "./section";
 describe("PortfolioSection", () => {
 	it("uses the id and labels the heading", () => {
 		const { container, getByText } = render(
-			<PortfolioSection id="hero" title="intro" eyebrow="cat ~/intro" />,
+			<PortfolioSection id="hero" title="intro" command="cat ~/intro" />,
 		);
 		const section = container.querySelector("section");
 		expect(section?.id).toBe("hero");
@@ -13,16 +13,16 @@ describe("PortfolioSection", () => {
 		expect(getByText("intro").id).toBe("hero-label");
 	});
 
-	it("renders the eyebrow when provided", () => {
-		const { getByText } = render(
-			<PortfolioSection id="x" title="t" eyebrow="ls -la" />,
+	it("renders the command prompt when provided", () => {
+		const { container } = render(
+			<PortfolioSection id="x" title="t" command="ls -la" />,
 		);
-		expect(getByText(/ls -la/)).toBeInTheDocument();
+		expect(container.textContent).toMatch(/ls -la/);
 	});
 
 	it("renders children when provided", () => {
 		const { getByText } = render(
-			<PortfolioSection id="x" title="t">
+			<PortfolioSection id="x" title="t" command="cat ~/x">
 				<span>body</span>
 			</PortfolioSection>,
 		);

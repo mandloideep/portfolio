@@ -6,16 +6,14 @@ export function ExperienceTimeline({ className }: { className?: string }) {
 	return (
 		<ol
 			data-testid="experience-timeline"
-			className={cn(
-				"relative ml-1 flex flex-col border-l border-border/60",
-				className,
-			)}
+			className={cn("flex flex-col gap-3", className)}
 		>
 			{experience.map((entry, i) => (
 				<ExperienceCard
 					key={`${entry.company}-${entry.start}`}
 					entry={entry}
 					index={i}
+					defaultExpanded={i === 0 || entry.end === "present"}
 				/>
 			))}
 		</ol>

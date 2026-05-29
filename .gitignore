@@ -19,5 +19,8 @@ todos.json
 .idea
 *.log
 
+# OG cards — regenerated at build time by scripts/generate-og.tsx
+public/og/
+
 # generated drizzle migrations (commit if you want them under review — leave ignored by default)
 # /drizzle

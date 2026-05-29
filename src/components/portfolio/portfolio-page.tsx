@@ -1,93 +1,91 @@
-import { siteMeta } from "#/content/site";
-import { AnimatedBackground } from "./animated-background";
-import { ContactCard } from "./contact-card";
-import { type DockItem, DockNav } from "./dock-nav";
-import { ExperienceTimeline } from "./experience-timeline";
-import { Footer } from "./footer";
+import { CommandPrompt } from "#/components/ui/command-prompt";
+import { StatCard } from "#/components/ui/stat-card";
+import type { Project } from "#/content/site";
+import { projects } from "#/content/site";
 import { GithubGraph } from "./github-graph";
 import { Hero } from "./hero";
-import { ProjectsBento } from "./projects-bento";
-import { ResearchList } from "./research-list";
-import { PortfolioSection } from "./section";
-import { SkillsGrid } from "./skills-grid";
+import { PortfolioLayout } from "./portfolio-layout";
 
-const SECTIONS: ReadonlyArray<DockItem & { eyebrow: string; title: string }> = [
-	{ id: "hero", label: "intro", eyebrow: "cat ~/intro", title: "intro" },
-	{
-		id: "projects",
-		label: "projects",
-		eyebrow: "ls ~/projects",
-		title: "projects",
-	},
-	{
-		id: "experience",
-		label: "experience",
-		eyebrow: "cat ~/experience.md",
-		title: "experience",
-	},
-	{
-		id: "skills",
-		label: "skills",
-		eyebrow: "cat ~/skills.md",
-		title: "skills & research",
-	},
-	{
-		id: "github",
-		label: "github",
-		eyebrow: "git log --graph",
-		title: "github",
-	},
-	{
-		id: "contact",
-		label: "contact",
-		eyebrow: "cat ~/contact.md",
-		title: "contact",
-	},
-] as const;
+const SECTION_PADDING = "px-6 py-10 sm:px-10 sm:py-12";
 
-export function PortfolioPage() {
+function ProjectStatBlock({ project }: { project: Project }) {
+	if (!project.stats || project.stats.length === 0) return null;
+	const command = project.endpoint ?? `cat ~/projects/${project.slug}.log`;
+	const ctaHref = project.links.live ?? project.links.repo;
+	const cta = project.cta ?? "view";
+
 	return (
-		<div data-page="portfolio" className="relative min-h-screen">
-			<AnimatedBackground />
-
-			<main id="main" className="relative">
-				<h1 className="sr-only">
-					{siteMeta.name} — {siteMeta.role}
-				</h1>
-				{SECTIONS.map((s) => (
-					<PortfolioSection
-						key={s.id}
-						id={s.id}
-						title={s.title}
-						eyebrow={s.eyebrow}
-					>
-						{s.id === "hero" ? (
-							<Hero />
-						) : s.id === "projects" ? (
-							<ProjectsBento />
-						) : s.id === "experience" ? (
-							<ExperienceTimeline />
-						) : s.id === "skills" ? (
-							<div className="grid grid-cols-1 gap-10 md:grid-cols-2">
-								<SkillsGrid />
-								<ResearchList />
-							</div>
-						) : s.id === "github" ? (
-							<GithubGraph />
-						) : s.id === "contact" ? (
-							<ContactCard />
-						) : (
-							<p className="text-muted text-sm">
-								placeholder — content lands in a later phase.
-							</p>
-						)}
-					</PortfolioSection>
+		<section
+			data-testid={`whoami-stat-${project.slug}`}
+			className={`flex flex-col gap-4 border-t border-border/60 ${SECTION_PADDING}`}
+		>
+			<CommandPrompt
+				command={command}
+				trailing={
+					ctaHref ? (
+						<a
+							href={ctaHref}
+							target="_blank"
+							rel="noreferrer"
+							className="underline-offset-4 hover:underline focus-visible:outline-none focus-visible:underline"
+						>
+							{cta}
+						</a>
+					) : (
+						cta
+					)
+				}
+			/>
+			<p className="max-w-3xl font-mono text-sm leading-relaxed text-fg/85">
+				{project.pitch ?? project.summary}
+			</p>
+			<div
+				className={`grid gap-3 ${
+					project.stats.length === 4
+						? "grid-cols-2 sm:grid-cols-4"
+						: project.stats.length === 3
+							? "grid-cols-1 sm:grid-cols-3"
+							: "grid-cols-1 sm:grid-cols-2"
+				}`}
+			>
+				{project.stats.map((s) => (
+					<StatCard
+						key={s.label}
+						value={s.value}
+						label={s.label}
+						sublabel={s.sublabel}
+						pulse={s.pulse}
+					/>
 				))}
-			</main>
+			</div>
+		</section>
+	);
+}
 
-			<Footer />
+/**
+ * The whoami page. Profile card up top, then a stat summary block per
+ * featured project, then a GitHub contributions graph block at the
+ * bottom. Each block reads as `$ command → cta` over its content.
+ */
+export function PortfolioPage() {
+	const featured = projects.filter((p) => p.featured && p.stats);
 
-			<DockNav items={SECTIONS} />
-		</div>
+	return (
+		<PortfolioLayout>
+			<section className={SECTION_PADDING}>
+				<Hero />
+			</section>
+
+			{featured.map((p) => (
+				<ProjectStatBlock key={p.slug} project={p} />
+			))}
+
+			<section
+				className={`flex flex-col gap-5 border-t border-border/60 ${SECTION_PADDING}`}
+			>
+				<CommandPrompt command={`git log --author="deep" --oneline | wc -l`} />
+				<GithubGraph />
+			</section>
+		</PortfolioLayout>
 	);
 }

@@ -1,0 +1,56 @@
+# Manual deploy: build the Docker image, push to GHCR, tell Dokploy to redeploy.
+#
+# Run it from GitHub → Actions → "Deploy" → Run workflow.
+#
+# One-time setup:
+#   1. Repo secret DOKPLOY_DEPLOY_WEBHOOK — the Dokploy application's deploy
+#      webhook URL (Dokploy → service → Deployments → Webhook / Auto Deploy).
+#   2. Dokploy service uses the "Docker" provider with image
+#      ghcr.io/mandloideep/portfolio:latest.
+#   3. If the GHCR package is private, add registry credentials in Dokploy
+#      (username = GitHub username, password = PAT with read:packages) — or make
+#      the package public. The first push creates a private package by default.
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trigger Dokploy redeploy
+        run: curl -fsS -X POST "${{ secrets.DOKPLOY_DEPLOY_WEBHOOK }}"

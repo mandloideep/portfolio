@@ -4,36 +4,37 @@ import { research } from "#/content/site";
 import { ResearchList } from "./research-list";
 
 describe("ResearchList", () => {
-	it("renders one <li> per research entry", () => {
+	it("renders one card <li> per research entry", () => {
 		const { container } = render(<ResearchList />);
-		expect(container.querySelectorAll("li").length).toBe(research.length);
+		const cards = container.querySelectorAll('[data-testid^="research-card-"]');
+		expect(cards.length).toBe(research.length);
 	});
 
 	it("orders entries by year descending", () => {
 		const { container } = render(<ResearchList />);
-		const cards = container.querySelectorAll('[data-testid^="research-card-"]');
-		const years = Array.from(cards).map((card) => {
-			const yearBadge = card.querySelector('[data-variant="default"]');
-			return Number(yearBadge?.textContent);
+		const cards = container.querySelectorAll(
+			'[data-testid^="research-card-"]:not([data-testid*="timeline"]):not([data-testid*="link"])',
+		);
+		const sortedByYear = [...research].sort((a, b) => b.year - a.year);
+		Array.from(cards).forEach((card, i) => {
+			expect(card.getAttribute("data-testid")).toBe(
+				`research-card-${sortedByYear[i]?.slug}`,
+			);
 		});
-		for (let i = 1; i < years.length; i++) {
-			expect(years[i - 1]).toBeGreaterThanOrEqual(years[i]);
-		}
 	});
 
 	it("renders year, venue, title and abstract for every entry", () => {
 		const { getByTestId } = render(<ResearchList />);
 		for (const entry of research) {
 			const card = getByTestId(`research-card-${entry.slug}`);
-			const scope = within(card);
-			expect(scope.getByText(String(entry.year))).toBeInTheDocument();
-			expect(scope.getByText(entry.venue)).toBeInTheDocument();
-			expect(scope.getByText(entry.title)).toBeInTheDocument();
-			expect(scope.getByText(entry.abstract)).toBeInTheDocument();
+			expect(card.textContent).toContain(String(entry.year));
+			expect(card.textContent).toContain(entry.venue);
+			expect(within(card).getByText(entry.title)).toBeInTheDocument();
+			expect(within(card).getByText(entry.abstract)).toBeInTheDocument();
 		}
 	});
 
-	it("renders each entry's tags as Badges", () => {
+	it("renders each entry's tags", () => {
 		const { getByTestId } = render(<ResearchList />);
 		for (const entry of research) {
 			const card = getByTestId(`research-card-${entry.slug}`);
@@ -41,17 +42,6 @@ describe("ResearchList", () => {
 			for (const tag of entry.tags) {
 				expect(scope.getByText(tag)).toBeInTheDocument();
 			}
-		}
-	});
-
-	it("uses variant=default for the year pill and variant=outline for the venue pill", () => {
-		const { getByTestId } = render(<ResearchList />);
-		for (const entry of research) {
-			const card = getByTestId(`research-card-${entry.slug}`);
-			const yearBadge = within(card).getByText(String(entry.year));
-			const venueBadge = within(card).getByText(entry.venue);
-			expect(yearBadge.dataset.variant).toBe("default");
-			expect(venueBadge.dataset.variant).toBe("outline");
 		}
 	});
 });

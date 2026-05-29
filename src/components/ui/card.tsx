@@ -1,92 +1,46 @@
-import * as React from "react"
+import type { ComponentPropsWithoutRef, ElementType } from "react";
+import { cn } from "#/lib/utils";
 
-import { cn } from "#/lib/utils"
+type CardTone = "default" | "accent";
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card"
-      className={cn(
-        "flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm",
-        className
-      )}
-      {...props}
-    />
-  )
-}
+const TONE_CLASS: Record<CardTone, string> = {
+	default: "border-border/70 bg-bg-elev/50",
+	accent: "border-accent/60 bg-bg-elev/50 shadow-glow",
+};
 
-function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-header"
-      className={cn(
-        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6",
-        className
-      )}
-      {...props}
-    />
-  )
-}
+export type CardProps<T extends ElementType = "div"> = {
+	as?: T;
+	tone?: CardTone;
+	interactive?: boolean;
+	className?: string;
+} & Omit<ComponentPropsWithoutRef<T>, "as" | "className">;
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-title"
-      className={cn("leading-none font-semibold", className)}
-      {...props}
-    />
-  )
-}
-
-function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-description"
-      className={cn("text-sm text-muted-foreground", className)}
-      {...props}
-    />
-  )
-}
-
-function CardAction({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-action"
-      className={cn(
-        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function CardContent({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-content"
-      className={cn("px-6", className)}
-      {...props}
-    />
-  )
-}
-
-function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-footer"
-      className={cn("flex items-center px-6 [.border-t]:pt-6", className)}
-      {...props}
-    />
-  )
-}
-
-export {
-  Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardAction,
-  CardDescription,
-  CardContent,
+/**
+ * Shared card surface used across every page (project rows, experience
+ * cards, research entries, contact rows). `tone` controls baseline
+ * border/glow; `interactive` adds focus/hover affordances for clickable
+ * card callsites. Pass `as` to change the rendered element (li, button,
+ * a, ...) without losing the consistent surface look.
+ */
+export function Card<T extends ElementType = "div">({
+	as,
+	tone = "default",
+	interactive,
+	className,
+	...rest
+}: CardProps<T>) {
+	const Tag = (as ?? "div") as ElementType;
+	return (
+		<Tag
+			className={cn(
+				"rounded-card border text-left transition-[border-color,box-shadow,transform] duration-base",
+				TONE_CLASS[tone],
+				tone === "default" && "hover:border-border",
+				interactive &&
+					"hover:border-accent/60 hover:shadow-glow focus-visible:outline-none focus-visible:border-accent/70 focus-visible:shadow-glow-strong",
+				className,
+			)}
+			{...rest}
+		/>
+	);
 }

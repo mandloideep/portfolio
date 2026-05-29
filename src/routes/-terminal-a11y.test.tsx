@@ -7,11 +7,27 @@ import { terminalStore } from "#/store/terminal";
 // biome-ignore lint/suspicious/noExplicitAny: vitest-axe matchers shape varies between vitest majors
 expect.extend(matchers as any);
 
-vi.mock("@tanstack/react-router", () => ({
-	useNavigate: () => vi.fn(),
-	useSearch: () => ({}),
-	createFileRoute: () => () => ({}),
-}));
+vi.mock("@tanstack/react-router", async () => {
+	const actual = await vi.importActual<typeof import("@tanstack/react-router")>(
+		"@tanstack/react-router",
+	);
+	return {
+		...actual,
+		useNavigate: () => vi.fn(),
+		useSearch: () => ({}),
+		useRouterState: () => "/terminal",
+		createFileRoute: () => () => ({}),
+		Link: ({
+			children,
+			to,
+			...rest
+		}: React.PropsWithChildren<{ to?: string } & Record<string, unknown>>) => (
+			<a href={to as string} {...(rest as Record<string, string>)}>
+				{children}
+			</a>
+		),
+	};
+});
 
 import { TerminalShell } from "#/components/terminal/terminal-shell";
 

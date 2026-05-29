@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AgentTestWrapper } from "#/components/agent/test-utils";
 import {
 	abortAgentStream,
 	useAgentStream,
@@ -84,7 +85,9 @@ afterEach(() => {
 describe("runPresentation", () => {
 	it("emits one header system block + one markdown block per beat in order", async () => {
 		vi.stubGlobal("fetch", makeFetchMock());
-		const { result } = renderHook(() => useAgentStream());
+		const { result } = renderHook(() => useAgentStream(), {
+			wrapper: AgentTestWrapper,
+		});
 
 		await act(async () => {
 			await runPresentation({ agentStream: result.current });
@@ -119,7 +122,9 @@ describe("runPresentation", () => {
 				}),
 		);
 		vi.stubGlobal("fetch", fetchMock);
-		const { result } = renderHook(() => useAgentStream());
+		const { result } = renderHook(() => useAgentStream(), {
+			wrapper: AgentTestWrapper,
+		});
 
 		let firstResolved = false;
 		const firstRun = runPresentation({ agentStream: result.current }).then(
@@ -159,7 +164,9 @@ describe("runPresentation", () => {
 			);
 		});
 		vi.stubGlobal("fetch", fetchMock);
-		const { result } = renderHook(() => useAgentStream());
+		const { result } = renderHook(() => useAgentStream(), {
+			wrapper: AgentTestWrapper,
+		});
 
 		const pending = act(async () => {
 			const p = runPresentation({ agentStream: result.current });

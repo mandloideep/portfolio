@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { siteMeta } from "#/content/site";
 import { makeBlock } from "#/lib/terminal/blocks";
 import { commands } from "#/lib/terminal/commands";
 import { appendBlock, setBooted, terminalStore } from "#/store/terminal";
@@ -23,7 +24,7 @@ export function BootSequence() {
 		const commandCount = commands.length;
 
 		const banner = makeBlock("system", {
-			text: "deep — portfolio terminal v0.1.0\ntype /help for commands, /ui to open the visual portfolio",
+			text: `deep — portfolio terminal v0.1.0\n"${siteMeta.quip}"\ntype /help for commands, /ui to open the visual portfolio`,
 		});
 		const steps: Array<{ text: string }> = [
 			{ text: "* loading theme registry... ok" },

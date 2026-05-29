@@ -1,19 +1,47 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { getModel, isModelAllowed, isPremiumModel } from "#/lib/agent/models";
+import { classifyPrompt } from "#/lib/classifier";
+import { pickCheckingQuip } from "#/lib/classifier-quips";
 import { assembleContext } from "#/lib/context";
-import { getServerEnv } from "#/lib/env";
 import {
-	type ChatMessage,
-	isOpenRouterModel,
-	streamOpenRouter,
-} from "#/lib/openrouter";
+	getClassifierConfig,
+	getModelConfig,
+	getServerEnv,
+	resolveDefaultModel,
+} from "#/lib/env";
+import { lookupIp } from "#/lib/ipinfo";
+import { checkAndRecordLlmCall } from "#/lib/llm-rate-limit";
+import { logger } from "#/lib/logger";
+import { type ChatMessage, streamLlm } from "#/lib/openrouter";
+// Import for side-effect: initializes Sentry server-side when SENTRY_DSN
+// is set. Safe to import multiple times — guarded internally.
+import "#/lib/sentry-server";
+import {
+	hasDisallowedContent,
+	isBrowserUserAgent,
+	wordCount,
+} from "#/lib/prompt-guards";
+import {
+	addUsage,
+	checkRateLimit,
+	getClientIp,
+	hashIp,
+	isDailyBudgetExhausted,
+	type RateCheck,
+} from "#/lib/rate-limit";
 
 /**
- * POST /api/agent — streams an OpenRouter chat completion as SSE.
+ * POST /api/agent — streams an LLM chat completion as SSE.
+ *
+ * Picks the provider from `LLM_PROVIDER` (defaults to `openrouter`) and
+ * dispatches to the matching endpoint. The wire format is identical
+ * (OpenAI-compatible Chat Completions) for both, so callers don't need
+ * to know which one served the response.
  *
  * Event sequence:
  *   event: activity  data: {"step":"reading","files":[...]}
- *   event: activity  data: {"step":"calling","model":"..."}
+ *   event: activity  data: {"step":"calling","model":"...","provider":"..."}
  *   event: token     data: "<chunk>"
  *   ...
  *   event: done      data: {"tokens":N}
@@ -33,9 +61,37 @@ const RequestSchema = z.object({
 		.max(20)
 		.optional(),
 	model: z.string().optional(),
+	// Honeypot — real browsers never set this. Bots scraping the form often do.
+	_hp: z.string().optional(),
 });
 
+const SSE_HEADERS = {
+	"Content-Type": "text/event-stream; charset=utf-8",
+	"Cache-Control": "no-store",
+	Connection: "keep-alive",
+	"X-Accel-Buffering": "no",
+} as const;
+
+function sseSingle(event: string, data: unknown): Response {
+	const body = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+	return new Response(body, { status: 200, headers: SSE_HEADERS });
+}
+
+/**
+ * Hard cap on the JSON request body. The Zod schema enforces per-field caps
+ * (message.max(4000), history.max(20)) but Node/TanStack-Start has no body
+ * size limit at the HTTP layer — a multi-MB POST would be buffered before
+ * Zod ever sees it. Traefik enforces the real cap in production; this is
+ * defense-in-depth for any non-proxied path.
+ */
+const MAX_BODY_BYTES = 131_072; // 128 KB
+
 export async function handleAgentRequest(request: Request): Promise<Response> {
+	const contentLength = Number(request.headers.get("content-length") ?? 0);
+	if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+		return jsonError(413, "payload_too_large");
+	}
+
 	let body: unknown;
 	try {
 		body = await request.json();
@@ -47,13 +103,149 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 		return jsonError(400, "invalid_request");
 	}
 
-	const env = getServerEnv();
-	const model =
-		parsed.data.model && isOpenRouterModel(parsed.data.model)
-			? parsed.data.model
-			: env.OPENROUTER_DEFAULT_MODEL;
+	// Honeypot: real browsers never fill this. Reject silently so bots don't
+	// learn what tripped them.
+	if (parsed.data._hp && parsed.data._hp.length > 0) {
+		return sseSingle("error", { message: "rejected" });
+	}
 
-	const { system, contextDocs, files } = assembleContext(parsed.data.message);
+	// User-Agent allowlist. Cheap deterrent against scripted abuse.
+	const ua = request.headers.get("user-agent") ?? "";
+	if (!isBrowserUserAgent(ua)) {
+		return sseSingle("error", { message: "rejected" });
+	}
+
+	let env: ReturnType<typeof getServerEnv>;
+	let assembled: ReturnType<typeof assembleContext>;
+	try {
+		env = getServerEnv();
+		assembled = assembleContext(parsed.data.message);
+	} catch (err) {
+		const safe =
+			process.env.NODE_ENV === "production"
+				? "agent_unavailable"
+				: err instanceof Error
+					? err.message
+					: "agent_unavailable";
+		return sseSingle("error", { message: safe });
+	}
+
+	// Word cap — server-authoritative ceiling. Client also enforces softly.
+	if (wordCount(parsed.data.message) > env.WORD_CAP) {
+		return sseSingle("error", {
+			message: "prompt_too_long",
+			cap: env.WORD_CAP,
+		});
+	}
+
+	// PII / profanity regex. Reject before paying for any LLM call.
+	const flagged = hasDisallowedContent(parsed.data.message);
+	if (flagged) {
+		return sseSingle("error", { message: "rejected", reason: flagged });
+	}
+
+	// Global daily token budget circuit breaker. Trip → all requests bounced.
+	const budgetTripped = await isDailyBudgetExhausted(env.DAILY_TOKEN_BUDGET);
+	if (budgetTripped) {
+		return sseSingle("rate_limited", {
+			remaining: 0,
+			resetsAt: nextUtcMidnight().toISOString(),
+			reason: "daily_budget",
+		});
+	}
+
+	// Resolve the requested model (or fall back to the default for this
+	// deploy). Each model carries its own provider; reject unknown models
+	// so the rate-limit branch always knows the tier.
+	const requested = parsed.data.model;
+	const chosen = requested && isModelAllowed(requested) ? requested : null;
+	const defaultModelEntry = resolveDefaultModel(env);
+	const model = chosen ?? defaultModelEntry.id;
+	const modelEntry = chosen ? getModel(model) : defaultModelEntry;
+	const cfg = getModelConfig(env, model);
+	if (!cfg) {
+		// Either the model isn't in the catalog or its provider has no key.
+		// Surface as an error event so the client can suggest a switch.
+		return sseSingle("error", { message: "model_unavailable", model });
+	}
+	const { provider, apiKey } = cfg;
+	const tier: "free" | "premium" = isPremiumModel(model) ? "premium" : "free";
+
+	// Per-IP rate limit + cooldown + token cap. Free models are uncapped on
+	// message count by default (FREE_MODEL_PER_IP_LIMIT=0); only the per-IP
+	// token budget and the cooldown apply. Premium uses PREMIUM_LIMIT.
+	const ip = getClientIp(request);
+	const salt = env.RATE_LIMIT_SALT ?? "portfolio-default-salt";
+	const ipHash = hashIp(ip, salt);
+
+	let rate: RateCheck;
+	try {
+		rate = await checkRateLimit({
+			ipHash,
+			tier,
+			windowMs: env.RATE_LIMIT_WINDOW_MS,
+			cooldownMs: env.MIN_REQUEST_INTERVAL_MS,
+			perIpTokenBudget: env.PER_IP_TOKEN_BUDGET,
+			premiumLimit: env.PREMIUM_LIMIT,
+			freeIpLimit: env.FREE_MODEL_PER_IP_LIMIT,
+			lookupPrivacy:
+				env.BLOCK_VPN && env.IPINFO_TOKEN
+					? async () => lookupIp(ip, env.IPINFO_TOKEN ?? "")
+					: undefined,
+		});
+	} catch (err) {
+		logger.error({ err }, "[api.agent] rate-limit check failed");
+		// Fail-closed in production: a DB outage shouldn't open the door to
+		// unlimited usage. In dev we keep fail-open so a missing postgres
+		// doesn't break local work.
+		if (env.NODE_ENV === "production") {
+			return sseSingle("rate_limited", {
+				remaining: 0,
+				resetsAt: new Date(Date.now() + 30_000).toISOString(),
+				reason: "service_degraded",
+				tier,
+			});
+		}
+		rate = {
+			allowed: true,
+			remaining: tier === "premium" ? env.PREMIUM_LIMIT : null,
+			resetsAt: new Date(Date.now() + env.RATE_LIMIT_WINDOW_MS),
+			unlimited: tier === "free" && env.FREE_MODEL_PER_IP_LIMIT === 0,
+			tier,
+		};
+	}
+
+	if (!rate.allowed) {
+		return sseSingle("rate_limited", {
+			remaining: rate.remaining,
+			resetsAt: rate.resetsAt.toISOString(),
+			reason: rate.blockedReason ?? "limit_reached",
+			tier,
+		});
+	}
+
+	// Model-level rate-limit (Google's per-(provider, model) RPM/RPD).
+	// Checked once for the main reply now; the classifier call below has its
+	// own check immediately before firing.
+	const mainQuota = await checkAndRecordLlmCall({ provider, model });
+	if (!mainQuota.allowed) {
+		return sseSingle("rate_limited", {
+			remaining: 0,
+			resetsAt: new Date(Date.now() + mainQuota.retryAfterMs).toISOString(),
+			reason: `model_${mainQuota.reason}`,
+			model,
+			tier,
+		});
+	}
+
+	// On-topic pre-flight classifier. Routed through `getClassifierConfig`
+	// so it can run on a separate provider/model from the main reply
+	// (currently OpenRouter's free nvidia/nemotron — fast and decoupled
+	// from the per-visitor premium quota).
+	const classifier = getClassifierConfig(env);
+	const classifierEnabled = env.CLASSIFIER_ENABLED && classifier !== null;
+
+	const { system, contextDocs, files } = assembled;
 	const messages: ChatMessage[] = [
 		{
 			role: "system",
@@ -65,6 +257,38 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 		{ role: "user", content: parsed.data.message },
 	];
 
+	// Compose abort signal: client disconnect OR per-request timeout. The
+	// main reply gets the full REQUEST_TIMEOUT_MS budget; the classifier
+	// runs on its own shorter signal so a slow classifier doesn't eat into
+	// the main reply's window.
+	const anyFn = (
+		AbortSignal as unknown as {
+			any?: (s: AbortSignal[]) => AbortSignal;
+		}
+	).any;
+	const compose = (signals: AbortSignal[]): AbortSignal => {
+		if (typeof anyFn === "function") return anyFn.call(AbortSignal, signals);
+		const first = signals[0];
+		if (!first) throw new Error("compose() requires at least one signal");
+		return first;
+	};
+	const mainTimeout = AbortSignal.timeout(env.REQUEST_TIMEOUT_MS);
+	const upstreamSignal = compose([request.signal, mainTimeout]);
+
+	// Hoisted out of start() so the cancel() handler can record partial
+	// usage when the client aborts mid-stream. Without this, a user who
+	// aborts repeatedly accumulates uncounted token spend against their
+	// per-IP budget.
+	let streamedTokens = 0;
+	let usageRecorded = false;
+	const recordUsage = (tokens: number) => {
+		if (usageRecorded || !Number.isFinite(tokens) || tokens <= 0) return;
+		usageRecorded = true;
+		addUsage({ ipHash, tokens }).catch((err) => {
+			logger.error({ err }, "[api.agent] addUsage failed");
+		});
+	};
+
 	const stream = new ReadableStream<Uint8Array>({
 		async start(controller) {
 			const enc = new TextEncoder();
@@ -73,51 +297,154 @@ export async function handleAgentRequest(request: Request): Promise<Response> {
 					enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
 				);
 			};
+			// Perceptible gap between activity events so the user sees them
+			// appear one-by-one instead of in a single render batch when
+			// the underlying work is fast (e.g. classifier allowlist hit).
+			const ACTIVITY_PACE_MS = 220;
+			const tick = () =>
+				new Promise<void>((r) => setTimeout(r, ACTIVITY_PACE_MS));
+
+			write("quota", {
+				remaining: rate.remaining,
+				resetsAt: rate.resetsAt.toISOString(),
+				unlimited: rate.unlimited,
+				tier: rate.tier,
+				limit:
+					rate.tier === "premium"
+						? env.PREMIUM_LIMIT
+						: env.FREE_MODEL_PER_IP_LIMIT > 0
+							? env.FREE_MODEL_PER_IP_LIMIT
+							: null,
+				model,
+			});
+
+			// On-topic pre-flight inside the stream so the user sees a
+			// "checking…" activity line during the ~1s round-trip (or just
+			// for visual rhythm if the verdict is cached / allowlisted).
+			if (classifierEnabled && classifier) {
+				const classifierQuota = await checkAndRecordLlmCall({
+					provider: classifier.provider,
+					model: classifier.model,
+				});
+				if (classifierQuota.allowed) {
+					write("activity", {
+						step: "checking",
+						note: pickCheckingQuip(),
+						model: classifier.model,
+					});
+					// Classifier gets its own short deadline so a slow
+					// classifier never burns the main reply's budget.
+					const classifierTimeout = AbortSignal.timeout(8_000);
+					const classifierSignal = compose([request.signal, classifierTimeout]);
+					try {
+						const verdict = await classifyPrompt({
+							prompt: parsed.data.message,
+							provider: classifier.provider,
+							apiKey: classifier.apiKey,
+							model: classifier.model,
+							signal: classifierSignal,
+						});
+						if (verdict === "UNSAFE") {
+							write("error", { message: "off_topic" });
+							controller.close();
+							return;
+						}
+					} catch (err) {
+						logger.warn({ err }, "[api.agent] classifier failed (fail-open)");
+					}
+					// If the classifier finished faster than ACTIVITY_PACE_MS
+					// (allowlist hit, cached verdict), pad to keep the next
+					// activity line from rendering in the same React batch.
+					await tick();
+				}
+			}
 
 			try {
 				write("activity", { step: "reading", files });
-				write("activity", { step: "calling", model });
+				await tick();
+				write("activity", { step: "calling", model, provider });
+				await tick();
 
 				let totalTokens = 0;
-				let lastUsage: { total_tokens?: number } | undefined;
-				for await (const ev of streamOpenRouter({
-					apiKey: env.OPENROUTER_API_KEY,
+				let thinkingTokens = 0;
+				let thinkingStartedAt: number | null = null;
+				let thinkingEndedAt: number | null = null;
+				let lastUsage:
+					| {
+							total_tokens?: number;
+							completion_tokens?: number;
+					  }
+					| undefined;
+				for await (const ev of streamLlm({
+					provider,
+					apiKey,
 					model,
 					messages,
-					signal: request.signal,
+					signal: upstreamSignal,
+					maxTokens: env.MAX_OUTPUT_TOKENS,
+					// OpenRouter only — silently upgrade the free Gemma slug
+					// to the paid Cloudflare-backed one when the free pool
+					// 429s. Billed only for whichever model actually served.
+					...(modelEntry?.fallbacks && modelEntry.fallbacks.length > 0
+						? { fallbackModels: modelEntry.fallbacks }
+						: {}),
 				})) {
-					if (ev.type === "token") {
+					if (ev.type === "thinking") {
+						if (thinkingStartedAt === null) {
+							thinkingStartedAt = Date.now();
+						}
+						thinkingTokens += 1;
+						write("thinking", ev.text);
+					} else if (ev.type === "token") {
+						if (thinkingStartedAt !== null && thinkingEndedAt === null) {
+							thinkingEndedAt = Date.now();
+						}
 						totalTokens += 1;
+						streamedTokens = totalTokens;
 						write("token", ev.text);
 					} else {
 						lastUsage = ev.usage;
 					}
 				}
+				const used = lastUsage?.total_tokens ?? totalTokens;
+				const thinkingMs =
+					thinkingStartedAt !== null && thinkingEndedAt !== null
+						? thinkingEndedAt - thinkingStartedAt
+						: undefined;
 				write("done", {
-					tokens: lastUsage?.total_tokens ?? totalTokens,
+					tokens: used,
+					...(thinkingTokens > 0 ? { thinkingTokens } : {}),
+					...(typeof thinkingMs === "number" ? { thinkingMs } : {}),
 				});
+				// Tally usage for the daily budget + per-IP cap. Fire-and-forget so
+				// a DB blip doesn't stall the response close.
+				recordUsage(used);
 			} catch (err) {
 				const message = err instanceof Error ? err.message : "stream_failed";
 				write("error", { message });
+				// Record what we streamed before the failure so partial usage
+				// still counts against the budget.
+				recordUsage(streamedTokens);
 			} finally {
 				controller.close();
 			}
 		},
 		cancel() {
-			// The fetch above is bound to request.signal; cancelling the response
-			// stream surfaces back through the consumer when they `getReader()`.
+			// Client disconnected mid-stream. Charge them for what they
+			// received so a user can't escape the per-IP token cap by
+			// aborting every stream.
+			recordUsage(streamedTokens);
 		},
 	});
 
-	return new Response(stream, {
-		status: 200,
-		headers: {
-			"Content-Type": "text/event-stream; charset=utf-8",
-			"Cache-Control": "no-store",
-			Connection: "keep-alive",
-			"X-Accel-Buffering": "no",
-		},
-	});
+	return new Response(stream, { status: 200, headers: SSE_HEADERS });
+}
+
+function nextUtcMidnight(): Date {
+	const now = new Date();
+	const t = new Date(now);
+	t.setUTCHours(24, 0, 0, 0);
+	return t;
 }
 
 function jsonError(status: number, code: string): Response {

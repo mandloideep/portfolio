@@ -5,9 +5,9 @@
 
 export const MODE_STORAGE_KEY = "portfolio.mode";
 
-export type Mode = "ui" | "terminal";
+export type Mode = "ui" | "terminal" | "chat";
 
-const MODES: readonly Mode[] = ["ui", "terminal"] as const;
+const MODES: readonly Mode[] = ["ui", "terminal", "chat"] as const;
 
 export function isMode(value: unknown): value is Mode {
 	return (

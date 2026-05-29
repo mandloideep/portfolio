@@ -1,16 +1,31 @@
 import { useStore } from "@tanstack/react-store";
+import { ArrowUp } from "lucide-react";
 import {
 	type KeyboardEvent,
 	useCallback,
 	useEffect,
+	useMemo,
 	useRef,
 	useState,
 } from "react";
+import { IconButton } from "#/components/ui/icon-button";
+import { useIsMobile } from "#/hooks/use-is-mobile";
+import { wordCount } from "#/lib/prompt-guards";
 import { autocomplete } from "#/lib/terminal/commands";
 import { abortTour, isTourRunning } from "#/lib/terminal/tour";
-import { clearBlocks, setHistoryCursor, terminalStore } from "#/store/terminal";
+import {
+	clearBlocks,
+	emit,
+	setHistoryCursor,
+	setMode,
+	terminalStore,
+} from "#/store/terminal";
 import { abortAgentStream, isAgentStreaming } from "./use-agent-stream";
 import { useSubmit } from "./use-submit";
+
+// Mirror of the server-side `WORD_CAP`. Kept in sync intentionally — this is
+// a UX hint; the server is authoritative.
+const WORD_CAP = 30;
 
 type Props = {
 	onOpenPalette: () => void;
@@ -23,8 +38,10 @@ type Props = {
  */
 export function Prompt({ onOpenPalette }: Props) {
 	const mode = useStore(terminalStore, (s) => s.mode);
+	const isMobile = useIsMobile();
 	const [value, setValue] = useState("");
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const ctrlCArmedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const submit = useSubmit();
 
 	useEffect(() => {
@@ -37,18 +54,20 @@ export function Prompt({ onOpenPalette }: Props) {
 
 	useEffect(() => {
 		// Refocus the prompt whenever the user clicks anywhere that isn't
-		// a button, input, or the palette dialog.
+		// a button, input, or the palette dialog. Skipped on touch devices —
+		// auto-refocus fights the soft keyboard UX.
 		function handler(e: MouseEvent) {
 			const target = e.target as HTMLElement | null;
 			if (!target) return;
 			if (target.closest("button, a, input, textarea, [role=dialog]")) return;
 			focusPrompt();
 		}
+		if (isMobile) return;
 		document.addEventListener("click", handler);
 		return () => document.removeEventListener("click", handler);
-	}, [focusPrompt]);
+	}, [focusPrompt, isMobile]);
 
-	function setFromHistory(direction: -1 | 1) {
+	const setFromHistory = useCallback((direction: -1 | 1) => {
 		const { history, historyCursor } = terminalStore.state;
 		if (history.length === 0) return;
 		let next: number | null;
@@ -66,10 +85,24 @@ export function Prompt({ onOpenPalette }: Props) {
 		}
 		setHistoryCursor(next);
 		setValue(next === null ? "" : (history[next] ?? ""));
-	}
+	}, []);
+
+	useEffect(() => {
+		// External controls (mobile command rail) can dispatch this event
+		// to drive history without re-implementing the cursor logic.
+		function onStep(e: Event) {
+			const ce = e as CustomEvent<{ direction: -1 | 1 }>;
+			if (ce.detail?.direction === -1 || ce.detail?.direction === 1) {
+				setFromHistory(ce.detail.direction);
+				textareaRef.current?.focus();
+			}
+		}
+		document.addEventListener("terminal:history-step", onStep);
+		return () => document.removeEventListener("terminal:history-step", onStep);
+	}, [setFromHistory]);
 
 	function handleTab() {
-		const matches = autocomplete(value);
+		const matches = autocomplete(value, mode);
 		if (matches.length === 0) return;
 		if (matches.length === 1) {
 			setValue(`${matches[0]} `);
@@ -83,11 +116,27 @@ export function Prompt({ onOpenPalette }: Props) {
 		});
 		if (lcp.length > value.length) {
 			setValue(lcp);
+			return;
 		}
+		// No further auto-completion possible; surface the choices as a hint.
+		emitTabHint(matches);
+	}
+
+	function emitTabHint(matches: string[]) {
+		emit("system", `[tab] ${matches.join("  ")}`);
 	}
 
 	async function handleSubmit() {
 		const raw = value;
+		// Only enforce the word cap in agent mode — shell commands ("/me",
+		// "/projects ...") happily ignore it.
+		if (mode === "agent" && wordCount(raw) > WORD_CAP) {
+			emit(
+				"error",
+				`prompts are capped at ${WORD_CAP} words. shorten the question and try again.`,
+			);
+			return;
+		}
 		setValue("");
 		setHistoryCursor(null);
 		await submit(raw);
@@ -123,16 +172,40 @@ export function Prompt({ onOpenPalette }: Props) {
 			return;
 		}
 		if (e.ctrlKey && e.key.toLowerCase() === "c") {
-			// Only intercept while a tour or stream is running so the browser's
-			// native copy shortcut still works when the user has selected text.
-			// Tour first — abortTour() cascades into abortAgentStream().
+			// Tour or stream running → abort it.
 			if (isTourRunning()) {
 				e.preventDefault();
 				abortTour();
-			} else if (isAgentStreaming()) {
+				return;
+			}
+			if (isAgentStreaming()) {
 				e.preventDefault();
 				abortAgentStream();
+				return;
 			}
+			// Preserve native copy when the user has actually selected text.
+			const el = e.currentTarget;
+			const selectionStart = el.selectionStart ?? 0;
+			const selectionEnd = el.selectionEnd ?? 0;
+			if (selectionEnd > selectionStart) return;
+			// Double-tap to exit agent mode. First press primes the timer +
+			// emits a hint; a second within 2s flips to shell.
+			if (mode !== "agent") return;
+			e.preventDefault();
+			if (ctrlCArmedRef.current) {
+				clearTimeout(ctrlCArmedRef.current);
+				ctrlCArmedRef.current = null;
+				setMode("shell");
+				emit(
+					"system",
+					"dropped into shell. type `help` for commands, `deep` to return.",
+				);
+				return;
+			}
+			emit("system", "(ctrl+c again to drop into shell)");
+			ctrlCArmedRef.current = setTimeout(() => {
+				ctrlCArmedRef.current = null;
+			}, 2000);
 			return;
 		}
 		if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "l") {
@@ -152,22 +225,51 @@ export function Prompt({ onOpenPalette }: Props) {
 		}
 	}
 
-	const prefix = mode === "shell" ? "deep@portfolio:~ $" : "deep@portfolio:~ ❯";
-	const rows = Math.min(8, Math.max(1, value.split("\n").length));
+	const rows = Math.min(
+		isMobile ? 4 : 8,
+		Math.max(1, value.split("\n").length),
+	);
+	const streaming =
+		useStore(terminalStore, (s) =>
+			s.blocks.some((b) => b.kind === "activity"),
+		) && value.length === 0;
+	const symbol = mode === "shell" ? "$" : "❯";
+	const words = useMemo(() => wordCount(value), [value]);
+	const showCounter = mode === "agent" && value.length > 0;
+	const overflow = words > WORD_CAP;
+	const counterClass = overflow
+		? "text-error"
+		: words >= WORD_CAP - 5
+			? "text-accent-alt"
+			: "text-muted/70";
 
 	return (
 		<form
 			data-testid="prompt-form"
+			data-state={streaming ? "streaming" : "idle"}
 			onSubmit={(e) => {
 				e.preventDefault();
 				void handleSubmit();
 			}}
-			className="flex items-start gap-2 border-t border-border bg-bg/60 px-4 py-2 text-[13px] sm:text-sm"
+			className="sticky bottom-0 z-overlay flex flex-wrap items-baseline gap-x-2 gap-y-2 border-t border-border bg-bg-elev/95 px-4 py-3 font-mono text-base transition-colors duration-base focus-within:bg-bg-elev sm:static sm:flex-nowrap sm:gap-x-2.5 sm:bg-bg-elev/60 sm:px-5 sm:py-3.5"
+			style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
 		>
 			<label htmlFor="terminal-prompt" className="sr-only">
 				Terminal prompt
 			</label>
-			<span className="text-accent select-none shrink-0 pt-0.5">{prefix}</span>
+			{/* On mobile the prefix `deep@portfolio:~ ❯` takes its own row
+			 *  (`w-full`) so the textarea on the next row gets the full
+			 *  viewport width minus the send button. Desktop keeps the
+			 *  inline single-row layout via `sm:w-auto`. */}
+			<span className="flex w-full shrink-0 items-center gap-2 font-semibold select-none sm:w-auto">
+				<span className="status-dot" aria-hidden="true" />
+				<span>
+					<span className="text-prompt-user">deep</span>
+					<span className="text-prompt-symbol">@</span>
+					<span className="text-prompt-host">portfolio</span>
+					<span className="text-prompt-symbol">:~ {symbol}</span>
+				</span>
+			</span>
 			<textarea
 				id="terminal-prompt"
 				ref={textareaRef}
@@ -180,8 +282,42 @@ export function Prompt({ onOpenPalette }: Props) {
 				autoCorrect="off"
 				autoCapitalize="off"
 				spellCheck={false}
-				className="flex-1 resize-none bg-transparent text-fg outline-none placeholder:text-muted font-mono"
+				aria-busy={streaming}
+				aria-invalid={overflow || undefined}
+				className="flex-1 resize-none bg-transparent font-mono text-fg caret-accent outline-none placeholder:text-muted/70"
 				placeholder="type /help"
+			/>
+			{showCounter ? (
+				<span
+					data-testid="word-counter"
+					aria-live="polite"
+					className={`shrink-0 self-end pb-1 font-mono text-meta uppercase tracking-tab [font-variant-numeric:tabular-nums] ${counterClass}`}
+				>
+					{words}/{WORD_CAP}
+				</span>
+			) : null}
+			{/* Mobile send button — soft keyboards send Enter as newline by default. */}
+			<IconButton
+				size="lg"
+				shape="pill"
+				tone="accent"
+				type="submit"
+				data-testid="prompt-send"
+				aria-label="send"
+				disabled={value.length === 0}
+				className="self-end disabled:opacity-40 sm:hidden"
+			>
+				<ArrowUp className="size-5" aria-hidden="true" />
+			</IconButton>
+			{/* Honeypot — invisible, never auto-filled by humans. */}
+			<input
+				type="text"
+				name="_hp"
+				tabIndex={-1}
+				autoComplete="off"
+				aria-hidden="true"
+				className="sr-only"
+				defaultValue=""
 			/>
 		</form>
 	);

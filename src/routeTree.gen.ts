@@ -10,13 +10,51 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TerminalRouteImport } from './routes/terminal'
+import { Route as ResearchRouteImport } from './routes/research'
+import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as GithubRouteImport } from './routes/github'
+import { Route as ExperienceRouteImport } from './routes/experience'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as ChatRouteImport } from './routes/chat'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiGithubGraphRouteImport } from './routes/api.github-graph'
 import { Route as ApiAgentRouteImport } from './routes/api.agent'
+import { Route as ApiAgentQuotaRouteImport } from './routes/api.agent.quota'
+import { Route as ApiAgentCommentaryRouteImport } from './routes/api.agent.commentary'
 
 const TerminalRoute = TerminalRouteImport.update({
   id: '/terminal',
   path: '/terminal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResearchRoute = ResearchRouteImport.update({
+  id: '/research',
+  path: '/research',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsRoute = ProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GithubRoute = GithubRouteImport.update({
+  id: '/github',
+  path: '/github',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExperienceRoute = ExperienceRouteImport.update({
+  id: '/experience',
+  path: '/experience',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -34,38 +72,115 @@ const ApiAgentRoute = ApiAgentRouteImport.update({
   path: '/api/agent',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentQuotaRoute = ApiAgentQuotaRouteImport.update({
+  id: '/quota',
+  path: '/quota',
+  getParentRoute: () => ApiAgentRoute,
+} as any)
+const ApiAgentCommentaryRoute = ApiAgentCommentaryRouteImport.update({
+  id: '/commentary',
+  path: '/commentary',
+  getParentRoute: () => ApiAgentRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/chat': typeof ChatRoute
+  '/contact': typeof ContactRoute
+  '/experience': typeof ExperienceRoute
+  '/github': typeof GithubRoute
+  '/projects': typeof ProjectsRoute
+  '/research': typeof ResearchRoute
   '/terminal': typeof TerminalRoute
-  '/api/agent': typeof ApiAgentRoute
+  '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/github-graph': typeof ApiGithubGraphRoute
+  '/api/agent/commentary': typeof ApiAgentCommentaryRoute
+  '/api/agent/quota': typeof ApiAgentQuotaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/chat': typeof ChatRoute
+  '/contact': typeof ContactRoute
+  '/experience': typeof ExperienceRoute
+  '/github': typeof GithubRoute
+  '/projects': typeof ProjectsRoute
+  '/research': typeof ResearchRoute
   '/terminal': typeof TerminalRoute
-  '/api/agent': typeof ApiAgentRoute
+  '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/github-graph': typeof ApiGithubGraphRoute
+  '/api/agent/commentary': typeof ApiAgentCommentaryRoute
+  '/api/agent/quota': typeof ApiAgentQuotaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/chat': typeof ChatRoute
+  '/contact': typeof ContactRoute
+  '/experience': typeof ExperienceRoute
+  '/github': typeof GithubRoute
+  '/projects': typeof ProjectsRoute
+  '/research': typeof ResearchRoute
   '/terminal': typeof TerminalRoute
-  '/api/agent': typeof ApiAgentRoute
+  '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/github-graph': typeof ApiGithubGraphRoute
+  '/api/agent/commentary': typeof ApiAgentCommentaryRoute
+  '/api/agent/quota': typeof ApiAgentQuotaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/terminal' | '/api/agent' | '/api/github-graph'
+  fullPaths:
+    | '/'
+    | '/chat'
+    | '/contact'
+    | '/experience'
+    | '/github'
+    | '/projects'
+    | '/research'
+    | '/terminal'
+    | '/api/agent'
+    | '/api/github-graph'
+    | '/api/agent/commentary'
+    | '/api/agent/quota'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/terminal' | '/api/agent' | '/api/github-graph'
-  id: '__root__' | '/' | '/terminal' | '/api/agent' | '/api/github-graph'
+  to:
+    | '/'
+    | '/chat'
+    | '/contact'
+    | '/experience'
+    | '/github'
+    | '/projects'
+    | '/research'
+    | '/terminal'
+    | '/api/agent'
+    | '/api/github-graph'
+    | '/api/agent/commentary'
+    | '/api/agent/quota'
+  id:
+    | '__root__'
+    | '/'
+    | '/chat'
+    | '/contact'
+    | '/experience'
+    | '/github'
+    | '/projects'
+    | '/research'
+    | '/terminal'
+    | '/api/agent'
+    | '/api/github-graph'
+    | '/api/agent/commentary'
+    | '/api/agent/quota'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ChatRoute: typeof ChatRoute
+  ContactRoute: typeof ContactRoute
+  ExperienceRoute: typeof ExperienceRoute
+  GithubRoute: typeof GithubRoute
+  ProjectsRoute: typeof ProjectsRoute
+  ResearchRoute: typeof ResearchRoute
   TerminalRoute: typeof TerminalRoute
-  ApiAgentRoute: typeof ApiAgentRoute
+  ApiAgentRoute: typeof ApiAgentRouteWithChildren
   ApiGithubGraphRoute: typeof ApiGithubGraphRoute
 }
 
@@ -76,6 +191,48 @@ declare module '@tanstack/react-router' {
       path: '/terminal'
       fullPath: '/terminal'
       preLoaderRoute: typeof TerminalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/research': {
+      id: '/research'
+      path: '/research'
+      fullPath: '/research'
+      preLoaderRoute: typeof ResearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects': {
+      id: '/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof ProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/github': {
+      id: '/github'
+      path: '/github'
+      fullPath: '/github'
+      preLoaderRoute: typeof GithubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/experience': {
+      id: '/experience'
+      path: '/experience'
+      fullPath: '/experience'
+      preLoaderRoute: typeof ExperienceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -99,13 +256,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/quota': {
+      id: '/api/agent/quota'
+      path: '/quota'
+      fullPath: '/api/agent/quota'
+      preLoaderRoute: typeof ApiAgentQuotaRouteImport
+      parentRoute: typeof ApiAgentRoute
+    }
+    '/api/agent/commentary': {
+      id: '/api/agent/commentary'
+      path: '/commentary'
+      fullPath: '/api/agent/commentary'
+      preLoaderRoute: typeof ApiAgentCommentaryRouteImport
+      parentRoute: typeof ApiAgentRoute
+    }
   }
 }
 
+interface ApiAgentRouteChildren {
+  ApiAgentCommentaryRoute: typeof ApiAgentCommentaryRoute
+  ApiAgentQuotaRoute: typeof ApiAgentQuotaRoute
+}
+
+const ApiAgentRouteChildren: ApiAgentRouteChildren = {
+  ApiAgentCommentaryRoute: ApiAgentCommentaryRoute,
+  ApiAgentQuotaRoute: ApiAgentQuotaRoute,
+}
+
+const ApiAgentRouteWithChildren = ApiAgentRoute._addFileChildren(
+  ApiAgentRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ChatRoute: ChatRoute,
+  ContactRoute: ContactRoute,
+  ExperienceRoute: ExperienceRoute,
+  GithubRoute: GithubRoute,
+  ProjectsRoute: ProjectsRoute,
+  ResearchRoute: ResearchRoute,
   TerminalRoute: TerminalRoute,
-  ApiAgentRoute: ApiAgentRoute,
+  ApiAgentRoute: ApiAgentRouteWithChildren,
   ApiGithubGraphRoute: ApiGithubGraphRoute,
 }
 export const routeTree = rootRouteImport

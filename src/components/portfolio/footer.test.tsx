@@ -1,6 +1,7 @@
 import { render } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import { getProject, siteMeta } from "#/content/site";
+import { QUIPS } from "#/content/quips";
+import { getProject } from "#/content/site";
 import { themeStore } from "#/store/theme";
 import { Footer } from "./footer";
 
@@ -10,9 +11,11 @@ beforeEach(() => {
 });
 
 describe("Footer", () => {
-	it("renders the siteMeta quip", () => {
-		const { getByText } = render(<Footer />);
-		expect(getByText(siteMeta.quip)).toBeInTheDocument();
+	it("renders a quip from the QUIPS list", () => {
+		const { getByTestId } = render(<Footer />);
+		const text = getByTestId("footer-quip").textContent ?? "";
+		const matched = QUIPS.some((q) => text.includes(q));
+		expect(matched).toBe(true);
 	});
 
 	it("renders the current year", () => {
@@ -30,10 +33,5 @@ describe("Footer", () => {
 		expect(link.getAttribute("href")).toBe(expected);
 		expect(link.getAttribute("target")).toBe("_blank");
 		expect(link.getAttribute("rel")).toContain("noreferrer");
-	});
-
-	it("renders the theme switcher", () => {
-		const { getByTestId } = render(<Footer />);
-		expect(getByTestId("theme-switcher")).toBeInTheDocument();
 	});
 });

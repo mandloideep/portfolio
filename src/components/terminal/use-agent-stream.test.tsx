@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AgentTestWrapper } from "#/components/agent/test-utils";
 import { DEFAULT_MODEL_ID, modelStore } from "#/store/model";
 import { terminalStore } from "#/store/terminal";
 import {
@@ -65,7 +66,9 @@ describe("useAgentStream", () => {
 			);
 		vi.stubGlobal("fetch", fetchMock);
 
-		const { result } = renderHook(() => useAgentStream());
+		const { result } = renderHook(() => useAgentStream(), {
+			wrapper: AgentTestWrapper,
+		});
 		await act(async () => {
 			await result.current.start("hi");
 		});
@@ -87,7 +90,7 @@ describe("useAgentStream", () => {
 	});
 
 	it("sends the active model + recent history in the POST body", async () => {
-		modelStore.setState(() => ({ activeModel: "anthropic/claude-haiku-4.5" }));
+		modelStore.setState(() => ({ activeModel: "gemma-4-31b-it" }));
 		// Prime the store with prior chat history
 		terminalStore.setState((s) => ({
 			...s,
@@ -114,7 +117,9 @@ describe("useAgentStream", () => {
 			);
 		vi.stubGlobal("fetch", fetchMock);
 
-		const { result } = renderHook(() => useAgentStream());
+		const { result } = renderHook(() => useAgentStream(), {
+			wrapper: AgentTestWrapper,
+		});
 		await act(async () => {
 			await result.current.start("second question");
 		});
@@ -123,7 +128,7 @@ describe("useAgentStream", () => {
 			(fetchMock.mock.calls[0]?.[1]?.body ?? "{}") as string,
 		);
 		expect(body.message).toBe("second question");
-		expect(body.model).toBe("anthropic/claude-haiku-4.5");
+		expect(body.model).toBe("gemma-4-31b-it");
 		expect(body.history).toEqual([
 			{ role: "user", content: "first question" },
 			{ role: "assistant", content: "first answer" },
@@ -136,7 +141,9 @@ describe("useAgentStream", () => {
 			.mockImplementation(async () => new Response("nope", { status: 500 }));
 		vi.stubGlobal("fetch", fetchMock);
 
-		const { result } = renderHook(() => useAgentStream());
+		const { result } = renderHook(() => useAgentStream(), {
+			wrapper: AgentTestWrapper,
+		});
 		await act(async () => {
 			await result.current.start("hi");
 		});
@@ -157,7 +164,9 @@ describe("useAgentStream", () => {
 			);
 		vi.stubGlobal("fetch", fetchMock);
 
-		const { result } = renderHook(() => useAgentStream());
+		const { result } = renderHook(() => useAgentStream(), {
+			wrapper: AgentTestWrapper,
+		});
 		await act(async () => {
 			await result.current.start("hi");
 		});
@@ -187,7 +196,9 @@ describe("useAgentStream", () => {
 			});
 		vi.stubGlobal("fetch", fetchMock);
 
-		const { result } = renderHook(() => useAgentStream());
+		const { result } = renderHook(() => useAgentStream(), {
+			wrapper: AgentTestWrapper,
+		});
 
 		await act(async () => {
 			const pending = result.current.start("hi");
